@@ -1,0 +1,6 @@
+@TaskHub.API_HostAddress = http://localhost:5036
+
+GET {{TaskHub.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

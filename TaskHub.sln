@@ -1,0 +1,39 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "taskhub-backend", "taskhub-backend", "{AFD3C7D3-DC6E-6E7C-EE6F-20113D070449}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskHub.API", "taskhub-backend\TaskHub.API\TaskHub.API.csproj", "{79FE8B7E-CCFD-4ECD-867F-D20E86A467C9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{79FE8B7E-CCFD-4ECD-867F-D20E86A467C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{79FE8B7E-CCFD-4ECD-867F-D20E86A467C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{79FE8B7E-CCFD-4ECD-867F-D20E86A467C9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{79FE8B7E-CCFD-4ECD-867F-D20E86A467C9}.Debug|x64.Build.0 = Debug|Any CPU
+		{79FE8B7E-CCFD-4ECD-867F-D20E86A467C9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{79FE8B7E-CCFD-4ECD-867F-D20E86A467C9}.Debug|x86.Build.0 = Debug|Any CPU
+		{79FE8B7E-CCFD-4ECD-867F-D20E86A467C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{79FE8B7E-CCFD-4ECD-867F-D20E86A467C9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{79FE8B7E-CCFD-4ECD-867F-D20E86A467C9}.Release|x64.ActiveCfg = Release|Any CPU
+		{79FE8B7E-CCFD-4ECD-867F-D20E86A467C9}.Release|x64.Build.0 = Release|Any CPU
+		{79FE8B7E-CCFD-4ECD-867F-D20E86A467C9}.Release|x86.ActiveCfg = Release|Any CPU
+		{79FE8B7E-CCFD-4ECD-867F-D20E86A467C9}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{79FE8B7E-CCFD-4ECD-867F-D20E86A467C9} = {AFD3C7D3-DC6E-6E7C-EE6F-20113D070449}
+	EndGlobalSection
+EndGlobal
