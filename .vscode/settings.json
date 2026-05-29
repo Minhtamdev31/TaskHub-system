@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cmd\\.exe /c \"cd /d d:\\\\TaskHub-system\\\\taskhub-backend && dotnet new classlib -n TaskHub\\.Domain -f net9\\.0 --force\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
