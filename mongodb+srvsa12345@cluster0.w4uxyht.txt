@@ -1,0 +1,4 @@
+mongodb+srv://sa:12345@cluster0.w4uxyht.mongodb.net/?appName=Cluster0
+
+email admin Admin@taskhub.com
+pass admin123
