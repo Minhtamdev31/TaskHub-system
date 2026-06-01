@@ -4,6 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,11 +19,24 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.8.0" />
+    <PackageReference Include="Google.Apis.Auth" Version="1.68.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\TaskHub.Application\TaskHub.Application.csproj" />
     <ProjectReference Include="..\TaskHub.Persistence\TaskHub.Persistence.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="appsettings.Development.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="TaskHub.API.http">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

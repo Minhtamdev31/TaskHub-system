@@ -153,9 +153,39 @@ public class UserService : IUserService
         return true;
     }
 
-    private async Task<User?> GetByEmailAsync(string email)
+    public async Task<User?> ChangePasswordAsync(string userId, string oldPassword, string newPassword)
+    {
+        var user = await GetByIdAsync(userId);
+        if (user is null)
+        {
+            return null;
+        }
+
+        if (!BCrypt.Net.BCrypt.Verify(oldPassword, user.PasswordHash))
+        {
+            return null;
+        }
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        user.UpdatedAt = DateTime.UtcNow;
+        await _userRepository.UpdateAsync(userId, user);
+        return user;
+    }
+
+    public async Task<User?> GetByEmailAsync(string email)
     {
         var allUsers = await _userRepository.GetAllAsync();
         return allUsers.FirstOrDefault(u => u.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public async Task<User?> CreateAsync(User user)
+    {
+        if (user is null)
+        {
+            return null;
+        }
+
+        await _userRepository.CreateAsync(user);
+        return user;
     }
 }

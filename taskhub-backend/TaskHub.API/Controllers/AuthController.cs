@@ -10,11 +10,13 @@ namespace TaskHub.API.Controllers
     {
         private readonly IUserService _userService;
         private readonly ITokenService _tokenService;
+        private readonly IAuthService _authService;
 
-        public AuthController(IUserService userService, ITokenService tokenService)
+        public AuthController(IUserService userService, ITokenService tokenService, IAuthService authService)
         {
             _userService = userService;
             _tokenService = tokenService;
+            _authService = authService;
         }
 
         [HttpPost("register")]
@@ -50,6 +52,23 @@ namespace TaskHub.API.Controllers
             }
 
             var token = _tokenService.GenerateToken(user);
+            return Ok(new TokenResponse(token));
+        }
+
+        [HttpPost("google-login")]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.IdToken))
+            {
+                return BadRequest("IdToken is required.");
+            }
+
+            var token = await _authService.GoogleLoginAsync(request.IdToken);
+            if (token is null)
+            {
+                return Unauthorized("Invalid Google token or user creation failed.");
+            }
+
             return Ok(new TokenResponse(token));
         }
     }

@@ -85,6 +85,8 @@ builder.Services.AddSingleton<MongoDbContext>();
 builder.Services.AddScoped(typeof(IMongoRepository<>), typeof(MongoRepository<>));
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
 
 var app = builder.Build();
 
