@@ -58,9 +58,9 @@ public class TasksController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateTask([FromBody] CreateTaskDto request)
     {
-        if (request is null || string.IsNullOrWhiteSpace(request.Title))
+        if (request is null || string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.ProjectId))
         {
-            return BadRequest("Title is required.");
+            return BadRequest("Title and ProjectId are required.");
         }
 
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -76,6 +76,25 @@ public class TasksController : ControllerBase
         }
 
         return CreatedAtAction(nameof(GetTaskById), new { id = task.Id }, new TaskResponse(task));
+    }
+
+    [HttpGet("project/{projectId}")]
+    public async Task<IActionResult> GetTasksByProject(string projectId)
+    {
+        if (string.IsNullOrWhiteSpace(projectId))
+        {
+            return BadRequest("ProjectId is required.");
+        }
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var tasks = await _taskService.GetTasksByProjectIdAsync(projectId, userId);
+        var response = tasks.Select(task => new TaskResponse(task));
+        return Ok(response);
     }
 
     [HttpPut("{id}")]

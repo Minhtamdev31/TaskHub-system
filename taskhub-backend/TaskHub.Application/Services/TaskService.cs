@@ -20,10 +20,12 @@ namespace TaskHub.Application.Services;
 public class TaskService : ITaskService
 {
     private readonly IMongoRepository<TaskItem> _taskRepository;
+    private readonly IProjectService _projectService;
 
-    public TaskService(IMongoRepository<TaskItem> taskRepository)
+    public TaskService(IMongoRepository<TaskItem> taskRepository, IProjectService projectService)
     {
         _taskRepository = taskRepository;
+        _projectService = projectService;
     }
 
     public async Task<List<TaskItem>> GetTasksByUserIdAsync(string userId)
@@ -49,7 +51,7 @@ public class TaskService : ITaskService
 
     public async Task<TaskItem?> CreateTaskAsync(CreateTaskDto dto, string userId)
     {
-        if (dto is null || string.IsNullOrEmpty(userId) || string.IsNullOrWhiteSpace(dto.Title))
+        if (dto is null || string.IsNullOrEmpty(userId) || string.IsNullOrWhiteSpace(dto.Title) || string.IsNullOrWhiteSpace(dto.ProjectId))
         {
             return null;
         }
@@ -61,7 +63,7 @@ public class TaskService : ITaskService
             Status = "Todo",
             DueDate = dto.DueDate,
             UserId = userId,
-            ProjectId = !string.IsNullOrEmpty(dto.ProjectId) ? dto.ProjectId : null,
+            ProjectId = dto.ProjectId.Trim(),
             CreatedAt = DateTime.UtcNow
         };
 
@@ -105,6 +107,32 @@ public class TaskService : ITaskService
         existingTask.UpdatedAt = DateTime.UtcNow;
         await _taskRepository.UpdateAsync(taskId, existingTask);
         return true;
+    }
+
+    public async Task<List<TaskItem>> GetTasksByProjectIdAsync(string projectId, string userId)
+    {
+        if (string.IsNullOrWhiteSpace(projectId) || string.IsNullOrEmpty(userId))
+        {
+            return new List<TaskItem>();
+        }
+
+        var project = await _projectService.GetProjectByIdAsync(projectId);
+        if (project is null)
+        {
+            return new List<TaskItem>();
+        }
+
+        var isOwner = project.OwnerId.Equals(userId, StringComparison.OrdinalIgnoreCase);
+        var isMember = project.Members.Any(m => m.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase));
+        if (!isOwner && !isMember)
+        {
+            return new List<TaskItem>();
+        }
+
+        var allTasks = await _taskRepository.GetAllAsync();
+        return allTasks
+            .Where(t => t.ProjectId.Equals(projectId, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
     public async Task<bool> DeleteTaskAsync(string taskId, string userId)

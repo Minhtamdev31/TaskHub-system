@@ -8,6 +8,7 @@ public interface ITaskService
     Task<List<TaskItem>> GetTasksByUserIdAsync(string userId);
     Task<TaskItem?> GetTaskByIdAsync(string taskId);
     Task<TaskItem?> CreateTaskAsync(CreateTaskDto dto, string userId);
+    Task<List<TaskItem>> GetTasksByProjectIdAsync(string projectId, string userId);
     Task<bool> UpdateTaskAsync(string taskId, UpdateTaskDto dto, string userId);
     Task<bool> DeleteTaskAsync(string taskId, string userId);
 }
