@@ -26,6 +26,10 @@ public class TaskItem
     [BsonRepresentation(BsonType.ObjectId)]
     public string UserId { get; set; } = string.Empty;
 
+    [BsonElement("projectId")]
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string? ProjectId { get; set; }
+
     [BsonElement("createdAt")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

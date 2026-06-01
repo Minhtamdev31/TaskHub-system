@@ -4,6 +4,19 @@ using TaskHub.Domain.Entities;
 
 namespace TaskHub.Application.Services;
 
+/// <summary>
+/// TaskService manages task-level operations with user-based authorization.
+/// 
+/// Authorization:
+/// - Tasks are user-owned and scoped to the task creator (UserId)
+/// - Only the task creator can view, update, or delete their tasks
+/// - Project members can manage tasks within their projects if the task belongs to them
+/// 
+/// Role Integration:
+/// - System roles (Admin/Member) are enforced at the controller level
+/// - Project roles (Leader/Member) are enforced at the project level
+/// - Task ownership is independent and based on the creator's UserId
+/// </summary>
 public class TaskService : ITaskService
 {
     private readonly IMongoRepository<TaskItem> _taskRepository;
@@ -48,6 +61,7 @@ public class TaskService : ITaskService
             Status = "Todo",
             DueDate = dto.DueDate,
             UserId = userId,
+            ProjectId = !string.IsNullOrEmpty(dto.ProjectId) ? dto.ProjectId : null,
             CreatedAt = DateTime.UtcNow
         };
 
