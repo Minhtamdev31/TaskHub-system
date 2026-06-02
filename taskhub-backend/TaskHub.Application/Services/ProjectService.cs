@@ -26,15 +26,21 @@ public class ProjectService : IProjectService
     private readonly IMongoRepository<Project> _projectRepository;
     private readonly IMongoRepository<User> _userRepository;
     private readonly IMongoRepository<TaskItem> _taskRepository;
+    private readonly INotificationService _notificationService;
+    private readonly IProjectInvitationService _projectInvitationService;
 
     public ProjectService(
         IMongoRepository<Project> projectRepository,
         IMongoRepository<User> userRepository,
-        IMongoRepository<TaskItem> taskRepository)
+        IMongoRepository<TaskItem> taskRepository,
+        INotificationService notificationService,
+        IProjectInvitationService projectInvitationService)
     {
         _projectRepository = projectRepository;
         _userRepository = userRepository;
         _taskRepository = taskRepository;
+        _notificationService = notificationService;
+        _projectInvitationService = projectInvitationService;
     }
 
     public async Task<Project?> CreateProjectAsync(CreateProjectDto dto, string ownerId)
@@ -177,15 +183,7 @@ public class ProjectService : IProjectService
             return false;
         }
 
-        project.Members.Add(new ProjectMember
-        {
-            UserId = userToAdd.Id,
-            ProjectRole = dto.Role ?? "Member"
-        });
-
-        project.UpdatedAt = DateTime.UtcNow;
-        await _projectRepository.UpdateAsync(projectId, project);
-        return true;
+        return await _projectInvitationService.SendInvitationAsync(projectId, currentUserId, normalizedEmail);
     }
 
     public async Task<bool> RemoveMemberFromProjectAsync(string projectId, string memberUserId, string currentUserId)
@@ -274,6 +272,47 @@ public class ProjectService : IProjectService
         project.UpdatedAt = DateTime.UtcNow;
         await _projectRepository.UpdateAsync(projectId, project);
         return true;
+    }
+
+    public async Task<ProjectDashboardDto?> GetProjectDashboardAsync(string projectId, string userId)
+    {
+        if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(userId))
+        {
+            return null;
+        }
+
+        var project = await _projectRepository.GetByIdAsync(projectId);
+        if (project is null)
+        {
+            return null;
+        }
+
+        var isOwner = project.OwnerId.Equals(userId, StringComparison.OrdinalIgnoreCase);
+        var isMember = project.Members.Any(m => m.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase));
+
+        if (!isOwner && !isMember)
+        {
+            return null;
+        }
+
+        var allTasks = await _taskRepository.GetAllAsync();
+        var projectTasks = allTasks.Where(t => t.ProjectId.Equals(projectId, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        var dashboard = new ProjectDashboardDto
+        {
+            ProjectId = projectId,
+            ProjectName = project.Name,
+            TotalTasks = projectTasks.Count,
+            TodoCount = projectTasks.Count(t => t.Status.Equals("Todo", StringComparison.OrdinalIgnoreCase)),
+            InProgressCount = projectTasks.Count(t => t.Status.Equals("InProgress", StringComparison.OrdinalIgnoreCase)),
+            ReviewCount = projectTasks.Count(t => t.Status.Equals("Review", StringComparison.OrdinalIgnoreCase)),
+            DoneCount = projectTasks.Count(t => t.Status.Equals("Done", StringComparison.OrdinalIgnoreCase)),
+            OverdueTasksCount = projectTasks.Count(t => t.DueDate.HasValue && t.DueDate.Value < DateTime.UtcNow && !t.Status.Equals("Done", StringComparison.OrdinalIgnoreCase))
+        };
+
+        dashboard.CompletionPercentage = dashboard.TotalTasks > 0 ? Math.Round(((double)dashboard.DoneCount / dashboard.TotalTasks) * 100, 1) : 0;
+
+        return dashboard;
     }
 
     public async Task<bool> DeleteProjectAsync(string projectId, string currentUserId)

@@ -20,7 +20,7 @@ public class User
     public string PasswordHash { get; set; } = string.Empty;
 
     [BsonElement("role")]
-    public string Role { get; set; } = "User";
+    public string Role { get; set; } = "Member";
 
     [BsonElement("isActive")]
     public bool IsActive { get; set; } = true;

@@ -121,6 +121,30 @@ public class TasksController : ControllerBase
         return Ok(new TaskResponse(updatedTask!));
     }
 
+    [HttpPut("{id}/assign")]
+    public async Task<IActionResult> AssignTask(string id, [FromBody] AssignTaskDto request)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.TargetUserId))
+        {
+            return BadRequest("TargetUserId is required.");
+        }
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var success = await _taskService.AssignTaskAsync(id, request, userId);
+        if (!success)
+        {
+            return NotFound();
+        }
+
+        var updatedTask = await _taskService.GetTaskByIdAsync(id);
+        return Ok(new TaskResponse(updatedTask!));
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTask(string id)
     {

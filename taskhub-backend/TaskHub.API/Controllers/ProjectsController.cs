@@ -171,6 +171,24 @@ public class ProjectsController : ControllerBase
         return Ok(new ProjectResponse(updatedProject!));
     }
 
+    [HttpGet("{id}/dashboard")]
+    public async Task<IActionResult> GetProjectDashboard(string id)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var dashboardDto = await _projectService.GetProjectDashboardAsync(id, userId);
+        if (dashboardDto is null)
+        {
+            return BadRequest("Unauthorized or project not found.");
+        }
+
+        return Ok(dashboardDto);
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteProject(string id)
     {

@@ -28,7 +28,7 @@ public class UserService : IUserService
             Email = normalizedEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
             Subscription = SubscriptionInfo.FreeActive,
-            Role = "User"
+            Role = "Member"
         };
 
         await _userRepository.CreateAsync(user);

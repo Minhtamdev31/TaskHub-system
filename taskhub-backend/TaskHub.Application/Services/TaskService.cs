@@ -20,12 +20,19 @@ namespace TaskHub.Application.Services;
 public class TaskService : ITaskService
 {
     private readonly IMongoRepository<TaskItem> _taskRepository;
-    private readonly IProjectService _projectService;
+    private readonly IMongoRepository<Project> _projectRepository;
+    private readonly INotificationService _notificationService;
 
-    public TaskService(IMongoRepository<TaskItem> taskRepository, IProjectService projectService)
+    private static readonly string[] ValidStatuses = { "Todo", "InProgress", "Review", "Done" };
+
+    public TaskService(
+        IMongoRepository<TaskItem> taskRepository, 
+        IMongoRepository<Project> projectRepository,
+        INotificationService notificationService)
     {
         _taskRepository = taskRepository;
-        _projectService = projectService;
+        _projectRepository = projectRepository;
+        _notificationService = notificationService;
     }
 
     public async Task<List<TaskItem>> GetTasksByUserIdAsync(string userId)
@@ -79,7 +86,22 @@ public class TaskService : ITaskService
         }
 
         var existingTask = await GetTaskByIdAsync(taskId);
-        if (existingTask is null || !existingTask.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase))
+        if (existingTask is null || string.IsNullOrWhiteSpace(existingTask.ProjectId))
+        {
+            return false;
+        }
+
+        var project = await _projectRepository.GetByIdAsync(existingTask.ProjectId);
+        if (project is null)
+        {
+            return false;
+        }
+
+        var isOwner = project.OwnerId.Equals(userId, StringComparison.OrdinalIgnoreCase);
+        var isLeader = project.Members.Any(m => m.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase) && m.ProjectRole.Equals("Leader", StringComparison.OrdinalIgnoreCase));
+        var isAssignee = existingTask.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase);
+
+        if (!isOwner && !isLeader && !isAssignee)
         {
             return false;
         }
@@ -96,7 +118,13 @@ public class TaskService : ITaskService
 
         if (!string.IsNullOrWhiteSpace(dto.Status))
         {
-            existingTask.Status = dto.Status.Trim();
+            var normalizedStatus = dto.Status.Trim();
+            if (!ValidStatuses.Contains(normalizedStatus, StringComparer.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            existingTask.Status = normalizedStatus;
         }
 
         if (dto.DueDate.HasValue)
@@ -116,7 +144,7 @@ public class TaskService : ITaskService
             return new List<TaskItem>();
         }
 
-        var project = await _projectService.GetProjectByIdAsync(projectId);
+        var project = await _projectRepository.GetByIdAsync(projectId);
         if (project is null)
         {
             return new List<TaskItem>();
@@ -135,6 +163,54 @@ public class TaskService : ITaskService
             .ToList();
     }
 
+    public async Task<bool> AssignTaskAsync(string taskId, AssignTaskDto dto, string currentUserId)
+    {
+        if (string.IsNullOrEmpty(taskId) || string.IsNullOrEmpty(currentUserId) || dto is null || string.IsNullOrWhiteSpace(dto.TargetUserId))
+        {
+            return false;
+        }
+
+        var existingTask = await GetTaskByIdAsync(taskId);
+        if (existingTask is null || string.IsNullOrWhiteSpace(existingTask.ProjectId))
+        {
+            return false;
+        }
+
+        var project = await _projectRepository.GetByIdAsync(existingTask.ProjectId);
+        if (project is null)
+        {
+            return false;
+        }
+
+        var isOwner = project.OwnerId.Equals(currentUserId, StringComparison.OrdinalIgnoreCase);
+        var isLeader = project.Members.Any(m => m.UserId.Equals(currentUserId, StringComparison.OrdinalIgnoreCase) && m.ProjectRole.Equals("Leader", StringComparison.OrdinalIgnoreCase));
+        if (!isOwner && !isLeader)
+        {
+            return false;
+        }
+
+        var targetUserId = dto.TargetUserId.Trim();
+        var isProjectMember = project.OwnerId.Equals(targetUserId, StringComparison.OrdinalIgnoreCase) ||
+            project.Members.Any(m => m.UserId.Equals(targetUserId, StringComparison.OrdinalIgnoreCase));
+        if (!isProjectMember)
+        {
+            return false;
+        }
+
+        existingTask.UserId = targetUserId;
+        existingTask.UpdatedAt = DateTime.UtcNow;
+        await _taskRepository.UpdateAsync(taskId, existingTask);
+
+        // Trigger Notification
+        await _notificationService.CreateAndSendNotificationAsync(
+            targetUserId, 
+            $"You have been assigned to task: {existingTask.Title}", 
+            "Task", 
+            taskId);
+
+        return true;
+    }
+
     public async Task<bool> DeleteTaskAsync(string taskId, string userId)
     {
         if (string.IsNullOrEmpty(taskId) || string.IsNullOrEmpty(userId))
@@ -143,7 +219,20 @@ public class TaskService : ITaskService
         }
 
         var existingTask = await GetTaskByIdAsync(taskId);
-        if (existingTask is null || !existingTask.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase))
+        if (existingTask is null || string.IsNullOrWhiteSpace(existingTask.ProjectId))
+        {
+            return false;
+        }
+
+        var project = await _projectRepository.GetByIdAsync(existingTask.ProjectId);
+        if (project is null)
+        {
+            return false;
+        }
+
+        var isOwner = project.OwnerId.Equals(userId, StringComparison.OrdinalIgnoreCase);
+        var isLeader = project.Members.Any(m => m.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase) && m.ProjectRole.Equals("Leader", StringComparison.OrdinalIgnoreCase));
+        if (!isOwner && !isLeader)
         {
             return false;
         }

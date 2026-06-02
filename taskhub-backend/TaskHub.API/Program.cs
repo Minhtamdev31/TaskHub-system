@@ -83,12 +83,17 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddSingleton<MongoDbContext>();
 
 builder.Services.AddScoped(typeof(IMongoRepository<>), typeof(MongoRepository<>));
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<ITokenService, JwtTokenService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<ITaskService, TaskService>();
-builder.Services.AddScoped<IProjectService, ProjectService>();
-
+builder.Services.AddScoped<IUserService, UserService>();//user
+builder.Services.AddScoped<ITokenService, JwtTokenService>();//jwt
+builder.Services.AddScoped<IAuthService, AuthService>();//auth
+builder.Services.AddScoped<ITaskService, TaskService>();//task
+builder.Services.AddScoped<IProjectService, ProjectService>();//project
+builder.Services.AddScoped<ICommentService, CommentService>();//commnent
+builder.Services.AddScoped<IEmailService, EmailService>();//email
+builder.Services.AddScoped<IOtpService, OtpService>();//otp
+builder.Services.AddScoped<INotificationService, NotificationService>();//notification
+builder.Services.AddHostedService<TaskDeadlineWorker>();//worker
+builder.Services.AddScoped<IProjectInvitationService, ProjectInvitationService>();//invitation
 var app = builder.Build();
 
 app.UseSwagger();
