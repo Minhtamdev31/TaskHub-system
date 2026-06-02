@@ -315,6 +315,58 @@ public class ProjectService : IProjectService
         return dashboard;
     }
 
+    public async Task<List<MemberContributionDto>> GetMemberContributionsAsync(string projectId, string currentUserId)
+    {
+        if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(currentUserId))
+        {
+            return new List<MemberContributionDto>();
+        }
+
+        var project = await _projectRepository.GetByIdAsync(projectId);
+        if (project is null) return new List<MemberContributionDto>();
+
+        // Authorization: Check if user is owner or member
+        var isOwner = project.OwnerId.Equals(currentUserId, StringComparison.OrdinalIgnoreCase);
+        var isMember = project.Members.Any(m => m.UserId.Equals(currentUserId, StringComparison.OrdinalIgnoreCase));
+
+        if (!isOwner && !isMember) return new List<MemberContributionDto>();
+
+        var allTasks = await _taskRepository.GetAllAsync();
+        var projectTasks = allTasks.Where(t => t.ProjectId.Equals(projectId, StringComparison.OrdinalIgnoreCase)).ToList();
+        var totalProjectTasks = projectTasks.Count;
+
+        // Combine Owner and Members into a list of IDs to track
+        var memberIds = project.Members.Select(m => m.UserId).ToList();
+        if (!memberIds.Contains(project.OwnerId)) memberIds.Add(project.OwnerId);
+
+        var allUsers = await _userRepository.GetAllAsync();
+        var projectUsers = allUsers.Where(u => memberIds.Contains(u.Id)).ToList();
+
+        var contributions = new List<MemberContributionDto>();
+        var now = DateTime.UtcNow;
+
+        foreach (var user in projectUsers)
+        {
+            var userTasks = projectTasks.Where(t => t.UserId.Equals(user.Id, StringComparison.OrdinalIgnoreCase)).ToList();
+            
+            var dto = new MemberContributionDto
+            {
+                UserId = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                TotalAssignedTasks = userTasks.Count,
+                CompletedTasks = userTasks.Count(t => t.Status.Equals("Done", StringComparison.OrdinalIgnoreCase)),
+                InProgressTasks = userTasks.Count(t => t.Status.Equals("InProgress", StringComparison.OrdinalIgnoreCase) || 
+                                                     t.Status.Equals("Review", StringComparison.OrdinalIgnoreCase)),
+                OverdueTasks = userTasks.Count(t => t.DueDate.HasValue && t.DueDate.Value < now && !t.Status.Equals("Done", StringComparison.OrdinalIgnoreCase)),
+                ContributionPercentage = totalProjectTasks > 0 ? Math.Round(((double)userTasks.Count / totalProjectTasks) * 100, 1) : 0
+            };
+            contributions.Add(dto);
+        }
+
+        return contributions;
+    }
+
     public async Task<bool> DeleteProjectAsync(string projectId, string currentUserId)
     {
         if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(currentUserId))

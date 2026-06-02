@@ -14,4 +14,5 @@ public interface IProjectService
     Task<bool> ChangeMemberRoleAsync(string projectId, ChangeRoleDto dto, string currentUserId);
     Task<bool> DeleteProjectAsync(string projectId, string currentUserId);
     Task<ProjectDashboardDto?> GetProjectDashboardAsync(string projectId, string userId);
+    Task<List<MemberContributionDto>> GetMemberContributionsAsync(string projectId, string currentUserId);
 }

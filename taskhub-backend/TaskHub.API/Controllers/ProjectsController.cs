@@ -189,6 +189,20 @@ public class ProjectsController : ControllerBase
         return Ok(dashboardDto);
     }
 
+    [HttpGet("{id}/member-contributions")]
+    public async Task<IActionResult> GetMemberContributions(string id)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var contributions = await _projectService.GetMemberContributionsAsync(id, userId);
+        // Returns an empty list if project not found or unauthorized as per service logic
+        return Ok(contributions);
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteProject(string id)
     {
