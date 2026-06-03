@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
@@ -9,6 +9,13 @@ using TaskHub.Persistence.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ==========================================
+// ĐỊNH CẤU HÌNH CỔNG (PORT) CHO RENDER DOCKER
+// ==========================================
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://*:{port}");
+
+// Cấu hình JWT Settings
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var secret = jwtSettings["Secret"];
 var issuer = jwtSettings["Issuer"];
@@ -20,6 +27,19 @@ if (string.IsNullOrEmpty(secret) || string.IsNullOrEmpty(issuer) || string.IsNul
 }
 
 var key = Encoding.ASCII.GetBytes(secret);
+
+// ==========================================
+// CẤU HÌNH CORS (CHO PHÉP FRONTEND GỌI API)
+// ==========================================
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 
 builder.Services.AddAuthentication(options =>
 {
@@ -42,10 +62,9 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
-
 builder.Services.AddControllers();
-
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
@@ -80,38 +99,47 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+// Dependency Injections
 builder.Services.AddSingleton<MongoDbContext>();
-
 builder.Services.AddScoped(typeof(IMongoRepository<>), typeof(MongoRepository<>));
-builder.Services.AddScoped<IUserService, UserService>();//user
-builder.Services.AddScoped<ITokenService, JwtTokenService>();//jwt
-builder.Services.AddScoped<IAuthService, AuthService>();//auth
-builder.Services.AddScoped<ITaskService, TaskService>();//task
-builder.Services.AddScoped<IProjectService, ProjectService>();//project
-builder.Services.AddScoped<ICommentService, CommentService>();//commnent
-builder.Services.AddScoped<IEmailService, EmailService>();//email
-builder.Services.AddScoped<IOtpService, OtpService>();//otp
-builder.Services.AddScoped<INotificationService, NotificationService>();//notification
-builder.Services.AddHostedService<TaskDeadlineWorker>();//worker
-builder.Services.AddScoped<IProjectInvitationService, ProjectInvitationService>();//invitation
-builder.Services.AddHttpClient();//
-builder.Services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();//subscription
-builder.Services.AddScoped<IPaymentService, PaymentService>();//payment
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ITokenService, JwtTokenService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddScoped<IProjectService, ProjectService>();
+builder.Services.AddScoped<ICommentService, CommentService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IOtpService, OtpService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddHostedService<TaskDeadlineWorker>();
+builder.Services.AddScoped<IProjectInvitationService, ProjectInvitationService>();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 var app = builder.Build();
+
+// Kích hoạt CORS trước các Middleware xác thực
+app.UseCors("AllowAll");
 
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
     options.SwaggerEndpoint("/swagger/v1/swagger.json", "TaskHub API v1");
+    // Đặt dòng dưới đây để khi vào link gốc nó sẽ tự động mở thẳng giao diện Swagger luôn thay vì báo 404
+    options.RoutePrefix = "swagger";
+});
+
+// Chuyển hướng trang chủ sang trang Swagger để dễ kiểm tra xem server sống hay chết
+app.MapGet("/", async context =>
+{
+    context.Response.Redirect("/swagger/index.html");
+    await Task.CompletedTask;
 });
 
 app.UseHttpsRedirection();
-
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
-
 
 app.Run();
