@@ -106,6 +106,7 @@ public class TaskService : ITaskService
             return false;
         }
 
+        var oldStatus = existingTask.Status;
         if (!string.IsNullOrWhiteSpace(dto.Title))
         {
             existingTask.Title = dto.Title.Trim();
@@ -125,6 +126,16 @@ public class TaskService : ITaskService
             }
 
             existingTask.Status = normalizedStatus;
+
+            // Thông báo cho chủ dự án khi trạng thái công việc thay đổi (Feature 6)
+            if (!oldStatus.Equals(normalizedStatus, StringComparison.OrdinalIgnoreCase))
+            {
+                await _notificationService.CreateAndSendNotificationAsync(
+                    project.OwnerId,
+                    $"Task \"{existingTask.Title}\" changed from {oldStatus} to {normalizedStatus}",
+                    "Task",
+                    taskId);
+            }
         }
 
         if (dto.DueDate.HasValue)

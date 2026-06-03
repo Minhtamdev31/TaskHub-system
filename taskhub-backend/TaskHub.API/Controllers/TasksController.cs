@@ -47,7 +47,13 @@ public class TasksController : ControllerBase
             return NotFound();
         }
 
-        if (!task.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase))
+        // Kiểm tra quyền: Người được giao việc HOẶC người có quyền truy cập dự án (Owner/Member)
+        var tasksInProject = await _taskService.GetTasksByProjectIdAsync(task.ProjectId, userId);
+        bool hasProjectAccess = tasksInProject.Any(t => t.Id == id);
+
+        var isAssignee = task.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase);
+
+        if (!isAssignee && !hasProjectAccess)
         {
             return Forbid();
         }

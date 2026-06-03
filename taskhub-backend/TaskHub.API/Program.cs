@@ -94,6 +94,10 @@ builder.Services.AddScoped<IOtpService, OtpService>();//otp
 builder.Services.AddScoped<INotificationService, NotificationService>();//notification
 builder.Services.AddHostedService<TaskDeadlineWorker>();//worker
 builder.Services.AddScoped<IProjectInvitationService, ProjectInvitationService>();//invitation
+builder.Services.AddHttpClient();//
+builder.Services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();//subscription
+builder.Services.AddScoped<IPaymentService, PaymentService>();//payment
+
 var app = builder.Build();
 
 app.UseSwagger();
