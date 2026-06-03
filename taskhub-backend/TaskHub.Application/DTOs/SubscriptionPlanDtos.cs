@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using TaskHub.Domain.Entities;
+
 namespace TaskHub.Application.DTOs;
 
 public class CreateSubscriptionPlanDto
@@ -14,4 +17,12 @@ public class CreatePaymentRequest
     public string PlanId { get; set; } = string.Empty;
     public string ReturnUrl { get; set; } = string.Empty;
     public string CancelUrl { get; set; } = string.Empty; // Also used as notifyUrl for MoMo
+}
+
+public class AdminDashboardDto
+{
+    public decimal TotalRevenue { get; set; }
+    public int TotalSuccessTransactions { get; set; }
+    public Dictionary<string, int> PlanBreakdown { get; set; } = new();
+    public List<Order> RecentOrders { get; set; } = new();
 }

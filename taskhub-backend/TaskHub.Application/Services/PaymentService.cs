@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Http;
+using TaskHub.Application.DTOs;
 using TaskHub.Application.Interfaces;
 using TaskHub.Domain.Entities;
 
@@ -95,62 +96,6 @@ public class PaymentService : IPaymentService
         return result.GetProperty("data").GetProperty("checkoutUrl").GetString() ?? "";
     }
 
-    public async Task<string> CreateMoMoPaymentUrlAsync(string userId, string planId, string returnUrl, string notifyUrl)
-    {
-        var plan = await _planRepository.GetByIdAsync(planId);
-        if (plan == null) throw new Exception("Plan not found");
-
-        string requestId = Guid.NewGuid().ToString();
-        string orderId = DateTimeOffset.UtcNow.Ticks.ToString();
-
-        var order = new Order
-        {
-            UserId = userId,
-            PlanId = planId,
-            PlanTitle = plan.Title,
-            Amount = plan.Price,
-            PaymentCode = orderId,
-            PaymentGateway = "MoMo"
-        };
-        await _orderRepository.CreateAsync(order);
-
-        var partnerCode = _config["MoMo:PartnerCode"];
-        var accessKey = _config["MoMo:AccessKey"];
-        var secretKey = _config["MoMo:SecretKey"];
-
-        if (string.IsNullOrEmpty(partnerCode) || string.IsNullOrEmpty(accessKey) || string.IsNullOrEmpty(secretKey))
-        {
-            throw new Exception("Backend Error: Cannot read MoMo configuration from appsettings.json. Please verify your root 'MoMo' block.");
-        }
-
-        string orderInfo = $"Pay for {plan.Title}";
-        string amount = ((int)plan.Price).ToString();
-        string extraData = "";
-
-        string rawHash = $"accessKey={accessKey}&amount={amount}&extraData={extraData}&ipnUrl={notifyUrl}&orderId={orderId}&orderInfo={orderInfo}&partnerCode={partnerCode}&redirectUrl={returnUrl}&requestId={requestId}&requestType=captureWallet";
-        string signature = HmacSha256(rawHash, secretKey!);
-
-        var requestBody = new
-        {
-            partnerCode,
-            requestId,
-            amount = int.Parse(amount),
-            orderId,
-            orderInfo,
-            redirectUrl = returnUrl,
-            ipnUrl = notifyUrl,
-            extraData,
-            requestType = "captureWallet",
-            signature,
-            lang = "vi"
-        };
-
-        var response = await _httpClient.PostAsJsonAsync("https://test-payment.momo.vn/v2/gateway/api/create", requestBody);
-        var result = await response.Content.ReadFromJsonAsync<JsonElement>();
-
-        return result.GetProperty("payUrl").GetString() ?? "";
-    }
-
     public async Task<bool> ProcessPayOSWebhookAsync(HttpRequest request)
     {
         using var reader = new StreamReader(request.Body);
@@ -168,17 +113,37 @@ public class PaymentService : IPaymentService
         return false;
     }
 
-    public async Task<bool> ProcessMoMoIPNAsync(HttpRequest request)
+    public async Task<List<Order>> GetOrdersByUserIdAsync(string userId)
     {
-        // Simplification: In production, verify MoMo IPN signature here
-        var orderId = request.Query["orderId"].ToString();
-        var resultCode = request.Query["resultCode"].ToString();
+        var all = await _orderRepository.GetAllAsync();
+        return all.Where(o => o.UserId == userId).OrderByDescending(o => o.CreatedAt).ToList();
+    }
 
-        if (resultCode == "0")
+    public async Task<List<Order>> GetAllOrdersForAdminAsync()
+    {
+        var all = await _orderRepository.GetAllAsync();
+        return all.OrderByDescending(o => o.CreatedAt).ToList();
+    }
+
+    public async Task<AdminDashboardDto> GetAdminDashboardAnalyticsAsync()
+    {
+        var allOrders = await _orderRepository.GetAllAsync();
+        var completedOrders = allOrders.Where(o => o.Status == "Completed").ToList();
+
+        var dashboard = new AdminDashboardDto
         {
-            return await CompleteSubscriptionOrder(orderId);
-        }
-        return false;
+            TotalRevenue = completedOrders.Sum(o => o.Amount),
+            TotalSuccessTransactions = completedOrders.Count,
+            PlanBreakdown = completedOrders
+                .GroupBy(o => o.PlanTitle)
+                .ToDictionary(g => g.Key ?? "Unknown", g => g.Count()),
+            RecentOrders = completedOrders
+                .OrderByDescending(o => o.CompletedAt ?? o.CreatedAt)
+                .Take(10)
+                .ToList()
+        };
+
+        return dashboard;
     }
 
     private async Task<bool> CompleteSubscriptionOrder(string paymentCode)

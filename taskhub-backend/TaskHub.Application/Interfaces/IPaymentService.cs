@@ -1,12 +1,16 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using TaskHub.Application.DTOs;
+using TaskHub.Domain.Entities;
 
 namespace TaskHub.Application.Interfaces;
 
 public interface IPaymentService
 {
     Task<string> CreatePayOSPaymentUrlAsync(string userId, string planId, string returnUrl, string cancelUrl);
-    Task<string> CreateMoMoPaymentUrlAsync(string userId, string planId, string returnUrl, string notifyUrl);
     Task<bool> ProcessPayOSWebhookAsync(HttpRequest request);
-    Task<bool> ProcessMoMoIPNAsync(HttpRequest request);
+    Task<List<Order>> GetOrdersByUserIdAsync(string userId);
+    Task<List<Order>> GetAllOrdersForAdminAsync();
+    Task<AdminDashboardDto> GetAdminDashboardAnalyticsAsync();
 }
