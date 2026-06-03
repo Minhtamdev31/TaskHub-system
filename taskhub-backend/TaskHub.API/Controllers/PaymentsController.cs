@@ -31,9 +31,24 @@ public class PaymentsController : ControllerBase
     [HttpPost("webhook/payos")]
     public async Task<IActionResult> PayOSWebhook()
     {
-        var success = await _paymentService.ProcessPayOSWebhookAsync(Request);
-        if (success) return Ok();
-        return BadRequest();
+        try
+        {
+         
+            Request.EnableBuffering();
+
+            var success = await _paymentService.ProcessPayOSWebhookAsync(Request);
+            if (success)
+            {
+                return Ok(new { message = "Webhook processed successfully" });
+            }
+
+            return BadRequest(new { message = "Webhook verification failed" });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PayOS Webhook Error]: {ex.Message}");
+            return StatusCode(500, new { message = "Internal server error during webhook processing" });
+        }
     }
 
     [HttpGet("my-orders")]
