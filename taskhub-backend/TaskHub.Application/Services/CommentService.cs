@@ -92,13 +92,13 @@ public class CommentService : ICommentService
 
         foreach (var username in mentionedUsernames)
         {
-            // Tìm user khớp username, thuộc project và không phải chính người gửi
-            var targetUser = allUsers.FirstOrDefault(u => 
+            // Tìm tất cả user khớp username trong dự án và không phải người gửi
+            var targetUsers = allUsers.Where(u => 
                 u.Username.Equals(username, StringComparison.OrdinalIgnoreCase) && 
                 projectMemberIds.Contains(u.Id) &&
-                u.Id != senderId);
+                u.Id != senderId).ToList();
 
-            if (targetUser != null)
+            foreach (var targetUser in targetUsers)
             {
                 await _notificationService.CreateAndSendNotificationAsync(
                     targetUser.Id,

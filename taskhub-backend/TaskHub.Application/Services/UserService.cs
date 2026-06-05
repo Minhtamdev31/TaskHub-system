@@ -17,14 +17,18 @@ public class UserService : IUserService
     public async Task<User?> RegisterAsync(string username, string email, string password)
     {
         var normalizedEmail = email.Trim().ToLowerInvariant();
-        if (await GetByEmailAsync(normalizedEmail) is not null)
+        var trimmedUsername = username.Trim();
+
+        var allUsers = await _userRepository.GetAllAsync();
+        if (allUsers.Any(u => u.Email.Equals(normalizedEmail, StringComparison.OrdinalIgnoreCase)) ||
+            allUsers.Any(u => u.Username.Equals(trimmedUsername, StringComparison.OrdinalIgnoreCase)))
         {
             return null;
         }
 
         var user = new User
         {
-            Username = username.Trim(),
+            Username = trimmedUsername,
             Email = normalizedEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
             Subscription = SubscriptionInfo.FreeActive,
@@ -78,7 +82,13 @@ public class UserService : IUserService
 
         if (!string.IsNullOrWhiteSpace(request.Username))
         {
-            existingUser.Username = request.Username.Trim();
+            var trimmedUsername = request.Username.Trim();
+            if (!trimmedUsername.Equals(existingUser.Username, StringComparison.OrdinalIgnoreCase))
+            {
+                var allUsers = await _userRepository.GetAllAsync();
+                if (allUsers.Any(u => u.Username.Equals(trimmedUsername, StringComparison.OrdinalIgnoreCase))) return null;
+            }
+            existingUser.Username = trimmedUsername;
         }
 
         if (!string.IsNullOrWhiteSpace(request.Role))

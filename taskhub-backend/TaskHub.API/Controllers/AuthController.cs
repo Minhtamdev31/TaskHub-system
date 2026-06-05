@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.AspNetCore.Mvc;
+﻿﻿﻿﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using TaskHub.Application.DTOs;
 using TaskHub.Application.Interfaces;
@@ -30,10 +30,15 @@ namespace TaskHub.API.Controllers
                 return BadRequest("Username, email and password are required.");
             }
 
-            var existingUser = await _userService.GetByEmailAsync(request.Email);
-            if (existingUser is not null)
+            var allUsers = await _userService.GetAllAsync();
+            if (allUsers.Any(u => u.Email.Equals(request.Email, StringComparison.OrdinalIgnoreCase)))
             {
                 return BadRequest("Email already registered.");
+            }
+
+            if (allUsers.Any(u => u.Username.Equals(request.Username, StringComparison.OrdinalIgnoreCase)))
+            {
+                return BadRequest("Username already taken. Please choose another one.");
             }
 
             await _otpService.GenerateAndSendOtpAsync(request.Email, "Register");
@@ -59,7 +64,7 @@ namespace TaskHub.API.Controllers
             var user = await _userService.RegisterAsync(request.Username, request.Email, request.Password);
             if (user is null)
             {
-                return BadRequest("Email already registered.");
+                return BadRequest("Registration failed. Email or Username may already be in use.");
             }
 
             return Ok("Registration successful! You can now log in.");

@@ -44,9 +44,20 @@ public class AuthService : IAuthService
             User user;
             if (existingUser is null)
             {
+                var baseUsername = name ?? email.Split('@')[0];
+                var uniqueUsername = baseUsername;
+                int counter = 1;
+                
+                var allUsers = await _userService.GetAllAsync();
+                // Tự động tìm tên không trùng bằng cách thêm số vào sau
+                while (allUsers.Any(u => u.Username.Equals(uniqueUsername, StringComparison.OrdinalIgnoreCase)))
+                {
+                    uniqueUsername = $"{baseUsername}{counter++}";
+                }
+
                 user = new User
                 {
-                    Username = name ?? email.Split('@')[0],
+                    Username = uniqueUsername,
                     Email = email,
                     PasswordHash = string.Empty,
                     Role = "User",
