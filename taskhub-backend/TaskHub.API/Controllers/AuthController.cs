@@ -13,13 +13,15 @@ namespace TaskHub.API.Controllers
         private readonly ITokenService _tokenService;
         private readonly IAuthService _authService;
         private readonly IOtpService _otpService;
+        private readonly IRecaptchaService _recaptchaService;
 
-        public AuthController(IUserService userService, ITokenService tokenService, IAuthService authService, IOtpService otpService)
+        public AuthController(IUserService userService, ITokenService tokenService, IAuthService authService, IOtpService otpService, IRecaptchaService recaptchaService)
         {
             _userService = userService;
             _tokenService = tokenService;
             _authService = authService;
             _otpService = otpService;
+            _recaptchaService = recaptchaService;
         }
 
         [HttpPost("register")]
@@ -28,6 +30,11 @@ namespace TaskHub.API.Controllers
             if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
                 return BadRequest("Username, email and password are required.");
+            }
+
+            if (!await _recaptchaService.VerifyTokenAsync(request.CaptchaToken))
+            {
+                return BadRequest("reCAPTCHA verification failed.");
             }
 
             var allUsers = await _userService.GetAllAsync();
@@ -76,6 +83,11 @@ namespace TaskHub.API.Controllers
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
                 return BadRequest("Email and password are required.");
+            }
+
+            if (!await _recaptchaService.VerifyTokenAsync(request.CaptchaToken))
+            {
+                return BadRequest("reCAPTCHA verification failed.");
             }
 
             var user = await _userService.LoginAsync(request.Email, request.Password);
