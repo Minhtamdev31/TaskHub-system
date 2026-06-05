@@ -13,18 +13,30 @@ namespace TaskHub.API.Controllers
         private readonly ITokenService _tokenService;
         private readonly IAuthService _authService;
         private readonly IOtpService _otpService;
+        private readonly IRecaptchaService _recaptchaService;
 
-        public AuthController(IUserService userService, ITokenService tokenService, IAuthService authService, IOtpService otpService)
+        public AuthController(
+            IUserService userService, 
+            ITokenService tokenService, 
+            IAuthService authService, 
+            IOtpService otpService,
+            IRecaptchaService recaptchaService)
         {
             _userService = userService;
             _tokenService = tokenService;
             _authService = authService;
             _otpService = otpService;
+            _recaptchaService = recaptchaService;
         }
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
+            if (!await _recaptchaService.VerifyTokenAsync(request.CaptchaToken))
+            {
+                return BadRequest(new { message = "Xác thực reCAPTCHA thất bại. Bạn có phải là robot?" });
+            }
+
             if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
                 return BadRequest("Username, email and password are required.");
@@ -73,6 +85,11 @@ namespace TaskHub.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
+            if (!await _recaptchaService.VerifyTokenAsync(request.CaptchaToken))
+            {
+                return BadRequest(new { message = "Xác thực reCAPTCHA thất bại. Bạn có phải là robot?" });
+            }
+
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
                 return BadRequest("Email and password are required.");
