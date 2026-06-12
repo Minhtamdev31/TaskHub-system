@@ -1,9 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://taskhub-system.onrender.com/api';
-
 const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -22,12 +20,34 @@ apiClient.interceptors.request.use(
   }
 );
 
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+/**
+ * Auth Service: Handles all authentication & identity
+ */
 export const authService = {
   login: (credentials) => apiClient.post('/auth/login', credentials),
   register: (userData) => apiClient.post('/auth/register', userData),
+  googleLogin: (idToken) => apiClient.post('/auth/google-login', { idToken }),
   getCurrentUser: () => apiClient.get('/users/me'),
+  forgotPassword: (email) => apiClient.post('/auth/forgot-password', { email }),
+  verifyResetOtp: (data) => apiClient.post('/auth/verify-reset-otp', data),
 };
 
+/**
+ * Project Service: Lifecycle and member management
+ */
 export const projectService = {
   getAll: () => apiClient.get('/projects'),
   getById: (id) => apiClient.get(`/projects/${id}`),
@@ -35,14 +55,45 @@ export const projectService = {
   update: (id, data) => apiClient.put(`/projects/${id}`, data),
   delete: (id) => apiClient.delete(`/projects/${id}`),
   getDashboard: (id) => apiClient.get(`/projects/${id}/dashboard`),
-  getInvitations: () => apiClient.get('/projectinvitations/my-invitations'),
-  respondToInvitation: (invitationId, accept) => apiClient.post('/projectinvitations/respond', { invitationId, accept }),
+  addMember: (id, data) => apiClient.post(`/projects/${id}/members`, data),
+  removeMember: (id, userId) => apiClient.delete(`/projects/${id}/members/${userId}`),
+  getInvitations: () => apiClient.get('/projects/invitations'),
+  respondToInvitation: (id, accept) => apiClient.post(`/projects/invitations/${id}/respond`, { accept }),
 };
 
+/**
+ * Task Service: Operations within projects
+ */
+export const taskService = {
+  getAll: () => apiClient.get('/tasks'),
+  getByProject: (projectId) => apiClient.get(`/tasks/project/${projectId}`),
+  create: (data) => apiClient.post('/tasks', data),
+  update: (id, data) => apiClient.put(`/tasks/${id}`, data),
+  delete: (id) => apiClient.delete(`/tasks/${id}`),
+  assign: (id, targetUserId) => apiClient.put(`/tasks/${id}/assign`, { targetUserId }),
+};
+
+/**
+ * Password Vault Service: Encrypted credentials
+ */
 export const passwordVaultService = {
   getAll: () => apiClient.get('/passwordvault'),
   create: (data) => apiClient.post('/passwordvault', data),
   delete: (id) => apiClient.delete(`/passwordvault/${id}`),
+};
+
+/**
+ * Invitation & Notification Service
+ */
+export const notificationService = {
+  getAll: () => apiClient.get('/notifications'),
+  markAsRead: (id) => apiClient.put(`/notifications/${id}/read`),
+};
+
+export const invitationService = {
+  getMyInvitations: () => apiClient.get('/projectinvitations/my-invitations'),
+  respond: (id, accept) => apiClient.post(`/projectinvitations/${id}/respond`, { accept }),
+  invite: (data) => apiClient.post('/projectinvitations/invite', data),
 };
 
 export const userService = {

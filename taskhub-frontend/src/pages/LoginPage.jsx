@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import ReCAPTCHA from "react-google-recaptcha";
 import { authService } from '../services/api';
 
@@ -76,7 +77,7 @@ const LoginPage = () => {
 
         <div className="mt-8 pt-6 border-t border-slate-100 text-center">
           <p className="text-slate-600 text-sm">
-            Don't have an account? <a href="/register" className="text-blue-600 font-bold hover:underline">Sign Up</a>
+            Don't have an account? <Link to="/register" className="text-blue-600 font-bold hover:underline">Sign Up</Link>
           </p>
         </div>
       </div>

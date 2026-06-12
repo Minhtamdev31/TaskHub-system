@@ -1,26 +1,52 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { User, Shield, Bell, Moon } from 'lucide-react';
-import { userService } from '../services/api';
+import { userService, authService } from '../services/api';
 
 const SettingsPage = () => {
   const [profile, setProfile] = useState({
-    username: 'JohnDoe',
-    email: 'john@example.com',
-    bio: 'Software Architect working on TaskHub.'
+    fullName: '',
+    bio: '',
+    jobTitle: '',
+    phoneNumber: '',
+    username: '',
+    email: '',
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    authService.getCurrentUser()
+      .then((res) => {
+        setProfile((prev) => ({
+          ...prev,
+          username: res.data.username || '',
+          email: res.data.email || '',
+        }));
+      })
+      .catch((err) => console.error('Failed to load user', err))
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleSave = async () => {
-    setLoading(true);
+    setSaving(true);
     try {
-      await userService.updateProfile(profile);
-      alert("Profile updated successfully!");
-    } catch (err) {
-      alert("Update failed.");
+      await userService.updateProfile({
+        fullName: profile.fullName,
+        bio: profile.bio,
+        jobTitle: profile.jobTitle,
+        phoneNumber: profile.phoneNumber,
+      });
+      alert('Profile updated successfully!');
+    } catch {
+      alert('Update failed.');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return <div className="p-8 text-slate-500">Loading settings...</div>;
+  }
 
   return (
     <div className="max-w-4xl space-y-8">
@@ -30,7 +56,6 @@ const SettingsPage = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-        {/* Sidebar Nav */}
         <div className="space-y-1">
           {[
             { name: 'Profile', icon: User, active: true },
@@ -50,25 +75,51 @@ const SettingsPage = () => {
           ))}
         </div>
 
-        {/* Main Form */}
         <div className="md:col-span-3 bg-white border border-slate-200 rounded-xl shadow-sm p-6 space-y-6">
           <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Username</label>
               <input
                 type="text"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                readOnly
+                className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 cursor-not-allowed"
                 value={profile.username}
-                onChange={(e) => setProfile({ ...profile, username: e.target.value })}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
               <input
                 type="email"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                readOnly
+                className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 cursor-not-allowed"
                 value={profile.email}
-                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+              <input
+                type="text"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                value={profile.fullName}
+                onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Job Title</label>
+              <input
+                type="text"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                value={profile.jobTitle}
+                onChange={(e) => setProfile({ ...profile, jobTitle: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
+              <input
+                type="tel"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                value={profile.phoneNumber}
+                onChange={(e) => setProfile({ ...profile, phoneNumber: e.target.value })}
               />
             </div>
             <div>
@@ -82,12 +133,12 @@ const SettingsPage = () => {
             </div>
           </div>
           <div className="pt-4 border-t border-slate-100 flex justify-end">
-            <button 
+            <button
               onClick={handleSave}
-              disabled={loading}
+              disabled={saving}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
-              {loading ? 'Saving...' : 'Save Changes'}
+              {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </div>

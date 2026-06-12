@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -34,13 +34,7 @@ var key = Encoding.ASCII.GetBytes(secret);
 // ==========================================
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
-    {
-        policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials();
-    });
+    options.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 
 builder.Services.AddAuthentication(options =>
@@ -151,7 +145,7 @@ else
 }
 
 app.UseRouting();
-app.UseCors("AllowFrontend");
+app.UseCors("AllowAll");
 
 app.UseSwagger();
 app.UseSwaggerUI(options =>
