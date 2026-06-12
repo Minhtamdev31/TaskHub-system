@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+const baseURL = (import.meta.env.MODE === 'production' || window.location.hostname.includes('vercel.app'))
+  ? 'https://taskhub-system.onrender.com/api'
+  : '/api';
+
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
