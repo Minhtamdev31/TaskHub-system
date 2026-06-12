@@ -1,4 +1,5 @@
-﻿﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
@@ -33,9 +34,9 @@ var key = Encoding.ASCII.GetBytes(secret);
 // ==========================================
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("FrontendPolicy", policy =>
+    options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
@@ -120,8 +121,35 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 var app = builder.Build();
 
+// ==========================================
+// GLOBAL EXCEPTION HANDLING (LOGS TO CONSOLE)
+// ==========================================
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler(errorApp =>
+    {
+        errorApp.Run(async context =>
+        {
+            var exceptionHandlerPathFeature = context.Features.Get<IExceptionHandlerPathFeature>();
+            var exception = exceptionHandlerPathFeature?.Error;
+
+            // This outputs to the Render console logs
+            Console.WriteLine($"[CRITICAL ERROR]: {exception?.Message}");
+            Console.WriteLine($"[STACK TRACE]: {exception?.StackTrace}");
+
+            context.Response.StatusCode = 500;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(new { error = "Internal Server Error. Check Render logs for details." });
+        });
+    });
+}
+
 app.UseRouting();
-app.UseCors("FrontendPolicy");
+app.UseCors("AllowFrontend");
 
 app.UseSwagger();
 app.UseSwaggerUI(options =>
