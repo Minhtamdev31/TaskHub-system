@@ -13,17 +13,34 @@ namespace TaskHub.API.Controllers;
 public class PasswordVaultController : ControllerBase
 {
     private readonly IPasswordVaultService _vaultService;
+    private readonly IUserService _userService;
 
-    public PasswordVaultController(IPasswordVaultService vaultService)
+    public PasswordVaultController(IPasswordVaultService vaultService, IUserService userService)
     {
         _vaultService = vaultService;
+        _userService = userService;
     }
+
+    private async Task<bool> IsPremiumAsync(string userId)
+    {
+        var user = await _userService.GetByIdAsync(userId);
+        return user?.Subscription?.IsActivePremium ?? false;
+    }
+
+    private IActionResult UpgradeRequired() =>
+        StatusCode(403, new
+        {
+            message = "Password Vault là tính năng Premium. Vui lòng nâng cấp để sử dụng.",
+            requiresUpgrade = true
+        });
 
     [HttpPost]
     public async Task<IActionResult> AddCredential([FromBody] AddCredentialDto request)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+        if (!await IsPremiumAsync(userId)) return UpgradeRequired();
 
         if (request is null || string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.Password))
         {
@@ -41,6 +58,8 @@ public class PasswordVaultController : ControllerBase
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+        if (!await IsPremiumAsync(userId)) return UpgradeRequired();
 
         var credentials = await _vaultService.GetMyCredentialsAsync(userId);
         return Ok(credentials);

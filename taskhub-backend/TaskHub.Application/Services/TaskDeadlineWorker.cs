@@ -35,17 +35,26 @@ public class TaskDeadlineWorker : BackgroundService
         var taskRepository = scope.ServiceProvider.GetRequiredService<IMongoRepository<TaskItem>>();
         var notificationRepository = scope.ServiceProvider.GetRequiredService<IMongoRepository<Notification>>();
         var notificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
+        var userRepository = scope.ServiceProvider.GetRequiredService<IMongoRepository<User>>();
 
         var now = DateTime.UtcNow;
         var next24Hours = now.AddHours(24);
 
+        // Nhắc deadline qua email là đặc quyền Premium → chỉ lấy danh sách user còn Premium hiệu lực
+        var allUsers = await userRepository.GetAllAsync();
+        var premiumUserIds = allUsers
+            .Where(u => u.Subscription?.IsActivePremium ?? false)
+            .Select(u => u.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         var allTasks = await taskRepository.GetAllAsync();
-        var upcomingTasks = allTasks.Where(t => 
-            t.Status != "Done" && 
-            t.DueDate.HasValue && 
-            t.DueDate.Value > now && 
-            t.DueDate.Value <= next24Hours && 
-            !string.IsNullOrEmpty(t.UserId)).ToList();
+        var upcomingTasks = allTasks.Where(t =>
+            t.Status != "Done" &&
+            t.DueDate.HasValue &&
+            t.DueDate.Value > now &&
+            t.DueDate.Value <= next24Hours &&
+            !string.IsNullOrEmpty(t.UserId) &&
+            premiumUserIds.Contains(t.UserId)).ToList();
 
         var allNotifications = await notificationRepository.GetAllAsync();
 

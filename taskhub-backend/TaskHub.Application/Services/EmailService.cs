@@ -1,46 +1,65 @@
-﻿using System.Net;
-using System.Net.Mail;
+using System.Net.Http.Json;
 using Microsoft.Extensions.Configuration;
 using TaskHub.Application.Interfaces;
 
 namespace TaskHub.Application.Services;
 
+/// <summary>
+/// Gửi email qua Brevo HTTP API (https://api.brevo.com/v3/smtp/email).
+/// Dùng HTTP thay vì SMTP vì các nền tảng hosting như Render chặn outbound SMTP (cổng 25/465/587).
+/// </summary>
 public class EmailService : IEmailService
 {
     private readonly IConfiguration _configuration;
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    public EmailService(IConfiguration configuration)
+    private const string BrevoEndpoint = "https://api.brevo.com/v3/smtp/email";
+
+    public EmailService(IConfiguration configuration, IHttpClientFactory httpClientFactory)
     {
         _configuration = configuration;
+        _httpClientFactory = httpClientFactory;
     }
 
     public async Task SendEmailAsync(string toEmail, string subject, string htmlMessage)
     {
         var emailSettings = _configuration.GetSection("EmailSettings");
 
-        // Sửa lại cho đúng Key trong file appsettings.json của Tâm
-        var fromEmail = emailSettings["SenderEmail"] ?? "your-email@gmail.com";
-        var rawAppPassword = emailSettings["SenderPassword"] ?? "your-app-password";
+        var apiKey = emailSettings["BrevoApiKey"];
+        var senderEmail = emailSettings["SenderEmail"] ?? "no-reply@taskhub.com";
+        var senderName = emailSettings["SenderName"] ?? "TaskHub Support";
 
-        // Tự động loại bỏ khoảng trắng dư thừa trong mã OTP/Mật khẩu ứng dụng
-        var appPassword = rawAppPassword.Replace(" ", "");
-
-        using var client = new SmtpClient("smtp.gmail.com", 587)
+        if (string.IsNullOrWhiteSpace(apiKey))
         {
-            EnableSsl = true,
-            Credentials = new NetworkCredential(fromEmail, appPassword)
+            throw new InvalidOperationException(
+                "Thiếu cấu hình EmailSettings:BrevoApiKey. Hãy đặt biến môi trường EmailSettings__BrevoApiKey trên server.");
+        }
+
+        var payload = new
+        {
+            sender = new { name = senderName, email = senderEmail },
+            to = new[] { new { email = toEmail } },
+            subject,
+            htmlContent = htmlMessage
         };
 
-        var mailMessage = new MailMessage
+        var client = _httpClientFactory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(30);
+
+        using var requestMessage = new HttpRequestMessage(HttpMethod.Post, BrevoEndpoint)
         {
-            From = new MailAddress(fromEmail, "TaskHub Support"),
-            Subject = subject,
-            Body = htmlMessage,
-            IsBodyHtml = true
+            Content = JsonContent.Create(payload)
         };
+        requestMessage.Headers.Add("api-key", apiKey);
+        requestMessage.Headers.Add("accept", "application/json");
 
-        mailMessage.To.Add(toEmail);
+        var response = await client.SendAsync(requestMessage);
 
-        await client.SendMailAsync(mailMessage);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            throw new InvalidOperationException(
+                $"Brevo gửi email thất bại ({(int)response.StatusCode}): {body}");
+        }
     }
 }

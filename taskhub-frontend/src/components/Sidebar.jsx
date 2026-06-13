@@ -6,6 +6,7 @@ import {
   Bell,
   Layers,
   Settings,
+  Crown,
   LogOut
 } from 'lucide-react';
 
@@ -19,6 +20,9 @@ const Sidebar = () => {
       { name: 'Vault', path: '/vault', icon: KeyRound, matchPrefix: false },
       { name: 'Notifications', path: '/notifications', icon: Bell, matchPrefix: false },
       { name: 'Settings', path: '/settings', icon: Settings, matchPrefix: false },
+    ]},
+    { title: 'Billing', items: [
+      { name: 'Upgrade', path: '/pricing', icon: Crown, matchPrefix: false },
     ]}
   ];
 

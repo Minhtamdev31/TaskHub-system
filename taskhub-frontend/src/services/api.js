@@ -116,4 +116,16 @@ export const userService = {
   lookup: (ids) => apiClient.post('/users/lookup', { ids }),
 };
 
+/**
+ * Subscription & Payment Service
+ */
+export const subscriptionService = {
+  getPlans: () => apiClient.get('/subscriptionplans'),
+};
+
+export const paymentService = {
+  checkoutPayOS: (data) => apiClient.post('/payments/checkout/payos', data),
+  myOrders: () => apiClient.get('/payments/my-orders'),
+};
+
 export default apiClient;

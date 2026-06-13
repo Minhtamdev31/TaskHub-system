@@ -23,6 +23,14 @@ public sealed class SubscriptionInfo
     [BsonElement("premiumUntil")]
     public DateTime? PremiumUntil { get; set; }
 
+    /// <summary>
+    /// True khi user đang có Premium còn hiệu lực (chưa hết hạn).
+    /// Dùng để kiểm soát đặc quyền tính năng cao cấp.
+    /// </summary>
+    [BsonIgnore]
+    public bool IsActivePremium =>
+        IsPremium && (PremiumUntil == null || PremiumUntil > DateTime.UtcNow);
+
     public static SubscriptionInfo FreeActive => new()
     {
         Plan = "Free",

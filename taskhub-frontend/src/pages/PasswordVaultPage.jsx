@@ -2,15 +2,25 @@ import { useEffect, useState } from 'react';
 import { passwordVaultService } from '../services/api';
 import { Eye, EyeOff, Plus, Trash2, ShieldCheck, KeyRound } from 'lucide-react';
 import { toast } from '../components/Toast';
+import UpgradePanel from '../components/UpgradePanel';
 
 const PasswordVaultPage = () => {
   const [credentials, setCredentials] = useState([]);
   const [visibleIds, setVisibleIds] = useState(new Set());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newCred, setNewCred] = useState({ title: '', username: '', password: '', url: '' });
+  const [locked, setLocked] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const fetchVault = () => {
-    passwordVaultService.getAll().then(res => setCredentials(res.data));
+    setLoading(true);
+    passwordVaultService.getAll()
+      .then((res) => { setCredentials(res.data); setLocked(false); })
+      .catch((err) => {
+        if (err.response?.status === 403) setLocked(true);
+        else toast.error('Failed to load vault.');
+      })
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -25,8 +35,14 @@ const PasswordVaultPage = () => {
       setNewCred({ title: '', username: '', password: '', url: '' });
       fetchVault();
       toast.success('Credential saved.');
-    } catch {
-      toast.error('Failed to save credential.');
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setIsModalOpen(false);
+        setLocked(true);
+        toast.error(err.response?.data?.message || 'Password Vault là tính năng Premium.');
+      } else {
+        toast.error('Failed to save credential.');
+      }
     }
   };
 
@@ -57,14 +73,24 @@ const PasswordVaultPage = () => {
           </h2>
           <p className="text-slate-500 mt-2 text-lg">Manage your project credentials within a secure zero-knowledge environment.</p>
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-2xl text-sm shadow-lg shadow-indigo-600/20 flex items-center gap-2 transition-all active:scale-95"
-        >
-          <Plus size={18} strokeWidth={3} /> Add Credential
-        </button>
+        {!locked && (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-2xl text-sm shadow-lg shadow-indigo-600/20 flex items-center gap-2 transition-all active:scale-95"
+          >
+            <Plus size={18} strokeWidth={3} /> Add Credential
+          </button>
+        )}
       </div>
 
+      {loading ? (
+        <div className="p-8 text-slate-500">Loading vault...</div>
+      ) : locked ? (
+        <UpgradePanel
+          title="Password Vault là tính năng Premium"
+          message="Lưu trữ và quản lý thông tin đăng nhập của bạn một cách an toàn. Nâng cấp Premium để mở khóa."
+        />
+      ) : (
       <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
         <table className="min-w-full divide-y divide-slate-100">
           <thead className="bg-slate-50/70">
@@ -116,6 +142,7 @@ const PasswordVaultPage = () => {
           </div>
         )}
       </div>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">

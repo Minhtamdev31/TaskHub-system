@@ -12,10 +12,12 @@ namespace TaskHub.API.Controllers;
 public class ProjectsController : ControllerBase
 {
     private readonly IProjectService _projectService;
+    private readonly IUserService _userService;
 
-    public ProjectsController(IProjectService projectService)
+    public ProjectsController(IProjectService projectService, IUserService userService)
     {
         _projectService = projectService;
+        _userService = userService;
     }
 
     [HttpPost]
@@ -178,6 +180,16 @@ public class ProjectsController : ControllerBase
         if (string.IsNullOrEmpty(userId))
         {
             return Unauthorized("User ID not found in token.");
+        }
+
+        var user = await _userService.GetByIdAsync(userId);
+        if (!(user?.Subscription?.IsActivePremium ?? false))
+        {
+            return StatusCode(403, new
+            {
+                message = "Project Analytics là tính năng Premium. Vui lòng nâng cấp để xem báo cáo chi tiết.",
+                requiresUpgrade = true
+            });
         }
 
         var dashboardDto = await _projectService.GetProjectDashboardAsync(id, userId);
