@@ -25,8 +25,8 @@ public class EmailService : IEmailService
     {
         var emailSettings = _configuration.GetSection("EmailSettings");
 
-        var apiKey = emailSettings["BrevoApiKey"];
-        var senderEmail = emailSettings["SenderEmail"] ?? "no-reply@taskhub.com";
+        var apiKey = emailSettings["BrevoApiKey"]?.Trim();
+        var senderEmail = (emailSettings["SenderEmail"] ?? "no-reply@taskhub.com").Trim();
         var senderName = emailSettings["SenderName"] ?? "TaskHub Support";
 
         if (string.IsNullOrWhiteSpace(apiKey))
