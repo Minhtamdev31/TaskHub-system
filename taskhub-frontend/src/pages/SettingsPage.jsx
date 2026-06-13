@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { User, Shield, Bell, Moon } from 'lucide-react';
-import { userService, authService } from '../services/api';
+import { Link } from 'react-router-dom';
+import { User, Shield, Bell, Moon, Crown, Check } from 'lucide-react';
+import { userService, authService, paymentService } from '../services/api';
 import { toast } from '../components/Toast';
 
 const TABS = [
@@ -8,7 +9,17 @@ const TABS = [
   { id: 'security', name: 'Security', icon: Shield },
   { id: 'notifications', name: 'Notifications', icon: Bell },
   { id: 'display', name: 'Display', icon: Moon },
+  { id: 'billing', name: 'Billing', icon: Crown },
 ];
+
+const formatPrice = (price) =>
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(price || 0);
+
+const ORDER_STATUS_STYLE = {
+  Completed: 'bg-green-100 text-green-700',
+  Pending: 'bg-amber-100 text-amber-700',
+  Failed: 'bg-rose-100 text-rose-700',
+};
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -17,6 +28,8 @@ const SettingsPage = () => {
   });
   const [settings, setSettings] = useState({ theme: 'Light', enableNotifications: true });
   const [passwords, setPasswords] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+  const [subscription, setSubscription] = useState(null);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -36,9 +49,14 @@ const SettingsPage = () => {
           theme: u.settings?.theme || 'Light',
           enableNotifications: u.settings?.enableNotifications ?? true,
         });
+        setSubscription(u.subscription || null);
       })
       .catch(() => toast.error('Failed to load profile.'))
       .finally(() => setLoading(false));
+
+    paymentService.myOrders()
+      .then((res) => setOrders(res.data || []))
+      .catch(() => { /* không bắt buộc */ });
   }, []);
 
   const handleSaveProfile = async () => {
@@ -218,6 +236,72 @@ const SettingsPage = () => {
                   ))}
                 </div>
                 <p className="text-xs text-slate-400 mt-3">Your theme preference is saved to your account.</p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'billing' && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-bold text-slate-900">Gói & Thanh toán</h3>
+
+              {/* Gói hiện tại */}
+              <div className={`rounded-2xl p-5 border ${subscription?.isPremium ? 'bg-gradient-to-br from-indigo-50 to-white border-indigo-200' : 'bg-slate-50 border-slate-200'}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${subscription?.isPremium ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                      <Crown size={22} />
+                    </div>
+                    <div>
+                      <p className="font-black text-slate-900">{subscription?.isPremium ? 'Premium' : 'Free'}</p>
+                      <p className="text-xs text-slate-500">
+                        {subscription?.isPremium
+                          ? (subscription?.premiumUntil
+                              ? `Hết hạn: ${new Date(subscription.premiumUntil).toLocaleDateString('vi-VN')}`
+                              : 'Không giới hạn thời gian')
+                          : 'Đang dùng gói miễn phí'}
+                      </p>
+                    </div>
+                  </div>
+                  {!subscription?.isPremium && (
+                    <Link to="/pricing" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2">
+                      <Crown size={16} /> Nâng cấp
+                    </Link>
+                  )}
+                </div>
+                {subscription?.isPremium && (
+                  <ul className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {['Password Vault', 'Nhắc deadline', 'Phân tích dự án', 'Cộng tác không giới hạn'].map((p) => (
+                      <li key={p} className="flex items-center gap-2 text-sm text-slate-600">
+                        <Check size={15} className="text-green-600 shrink-0" /> {p}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Lịch sử đơn hàng */}
+              <div>
+                <h4 className="font-bold text-slate-700 mb-3">Lịch sử đơn hàng</h4>
+                {orders.length === 0 ? (
+                  <p className="text-sm text-slate-400">Chưa có đơn hàng nào.</p>
+                ) : (
+                  <div className="border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100">
+                    {orders.map((o) => (
+                      <div key={o.id} className="flex items-center justify-between px-4 py-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800">{o.planTitle || 'Gói Premium'}</p>
+                          <p className="text-xs text-slate-400">{new Date(o.createdAt).toLocaleString('vi-VN')}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-bold text-slate-700">{formatPrice(o.amount)}</span>
+                          <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full ${ORDER_STATUS_STYLE[o.status] || 'bg-slate-100 text-slate-500'}`}>
+                            {o.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

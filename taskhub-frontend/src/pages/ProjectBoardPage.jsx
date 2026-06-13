@@ -23,6 +23,9 @@ const ProjectBoardPage = () => {
 
   const [selectedTask, setSelectedTask] = useState(null);
 
+  const [draggedTaskId, setDraggedTaskId] = useState(null);
+  const [dragOverColumn, setDragOverColumn] = useState(null);
+
   const displayName = useCallback(
     (userId) => userMap[userId]?.username || userMap[userId]?.fullName || userId || 'Unassigned',
     [userMap]
@@ -70,6 +73,21 @@ const ProjectBoardPage = () => {
       setSelectedTask((prev) => (prev && prev.id === taskId ? { ...prev, status: newStatus } : prev));
     } catch {
       toast.error('Failed to update task status.');
+    }
+  };
+
+  // --- Drag & drop ---
+  const handleDragStart = (taskId) => setDraggedTaskId(taskId);
+  const handleDragEnd = () => { setDraggedTaskId(null); setDragOverColumn(null); };
+
+  const handleDrop = (column) => {
+    setDragOverColumn(null);
+    const taskId = draggedTaskId;
+    setDraggedTaskId(null);
+    if (!taskId) return;
+    const task = tasks.find((t) => t.id === taskId);
+    if (task && task.status !== column) {
+      handleUpdateStatus(taskId, column);
     }
   };
 
@@ -181,12 +199,26 @@ const ProjectBoardPage = () => {
               <button className="text-slate-400 hover:text-slate-600"><MoreHorizontal size={18} /></button>
             </div>
 
-            <div className="flex-1 space-y-4 min-h-[500px] p-2 bg-slate-100/50 rounded-3xl border border-slate-200/50">
+            <div
+              onDragOver={(e) => { e.preventDefault(); if (dragOverColumn !== column) setDragOverColumn(column); }}
+              onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverColumn(null); }}
+              onDrop={() => handleDrop(column)}
+              className={`flex-1 space-y-4 min-h-[500px] p-2 rounded-3xl border transition-colors ${
+                dragOverColumn === column
+                  ? 'bg-indigo-50 border-indigo-300 border-dashed'
+                  : 'bg-slate-100/50 border-slate-200/50'
+              }`}
+            >
               {tasks.filter((t) => t.status === column).map((task) => (
                 <div
                   key={task.id}
+                  draggable
+                  onDragStart={() => handleDragStart(task.id)}
+                  onDragEnd={handleDragEnd}
                   onClick={() => setSelectedTask(task)}
-                  className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:border-indigo-300 transition-all cursor-pointer group"
+                  className={`bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:border-indigo-300 transition-all cursor-grab active:cursor-grabbing group ${
+                    draggedTaskId === task.id ? 'opacity-40' : ''
+                  }`}
                 >
                   <h4 className="font-bold text-slate-900 mb-3 group-hover:text-indigo-600 transition-colors">
                     {task.title}
