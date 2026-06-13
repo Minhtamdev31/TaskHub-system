@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using Microsoft.AspNetCore.Mvc;
+﻿﻿﻿﻿﻿﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using TaskHub.Application.DTOs;
 using TaskHub.Application.Interfaces;
@@ -32,10 +32,6 @@ namespace TaskHub.API.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            if (!await _recaptchaService.VerifyTokenAsync(request.CaptchaToken))
-            {
-                return BadRequest(new { message = "Xác thực reCAPTCHA thất bại. Bạn có phải là robot?" });
-            }
 
             if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
@@ -85,9 +81,24 @@ namespace TaskHub.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            if (!await _recaptchaService.VerifyTokenAsync(request.CaptchaToken))
+            // Kiểm tra xem máy này đã xác thực reCAPTCHA trong 30 phút qua chưa
+            bool isRecentlyVerified = Request.Cookies.TryGetValue("Captcha_Verified", out string? verified) && verified == "true";
+
+            if (!isRecentlyVerified)
             {
-                return BadRequest(new { message = "Xác thực reCAPTCHA thất bại. Bạn có phải là robot?" });
+                if (!await _recaptchaService.VerifyTokenAsync(request.CaptchaToken))
+                {
+                    return BadRequest(new { message = "Xác thực reCAPTCHA thất bại. Bạn có phải là robot?" });
+                }
+
+                // Nếu xác thực thành công lần đầu, cấp cookie 30 phút để không phải giải captcha lại
+                Response.Cookies.Append("Captcha_Verified", "true", new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict,
+                    Expires = DateTimeOffset.UtcNow.AddMinutes(30)
+                });
             }
 
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
