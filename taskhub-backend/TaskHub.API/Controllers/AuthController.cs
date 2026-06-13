@@ -49,7 +49,16 @@ namespace TaskHub.API.Controllers
                 return BadRequest("Username already taken. Please choose another one.");
             }
 
-            await _otpService.GenerateAndSendOtpAsync(request.Email, "Register");
+            try
+            {
+                await _otpService.GenerateAndSendOtpAsync(request.Email, "Register");
+            }
+            catch (Exception ex)
+            {
+                // Trả lý do thật để dễ chẩn đoán (cấu hình email / sender chưa verify ...)
+                return StatusCode(502, new { message = $"Không gửi được email OTP: {ex.Message}" });
+            }
+
             return Ok("An OTP code has been sent to your email. Please verify to complete registration.");
         }
 
@@ -142,7 +151,15 @@ namespace TaskHub.API.Controllers
                 return BadRequest("Email is required.");
             }
 
-            await _otpService.GenerateAndSendOtpAsync(request.Email, "ResetPassword");
+            try
+            {
+                await _otpService.GenerateAndSendOtpAsync(request.Email, "ResetPassword");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(502, new { message = $"Không gửi được email OTP: {ex.Message}" });
+            }
+
             return Ok("OTP sent to your email.");
         }
 
