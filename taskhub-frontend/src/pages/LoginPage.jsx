@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ReCAPTCHA from "react-google-recaptcha";
 import { authService } from '../services/api';
@@ -8,14 +8,25 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [captchaToken, setCaptchaToken] = useState(null);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const recaptchaRef = useRef(null);
+
+  const resetCaptcha = () => {
+    recaptchaRef.current?.reset();
+    setCaptchaToken(null);
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (loading) return; // chặn double-submit khi đang gửi
+    setError('');
+
     if (!captchaToken) {
-      setError('Please verify you are not a robot.');
+      setError('Vui lòng xác thực reCAPTCHA.');
       return;
     }
 
+    setLoading(true);
     try {
       const response = await authService.login({ email, password, captchaToken });
       localStorage.setItem('token', response.data.token);
@@ -25,6 +36,9 @@ const LoginPage = () => {
         ? err.response.data
         : (err.response?.data?.message || err.message || "An unknown error occurred");
       setError(errorMessage);
+      // Token reCAPTCHA chỉ dùng được 1 lần → phải xác thực lại trước khi thử lại
+      resetCaptcha();
+      setLoading(false);
     }
   };
 
@@ -41,20 +55,22 @@ const LoginPage = () => {
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-            <input 
-              type="email" 
+            <input
+              type="email"
               required
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              disabled={loading}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-50"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-            <input 
-              type="password" 
+            <input
+              type="password"
               required
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              disabled={loading}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-50"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -68,17 +84,34 @@ const LoginPage = () => {
 
           <div className="flex justify-center py-2">
             <ReCAPTCHA
+              ref={recaptchaRef}
               sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || "6LccYRotAAAAAKOZSmz1WzN0HoclDl3rXI3qKyau"}
               onChange={(token) => setCaptchaToken(token)}
+              onExpired={() => setCaptchaToken(null)}
+              onErrored={() => setCaptchaToken(null)}
             />
           </div>
 
-          <button 
+          <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors shadow-lg"
+            disabled={loading || !captchaToken}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Log In
+            {loading ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                Đang đăng nhập...
+              </>
+            ) : (
+              'Log In'
+            )}
           </button>
+
+          {loading && (
+            <p className="text-xs text-center text-slate-400">
+              Lần đăng nhập đầu có thể mất 30–60 giây nếu server vừa khởi động lại.
+            </p>
+          )}
         </form>
 
         <div className="mt-8 pt-6 border-t border-slate-100 text-center">
