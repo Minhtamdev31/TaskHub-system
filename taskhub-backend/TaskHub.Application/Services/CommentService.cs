@@ -142,4 +142,30 @@ public class CommentService : ICommentService
             .OrderBy(c => c.CreatedAt)
             .ToList();
     }
+
+    public async Task<bool> DeleteIndividualCommentAsync(string commentId, string userId)
+    {
+        var comment = await _commentRepository.GetByIdAsync(commentId);
+        if (comment == null || !comment.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        await _commentRepository.DeleteAsync(commentId);
+        return true;
+    }
+
+    public async Task<bool> DeleteCommentsByTaskIdAsync(string taskId)
+    {
+        if (string.IsNullOrWhiteSpace(taskId)) return false;
+        
+        var allComments = await _commentRepository.GetAllAsync();
+        var taskComments = allComments.Where(c => c.TaskId == taskId).ToList();
+        
+        foreach (var comment in taskComments)
+        {
+            await _commentRepository.DeleteAsync(comment.Id);
+        }
+        return true;
+    }
 }

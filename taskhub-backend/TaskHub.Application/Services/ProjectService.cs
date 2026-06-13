@@ -26,6 +26,7 @@ public class ProjectService : IProjectService
     private readonly IMongoRepository<Project> _projectRepository;
     private readonly IMongoRepository<User> _userRepository;
     private readonly IMongoRepository<TaskItem> _taskRepository;
+    private readonly IMongoRepository<Comment> _commentRepository;
     private readonly INotificationService _notificationService;
     private readonly IProjectInvitationService _projectInvitationService;
 
@@ -33,12 +34,14 @@ public class ProjectService : IProjectService
         IMongoRepository<Project> projectRepository,
         IMongoRepository<User> userRepository,
         IMongoRepository<TaskItem> taskRepository,
+        IMongoRepository<Comment> commentRepository,
         INotificationService notificationService,
         IProjectInvitationService projectInvitationService)
     {
         _projectRepository = projectRepository;
         _userRepository = userRepository;
         _taskRepository = taskRepository;
+        _commentRepository = commentRepository;
         _notificationService = notificationService;
         _projectInvitationService = projectInvitationService;
     }
@@ -393,8 +396,17 @@ public class ProjectService : IProjectService
                        t.ProjectId.Equals(projectId, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
+        var allComments = await _commentRepository.GetAllAsync();
+
         foreach (var task in tasksToDelete)
         {
+            // Xóa comments của từng task
+            var taskComments = allComments.Where(c => c.TaskId == task.Id).ToList();
+            foreach (var comment in taskComments)
+            {
+                await _commentRepository.DeleteAsync(comment.Id);
+            }
+
             await _taskRepository.DeleteAsync(task.Id);
         }
 

@@ -21,6 +21,7 @@ public class TaskService : ITaskService
 {
     private readonly IMongoRepository<TaskItem> _taskRepository;
     private readonly IMongoRepository<Project> _projectRepository;
+    private readonly IMongoRepository<Comment> _commentRepository;
     private readonly INotificationService _notificationService;
 
     private static readonly string[] ValidStatuses = { "Todo", "InProgress", "Review", "Done" };
@@ -28,10 +29,12 @@ public class TaskService : ITaskService
     public TaskService(
         IMongoRepository<TaskItem> taskRepository, 
         IMongoRepository<Project> projectRepository,
+        IMongoRepository<Comment> commentRepository,
         INotificationService notificationService)
     {
         _taskRepository = taskRepository;
         _projectRepository = projectRepository;
+        _commentRepository = commentRepository;
         _notificationService = notificationService;
     }
 
@@ -246,6 +249,14 @@ public class TaskService : ITaskService
         if (!isOwner && !isLeader)
         {
             return false;
+        }
+
+        // Cascade delete: Xóa tất cả comment thuộc về task này
+        var allComments = await _commentRepository.GetAllAsync();
+        var taskComments = allComments.Where(c => c.TaskId == taskId).ToList();
+        foreach (var comment in taskComments)
+        {
+            await _commentRepository.DeleteAsync(comment.Id);
         }
 
         await _taskRepository.DeleteAsync(taskId);
