@@ -75,6 +75,24 @@ public class UsersController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("{id}/grant-premium")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GrantPremium(string id, [FromBody] GrantPremiumRequest? request)
+    {
+        var user = await _userService.SetSubscriptionAsync(id, true, request?.DurationDays ?? 30);
+        if (user is null) return NotFound();
+        return Ok(new AuthResponse(user));
+    }
+
+    [HttpPost("{id}/revoke-premium")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> RevokePremium(string id)
+    {
+        var user = await _userService.SetSubscriptionAsync(id, false, 0);
+        if (user is null) return NotFound();
+        return Ok(new AuthResponse(user));
+    }
+
     [HttpGet("me")]
     [Authorize]
     public async Task<IActionResult> GetCurrentUser()

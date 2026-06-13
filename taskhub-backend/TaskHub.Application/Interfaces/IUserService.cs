@@ -14,5 +14,6 @@ public interface IUserService
     Task<bool> DeleteAsync(string id);
     Task<User?> ChangePasswordAsync(string userId, string oldPassword, string newPassword);
     Task<User?> ResetPasswordAsync(string email, string newPassword);
+    Task<User?> SetSubscriptionAsync(string userId, bool isPremium, int durationDays);
     Task<User?> CreateAsync(User user);
 }

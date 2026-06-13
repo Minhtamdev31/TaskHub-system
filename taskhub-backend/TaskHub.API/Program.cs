@@ -118,6 +118,43 @@ builder.Services.AddScoped<TaskHub.Application.Interfaces.IRecaptchaService, Tas
 var app = builder.Build();
 
 // ==========================================
+// SEED GÓI SUBSCRIPTION MẶC ĐỊNH (nếu DB chưa có gói nào)
+// ==========================================
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var planService = scope.ServiceProvider.GetRequiredService<ISubscriptionPlanService>();
+        var existingPlans = await planService.GetAllPlansAsync();
+        if (existingPlans.Count == 0)
+        {
+            var defaults = new[]
+            {
+                new TaskHub.Application.DTOs.CreateSubscriptionPlanDto
+                {
+                    Name = "Premium1Thang", Title = "Premium 1 Tháng", Price = 50000, DurationDays = 30,
+                    Description = "Mở khóa Password Vault, nhắc deadline & phân tích dự án."
+                },
+                new TaskHub.Application.DTOs.CreateSubscriptionPlanDto
+                {
+                    Name = "Premium1Nam", Title = "Premium 1 Năm", Price = 500000, DurationDays = 365,
+                    Description = "Tiết kiệm hơn với gói 1 năm — toàn bộ đặc quyền Premium."
+                }
+            };
+            foreach (var dto in defaults)
+            {
+                await planService.CreatePlanAsync(dto);
+            }
+            Console.WriteLine("[SEED] Đã tạo gói subscription mặc định.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[SEED ERROR] Không seed được subscription plans: {ex.Message}");
+    }
+}
+
+// ==========================================
 // GLOBAL EXCEPTION HANDLING (LOGS TO CONSOLE)
 // ==========================================
 if (app.Environment.IsDevelopment())

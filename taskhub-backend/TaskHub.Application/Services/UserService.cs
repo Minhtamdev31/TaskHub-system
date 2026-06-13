@@ -197,6 +197,43 @@ public class UserService : IUserService
         return user;
     }
 
+    public async Task<User?> SetSubscriptionAsync(string userId, bool isPremium, int durationDays)
+    {
+        var user = await GetByIdAsync(userId);
+        if (user is null)
+        {
+            return null;
+        }
+
+        user.Subscription ??= SubscriptionInfo.FreeActive;
+
+        if (isPremium)
+        {
+            user.Subscription.Plan = "Premium";
+            user.Subscription.Status = "Active";
+            user.Subscription.IsPremium = true;
+            user.Subscription.StartDate = DateTime.UtcNow;
+            // Cộng dồn nếu đang còn hạn Premium
+            var baseDate = user.Subscription.PremiumUntil > DateTime.UtcNow
+                ? user.Subscription.PremiumUntil!.Value
+                : DateTime.UtcNow;
+            user.Subscription.PremiumUntil = durationDays > 0 ? baseDate.AddDays(durationDays) : null;
+            user.Subscription.EndDate = user.Subscription.PremiumUntil;
+        }
+        else
+        {
+            user.Subscription.Plan = "Free";
+            user.Subscription.Status = "Active";
+            user.Subscription.IsPremium = false;
+            user.Subscription.PremiumUntil = null;
+            user.Subscription.EndDate = null;
+        }
+
+        user.UpdatedAt = DateTime.UtcNow;
+        await _userRepository.UpdateAsync(userId, user);
+        return user;
+    }
+
     public async Task<User?> GetByEmailAsync(string email)
     {
         var allUsers = await _userRepository.GetAllAsync();
