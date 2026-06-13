@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { projectService } from '../services/api';
 import { Link } from 'react-router-dom';
 import { Plus, Folder, Users, Calendar, ArrowRight, X } from 'lucide-react';
+import { toast } from '../components/Toast';
 
 const ProjectListPage = () => {
   const [projects, setProjects] = useState([]);
@@ -36,9 +37,10 @@ const ProjectListPage = () => {
       const res = await projectService.getAll();
       setProjects(res.data);
       setLoading(false);
+      toast.success('Project created.');
     } catch (err) {
       console.error('Failed to create project', err);
-      alert('Failed to create project. Please try again.');
+      toast.error('Failed to create project. Please try again.');
     } finally {
       setCreating(false);
     }

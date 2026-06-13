@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { passwordVaultService } from '../services/api';
 import { Eye, EyeOff, Plus, Trash2, ShieldCheck, KeyRound } from 'lucide-react';
+import { toast } from '../components/Toast';
 
 const PasswordVaultPage = () => {
   const [credentials, setCredentials] = useState([]);
@@ -23,15 +24,21 @@ const PasswordVaultPage = () => {
       setIsModalOpen(false);
       setNewCred({ title: '', username: '', password: '', url: '' });
       fetchVault();
+      toast.success('Credential saved.');
     } catch {
-      alert("Failed to save credential.");
+      toast.error('Failed to save credential.');
     }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this credential?")) return;
-    await passwordVaultService.delete(id);
-    fetchVault();
+    try {
+      await passwordVaultService.delete(id);
+      fetchVault();
+      toast.success('Credential deleted.');
+    } catch {
+      toast.error('Failed to delete credential.');
+    }
   };
 
   const toggleVisibility = (id) => {

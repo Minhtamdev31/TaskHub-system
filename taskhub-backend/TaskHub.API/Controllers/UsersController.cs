@@ -8,7 +8,7 @@ namespace TaskHub.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin")]
+[Authorize]
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
@@ -19,6 +19,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAll()
     {
         var users = await _userService.GetAllAsync();
@@ -27,6 +28,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetById(string id)
     {
         var user = await _userService.GetByIdAsync(id);
@@ -39,6 +41,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(string id, [FromBody] UpdateUserRequest request)
     {
         if (request is null)
@@ -61,6 +64,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(string id)
     {
         if (!await _userService.DeleteAsync(id))
@@ -90,6 +94,28 @@ public class UsersController : ControllerBase
         return Ok(new AuthResponse(user));
     }
 
+    [HttpPost("lookup")]
+    [Authorize]
+    public async Task<IActionResult> Lookup([FromBody] UserLookupRequest request)
+    {
+        if (request?.Ids is null || request.Ids.Count == 0)
+        {
+            return Ok(Array.Empty<UserLookupResponse>());
+        }
+
+        var idSet = request.Ids
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var allUsers = await _userService.GetAllAsync();
+        var response = allUsers
+            .Where(u => u.Id is not null && idSet.Contains(u.Id))
+            .Select(u => new UserLookupResponse(u));
+
+        return Ok(response);
+    }
+
     [HttpPut("me/profile")]
     [Authorize]
     public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
@@ -111,7 +137,9 @@ public class UsersController : ControllerBase
             AvatarUrl = request.AvatarUrl,
             Bio = request.Bio,
             PhoneNumber = request.PhoneNumber,
-            JobTitle = request.JobTitle
+            JobTitle = request.JobTitle,
+            Theme = request.Theme,
+            EnableNotifications = request.EnableNotifications
         };
 
         var updatedUser = await _userService.UpdateAsync(userId, updateRequest);

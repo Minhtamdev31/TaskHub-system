@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { notificationService } from '../services/api';
-import { Bell, CheckCheck, FolderKanban, ListTodo, Clock } from 'lucide-react';
+import { notificationService, invitationService } from '../services/api';
+import { toast } from '../components/Toast';
+import { Bell, CheckCheck, FolderKanban, ListTodo, Clock, Mail, Check, X } from 'lucide-react';
 
 const typeIcons = {
   Project: FolderKanban,
@@ -10,14 +11,21 @@ const typeIcons = {
 
 const NotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
+  const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await notificationService.getAll();
-        if (!cancelled) setNotifications(res.data);
+        const [nRes, iRes] = await Promise.all([
+          notificationService.getAll(),
+          invitationService.getMyInvitations().catch(() => ({ data: [] })),
+        ]);
+        if (!cancelled) {
+          setNotifications(nRes.data);
+          setInvitations(iRes.data);
+        }
       } catch (err) {
         console.error('Failed to fetch notifications', err);
       } finally {
@@ -26,6 +34,16 @@ const NotificationsPage = () => {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  const handleRespondInvitation = async (invitationId, accept) => {
+    try {
+      await invitationService.respond(invitationId, accept);
+      setInvitations((prev) => prev.filter((i) => i.id !== invitationId));
+      toast.success(accept ? 'Invitation accepted. You joined the project.' : 'Invitation declined.');
+    } catch {
+      toast.error('Failed to respond to invitation.');
+    }
+  };
 
   const handleMarkRead = async (id) => {
     try {
@@ -72,6 +90,37 @@ const NotificationsPage = () => {
           </button>
         )}
       </div>
+
+      {invitations.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <Mail size={16} /> Project Invitations
+          </h3>
+          <div className="bg-white border border-indigo-200 rounded-3xl shadow-sm overflow-hidden divide-y divide-slate-100">
+            {invitations.map((inv) => (
+              <div key={inv.id} className="flex items-center gap-4 px-6 py-5">
+                <div className="p-2.5 rounded-xl bg-indigo-100 text-indigo-600">
+                  <FolderKanban size={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-900 font-semibold">
+                    {inv.inviterName || 'Someone'} invited you to <span className="text-indigo-600">{inv.projectName || 'a project'}</span>
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">{new Date(inv.createdAt).toLocaleString()}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => handleRespondInvitation(inv.id, true)} className="flex items-center gap-1 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded-lg transition-colors">
+                    <Check size={14} /> Accept
+                  </button>
+                  <button onClick={() => handleRespondInvitation(inv.id, false)} className="flex items-center gap-1 text-xs font-bold text-slate-500 hover:bg-slate-100 px-3 py-2 rounded-lg transition-colors">
+                    <X size={14} /> Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden divide-y divide-slate-100">
         {notifications.length === 0 ? (

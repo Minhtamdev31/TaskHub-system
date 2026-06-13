@@ -60,6 +60,12 @@ const LoginPage = () => {
             />
           </div>
 
+          <div className="flex justify-end -mt-2">
+            <Link to="/forgot-password" className="text-sm text-blue-600 font-medium hover:underline">
+              Forgot password?
+            </Link>
+          </div>
+
           <div className="flex justify-center py-2">
             <ReCAPTCHA
               sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || "6LccYRotAAAAAKOZSmz1WzN0HoclDl3rXI3qKyau"}

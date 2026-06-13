@@ -7,4 +7,6 @@ public sealed class UpdateProfileRequest
     public string? Bio { get; set; }
     public string? PhoneNumber { get; set; }
     public string? JobTitle { get; set; }
+    public string? Theme { get; set; }
+    public bool? EnableNotifications { get; set; }
 }

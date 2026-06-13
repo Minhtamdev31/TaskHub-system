@@ -182,6 +182,21 @@ public class UserService : IUserService
         return user;
     }
 
+    public async Task<User?> ResetPasswordAsync(string email, string newPassword)
+    {
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var user = await GetByEmailAsync(normalizedEmail);
+        if (user is null)
+        {
+            return null;
+        }
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        user.UpdatedAt = DateTime.UtcNow;
+        await _userRepository.UpdateAsync(user.Id!, user);
+        return user;
+    }
+
     public async Task<User?> GetByEmailAsync(string email)
     {
         var allUsers = await _userRepository.GetAllAsync();

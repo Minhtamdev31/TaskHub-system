@@ -158,5 +158,36 @@ namespace TaskHub.API.Controllers
 
             return Ok("OTP valid. Proceed to change password.");
         }
+
+        [HttpPost("reset-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Email) ||
+                string.IsNullOrWhiteSpace(request.OtpCode) ||
+                string.IsNullOrWhiteSpace(request.NewPassword))
+            {
+                return BadRequest("Email, OTP code and new password are required.");
+            }
+
+            if (request.NewPassword.Length < 6)
+            {
+                return BadRequest("New password must be at least 6 characters.");
+            }
+
+            var isValid = await _otpService.VerifyOtpAsync(request.Email, request.OtpCode, "ResetPassword");
+            if (!isValid)
+            {
+                return BadRequest("Invalid or expired OTP.");
+            }
+
+            var user = await _userService.ResetPasswordAsync(request.Email, request.NewPassword);
+            if (user is null)
+            {
+                return BadRequest("Unable to reset password. Account not found.");
+            }
+
+            return Ok("Password has been reset successfully. You can now log in.");
+        }
     }
 }

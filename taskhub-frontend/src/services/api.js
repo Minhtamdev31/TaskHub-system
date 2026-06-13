@@ -45,8 +45,10 @@ export const authService = {
   register: (userData) => apiClient.post('/auth/register', userData),
   googleLogin: (idToken) => apiClient.post('/auth/google-login', { idToken }),
   getCurrentUser: () => apiClient.get('/users/me'),
+  verifyRegisterOtp: (data) => apiClient.post('/auth/verify-register-otp', data),
   forgotPassword: (email) => apiClient.post('/auth/forgot-password', { email }),
   verifyResetOtp: (data) => apiClient.post('/auth/verify-reset-otp', data),
+  resetPassword: (data) => apiClient.post('/auth/reset-password', data),
 };
 
 /**
@@ -87,6 +89,14 @@ export const passwordVaultService = {
 };
 
 /**
+ * Comment Service: Task discussion threads
+ */
+export const commentService = {
+  getByTask: (taskId) => apiClient.get(`/comments/task/${taskId}`),
+  create: (data) => apiClient.post('/comments', data),
+};
+
+/**
  * Invitation & Notification Service
  */
 export const notificationService = {
@@ -102,6 +112,8 @@ export const invitationService = {
 
 export const userService = {
   updateProfile: (data) => apiClient.put('/users/me/profile', data),
+  changePassword: (data) => apiClient.put('/users/me/change-password', data),
+  lookup: (ids) => apiClient.post('/users/lookup', { ids }),
 };
 
 export default apiClient;

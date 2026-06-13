@@ -13,5 +13,6 @@ public interface IUserService
     Task<User?> UpdateAsync(string id, UpdateUserRequest request);
     Task<bool> DeleteAsync(string id);
     Task<User?> ChangePasswordAsync(string userId, string oldPassword, string newPassword);
+    Task<User?> ResetPasswordAsync(string email, string newPassword);
     Task<User?> CreateAsync(User user);
 }

@@ -18,6 +18,8 @@ public sealed class AuthResponse
         Email = user.Email ?? string.Empty;
         Subscription = user.Subscription ?? SubscriptionInfo.FreeActive;
         Role = string.IsNullOrWhiteSpace(user.Role) ? "User" : user.Role;
+        Profile = user.Profile ?? new User.UserProfile();
+        Settings = user.Settings ?? new User.UserSettings();
         Token = null;
     }
 
@@ -31,5 +33,7 @@ public sealed class AuthResponse
     public string Email { get; }
     public SubscriptionInfo Subscription { get; }
     public string Role { get; }
+    public User.UserProfile Profile { get; }
+    public User.UserSettings Settings { get; }
     public string? Token { get; }
 }
