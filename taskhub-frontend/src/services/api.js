@@ -128,4 +128,22 @@ export const paymentService = {
   myOrders: () => apiClient.get('/payments/my-orders'),
 };
 
+/**
+ * Admin Service: quản trị hệ thống (yêu cầu role Admin)
+ */
+export const adminService = {
+  getDashboard: () => apiClient.get('/payments/admin/dashboard'),
+  getAllOrders: () => apiClient.get('/payments/admin/orders'),
+  getUsers: () => apiClient.get('/users'),
+  updateUser: (id, data) => apiClient.put(`/users/${id}`, data),
+  deleteUser: (id) => apiClient.delete(`/users/${id}`),
+  grantPremium: (id, durationDays) => apiClient.post(`/users/${id}/grant-premium`, { durationDays }),
+  revokePremium: (id) => apiClient.post(`/users/${id}/revoke-premium`),
+  // Subscription plans (admin)
+  getAllPlans: () => apiClient.get('/subscriptionplans/admin/all'),
+  createPlan: (data) => apiClient.post('/subscriptionplans', data),
+  updatePlan: (id, data) => apiClient.put(`/subscriptionplans/${id}`, data),
+  deletePlan: (id) => apiClient.delete(`/subscriptionplans/${id}`),
+};
+
 export default apiClient;

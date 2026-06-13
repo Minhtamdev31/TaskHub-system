@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -7,10 +8,20 @@ import {
   Layers,
   Settings,
   Crown,
+  ShieldCheck,
   LogOut
 } from 'lucide-react';
+import { authService } from '../services/api';
 
 const Sidebar = () => {
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    authService.getCurrentUser()
+      .then((res) => setIsAdmin((res.data?.role || '').toLowerCase() === 'admin'))
+      .catch(() => {});
+  }, []);
+
   const menu = [
     { title: 'Main', items: [
       { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, matchPrefix: false },
@@ -23,7 +34,10 @@ const Sidebar = () => {
     ]},
     { title: 'Billing', items: [
       { name: 'Upgrade', path: '/pricing', icon: Crown, matchPrefix: false },
-    ]}
+    ]},
+    ...(isAdmin ? [{ title: 'Admin', items: [
+      { name: 'Admin Dashboard', path: '/admin', icon: ShieldCheck, matchPrefix: false },
+    ]}] : []),
   ];
 
   const handleLogout = () => {

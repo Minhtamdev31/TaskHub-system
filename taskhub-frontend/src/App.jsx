@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/MainLayout.jsx';
+import AdminRoute from './components/AdminRoute.jsx';
 import { ToastContainer } from './components/Toast.jsx';
 import ProjectListPage from './pages/ProjectListPage.jsx';
 import PasswordVaultPage from './pages/PasswordVaultPage.jsx';
@@ -11,6 +12,7 @@ import SettingsPage from './pages/SettingsPage.jsx';
 import ProjectBoardPage from './pages/ProjectBoardPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
+import AdminDashboardPage from './pages/AdminDashboardPage.jsx';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -35,6 +37,7 @@ function App() {
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
         <Route path="/pricing" element={<ProtectedRoute><PricingPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+        <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
