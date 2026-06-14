@@ -4,6 +4,50 @@ import { Eye, EyeOff, Plus, Trash2, ShieldCheck, KeyRound } from 'lucide-react';
 import { toast } from '../components/Toast';
 import UpgradePanel from '../components/UpgradePanel';
 
+// Đánh giá độ mạnh mật khẩu theo độ dài và sự đa dạng ký tự. Trả về score 0–4.
+const evaluatePasswordStrength = (pw) => {
+  if (!pw) return { score: 0, label: '', color: '#e2e8f0' };
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
+  if (/\d/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  // Mật khẩu quá ngắn luôn bị coi là yếu.
+  if (pw.length < 6) score = 1;
+  score = Math.min(score, 4);
+
+  const levels = [
+    { label: '', color: '#e2e8f0' },
+    { label: 'Yếu', color: '#f43f5e' },
+    { label: 'Trung bình', color: '#f59e0b' },
+    { label: 'Khá', color: '#0ea5e9' },
+    { label: 'Mạnh', color: '#22c55e' },
+  ];
+  return { score, ...levels[score] };
+};
+
+const PasswordStrengthMeter = ({ password }) => {
+  const { score, label, color } = evaluatePasswordStrength(password);
+  if (!password) return null;
+  return (
+    <div className="mt-2">
+      <div className="flex gap-1.5">
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="h-1.5 flex-1 rounded-full transition-colors"
+            style={{ backgroundColor: i <= score ? color : '#e2e8f0' }}
+          />
+        ))}
+      </div>
+      <p className="text-xs font-medium mt-1" style={{ color }}>
+        Độ mạnh: {label}
+      </p>
+    </div>
+  );
+};
+
 const PasswordVaultPage = () => {
   const [credentials, setCredentials] = useState([]);
   const [visibleIds, setVisibleIds] = useState(new Set());
@@ -159,12 +203,15 @@ const PasswordVaultPage = () => {
                 className="w-full p-2 border rounded outline-none focus:ring-2 focus:ring-blue-500"
                 value={newCred.username} onChange={e => setNewCred({...newCred, username: e.target.value})} required
               />
-              <input 
-                type="password" placeholder="Password" 
-                className="w-full p-2 border rounded outline-none focus:ring-2 focus:ring-blue-500"
-                value={newCred.password} onChange={e => setNewCred({...newCred, password: e.target.value})} required
-              />
-              <input 
+              <div>
+                <input
+                  type="password" placeholder="Password"
+                  className="w-full p-2 border rounded outline-none focus:ring-2 focus:ring-blue-500"
+                  value={newCred.password} onChange={e => setNewCred({...newCred, password: e.target.value})} required
+                />
+                <PasswordStrengthMeter password={newCred.password} />
+              </div>
+              <input
                 type="text" placeholder="URL (Optional)" 
                 className="w-full p-2 border rounded outline-none focus:ring-2 focus:ring-blue-500"
                 value={newCred.url} onChange={e => setNewCred({...newCred, url: e.target.value})}

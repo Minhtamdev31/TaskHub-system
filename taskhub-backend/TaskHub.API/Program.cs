@@ -112,6 +112,7 @@ builder.Services.AddScoped<IProjectInvitationService, ProjectInvitationService>(
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IPasswordVaultService, PasswordVaultService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<TaskHub.Application.Interfaces.IRecaptchaService, TaskHub.Persistence.Services.RecaptchaService>();
 
