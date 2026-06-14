@@ -65,6 +65,25 @@ const ProjectBoardPage = () => {
   const [aiSummary, setAiSummary] = useState('');
   const [aiError, setAiError] = useState('');
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteProject = async () => {
+    setDeleting(true);
+    try {
+      await projectService.delete(id);
+      toast.success('Đã xóa dự án.');
+      window.location.href = '/projects';
+    } catch (err) {
+      const msg = typeof err.response?.data === 'string'
+        ? err.response.data
+        : (err.response?.data?.message || 'Không xóa được dự án.');
+      toast.error(msg);
+      setDeleting(false);
+      setDeleteOpen(false);
+    }
+  };
+
   const handleAiSummary = async () => {
     setAiOpen(true);
     setAiLoading(true);
@@ -288,6 +307,15 @@ const ProjectBoardPage = () => {
               </div>
             ))}
           </div>
+          {project.ownerId === currentUserId && (
+            <button
+              onClick={() => setDeleteOpen(true)}
+              title="Xóa dự án"
+              className="border border-rose-200 text-rose-600 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-rose-50 transition-all flex items-center gap-2"
+            >
+              <Trash2 size={16} /> Xóa
+            </button>
+          )}
           <button
             onClick={handleAiSummary}
             className="bg-brand-gradient text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-md hover:opacity-90 transition-opacity flex items-center gap-2"
@@ -423,6 +451,40 @@ const ProjectBoardPage = () => {
           </div>
         ))}
       </div>
+
+      {/* Delete Project Confirm Modal */}
+      {deleteOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-7 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="w-11 h-11 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                <Trash2 size={20} />
+              </span>
+              <h3 className="text-lg font-black text-slate-900">Xóa dự án?</h3>
+            </div>
+            <p className="text-sm text-slate-600 leading-relaxed mb-6">
+              Bạn sắp xóa dự án <span className="font-bold text-slate-900">{project.name}</span>.
+              Toàn bộ công việc và bình luận trong dự án sẽ bị xóa vĩnh viễn và <span className="font-bold">không thể hoàn tác</span>.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteOpen(false)}
+                disabled={deleting}
+                className="border border-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleDeleteProject}
+                disabled={deleting}
+                className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {deleting ? 'Đang xóa...' : 'Xóa vĩnh viễn'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Summary Modal */}
       {aiOpen && (
