@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -20,8 +21,9 @@ public class AiService : IAiService
     private const int MaxTasks = 100;
     private const int MaxComments = 40;
 
-    // Model miễn phí của Google Gemini (free tier).
-    private const string GeminiModel = "gemini-2.0-flash";
+    // Model miễn phí của Groq (API tương thích OpenAI).
+    private const string GroqModel = "llama-3.3-70b-versatile";
+    private const string GroqEndpoint = "https://api.groq.com/openai/v1/chat/completions";
 
     private const string SystemInstruction =
         "Bạn là trợ lý quản lý dự án của TaskHub. Hãy tóm tắt tình hình dự án bằng tiếng Việt, " +
@@ -63,10 +65,10 @@ public class AiService : IAiService
             return null;
         }
 
-        var apiKey = _configuration["Gemini:ApiKey"];
+        var apiKey = _configuration["Groq:ApiKey"];
         if (string.IsNullOrWhiteSpace(apiKey))
         {
-            throw new InvalidOperationException("Gemini API key chưa được cấu hình (Gemini:ApiKey).");
+            throw new InvalidOperationException("Groq API key chưa được cấu hình (Groq:ApiKey).");
         }
 
         var allTasks = await _taskRepository.GetAllAsync();
@@ -88,27 +90,32 @@ public class AiService : IAiService
 
         var requestBody = new
         {
-            system_instruction = new { parts = new[] { new { text = SystemInstruction } } },
-            contents = new[]
+            model = GroqModel,
+            messages = new[]
             {
-                new { role = "user", parts = new[] { new { text = prompt } } }
+                new { role = "system", content = SystemInstruction },
+                new { role = "user", content = prompt }
             },
-            generationConfig = new { maxOutputTokens = 2000, temperature = 0.4 }
+            max_tokens = 2000,
+            temperature = 0.4
         };
-
-        // Key truyền qua query string theo chuẩn REST của Gemini.
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{GeminiModel}:generateContent?key={apiKey}";
 
         var http = _httpClientFactory.CreateClient();
         http.Timeout = TimeSpan.FromSeconds(60);
 
-        using var resp = await http.PostAsJsonAsync(url, requestBody);
+        using var request = new HttpRequestMessage(HttpMethod.Post, GroqEndpoint)
+        {
+            Content = JsonContent.Create(requestBody)
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+
+        using var resp = await http.SendAsync(request);
         var body = await resp.Content.ReadAsStringAsync();
 
         if (!resp.IsSuccessStatusCode)
         {
-            // Đưa lỗi thật của Gemini ra ngoài để dễ chẩn đoán.
-            throw new HttpRequestException($"Gemini API {(int)resp.StatusCode}: {body}");
+            // Đưa lỗi thật của Groq ra ngoài để dễ chẩn đoán.
+            throw new HttpRequestException($"Groq API {(int)resp.StatusCode}: {body}");
         }
 
         using var doc = JsonDocument.Parse(body);
@@ -118,27 +125,19 @@ public class AiService : IAiService
 
     private static string ExtractText(JsonElement root)
     {
-        if (!root.TryGetProperty("candidates", out var candidates) || candidates.GetArrayLength() == 0)
+        if (!root.TryGetProperty("choices", out var choices) || choices.GetArrayLength() == 0)
         {
             return string.Empty;
         }
 
-        var first = candidates[0];
-        if (!first.TryGetProperty("content", out var content) ||
-            !content.TryGetProperty("parts", out var parts))
+        var first = choices[0];
+        if (!first.TryGetProperty("message", out var message) ||
+            !message.TryGetProperty("content", out var content))
         {
             return string.Empty;
         }
 
-        var sb = new StringBuilder();
-        foreach (var part in parts.EnumerateArray())
-        {
-            if (part.TryGetProperty("text", out var t))
-            {
-                sb.Append(t.GetString());
-            }
-        }
-        return sb.ToString();
+        return content.GetString() ?? string.Empty;
     }
 
     private static string BuildPrompt(Project project, List<TaskItem> tasks, List<Comment> comments)
