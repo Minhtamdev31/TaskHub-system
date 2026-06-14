@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import MainLayout from './components/MainLayout.jsx';
 import AdminRoute from './components/AdminRoute.jsx';
 import { ToastContainer } from './components/Toast.jsx';
+import LandingPage from './pages/LandingPage.jsx';
 import ProjectListPage from './pages/ProjectListPage.jsx';
 import PasswordVaultPage from './pages/PasswordVaultPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
@@ -29,7 +30,7 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/projects" element={<ProtectedRoute><ProjectListPage /></ProtectedRoute>} />
         <Route path="/projects/:id" element={<ProtectedRoute><ProjectBoardPage /></ProtectedRoute>} />
