@@ -61,6 +61,7 @@ export const projectService = {
   update: (id, data) => apiClient.put(`/projects/${id}`, data),
   delete: (id) => apiClient.delete(`/projects/${id}`),
   getDashboard: (id) => apiClient.get(`/projects/${id}/dashboard`),
+  aiSummary: (id) => apiClient.get(`/projects/${id}/ai-summary`),
   addMember: (id, data) => apiClient.post(`/projects/${id}/members`, data),
   removeMember: (id, userId) => apiClient.delete(`/projects/${id}/members/${userId}`),
   changeMemberRole: (id, targetUserId, newProjectRole) => apiClient.put(`/projects/${id}/members/role`, { targetUserId, newProjectRole }),

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { taskService, projectService, commentService, invitationService, userService, authService } from '../services/api';
 import { toast } from '../components/Toast';
-import { Plus, MoreHorizontal, Clock, X, ArrowLeft, Trash2, Send, UserPlus, MessageSquare, Search, Paperclip, Download, FileText, Users, Crown, Shield } from 'lucide-react';
+import { Plus, MoreHorizontal, Clock, X, ArrowLeft, Trash2, Send, UserPlus, MessageSquare, Search, Paperclip, Download, FileText, Users, Crown, Shield, Sparkles } from 'lucide-react';
 
 const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024; // 3MB
 
@@ -59,6 +59,33 @@ const ProjectBoardPage = () => {
 
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
+
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSummary, setAiSummary] = useState('');
+  const [aiError, setAiError] = useState('');
+
+  const handleAiSummary = async () => {
+    setAiOpen(true);
+    setAiLoading(true);
+    setAiError('');
+    setAiSummary('');
+    try {
+      const res = await projectService.aiSummary(id);
+      setAiSummary(res.data?.summary || '');
+    } catch (err) {
+      if (err.response?.data?.requiresUpgrade) {
+        setAiError(err.response.data.message || 'Tóm tắt AI là tính năng Premium.');
+      } else {
+        const msg = typeof err.response?.data === 'string'
+          ? err.response.data
+          : (err.response?.data?.message || 'Không tạo được tóm tắt. Vui lòng thử lại.');
+        setAiError(msg);
+      }
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const displayName = useCallback(
     (userId) => userMap[userId]?.username || userMap[userId]?.fullName || userId || 'Unassigned',
@@ -262,6 +289,12 @@ const ProjectBoardPage = () => {
             ))}
           </div>
           <button
+            onClick={handleAiSummary}
+            className="bg-brand-gradient text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-md hover:opacity-90 transition-opacity flex items-center gap-2"
+          >
+            <Sparkles size={16} /> Tóm tắt AI
+          </button>
+          <button
             onClick={() => setManageOpen(true)}
             className="border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2"
           >
@@ -390,6 +423,63 @@ const ProjectBoardPage = () => {
           </div>
         ))}
       </div>
+
+      {/* AI Summary Modal */}
+      {aiOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl relative flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <span className="w-8 h-8 rounded-lg bg-brand-gradient flex items-center justify-center text-white">
+                  <Sparkles size={16} />
+                </span>
+                Tóm tắt dự án bằng AI
+              </h3>
+              <button onClick={() => setAiOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 overflow-y-auto">
+              {aiLoading && (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <span className="w-8 h-8 border-2 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-4" />
+                  <p className="text-slate-500 text-sm">AI đang đọc các task & bình luận để tóm tắt...</p>
+                </div>
+              )}
+
+              {!aiLoading && aiError && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm">
+                  {aiError}
+                </div>
+              )}
+
+              {!aiLoading && !aiError && aiSummary && (
+                <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                  {aiSummary}
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+              {!aiLoading && (
+                <button
+                  onClick={handleAiSummary}
+                  className="border border-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-50 transition-colors"
+                >
+                  Tạo lại
+                </button>
+              )}
+              <button
+                onClick={() => setAiOpen(false)}
+                className="bg-brand-gradient text-white px-4 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-opacity"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Task Modal */}
       {isModalOpen && (

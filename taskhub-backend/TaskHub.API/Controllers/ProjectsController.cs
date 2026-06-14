@@ -13,11 +13,13 @@ public class ProjectsController : ControllerBase
 {
     private readonly IProjectService _projectService;
     private readonly IUserService _userService;
+    private readonly IAiService _aiService;
 
-    public ProjectsController(IProjectService projectService, IUserService userService)
+    public ProjectsController(IProjectService projectService, IUserService userService, IAiService aiService)
     {
         _projectService = projectService;
         _userService = userService;
+        _aiService = aiService;
     }
 
     [HttpPost]
@@ -223,6 +225,46 @@ public class ProjectsController : ControllerBase
         }
 
         return Ok(dashboardDto);
+    }
+
+    [HttpGet("{id}/ai-summary")]
+    public async Task<IActionResult> GetProjectAiSummary(string id)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var user = await _userService.GetByIdAsync(userId);
+        if (!(user?.Subscription?.IsActivePremium ?? false))
+        {
+            return StatusCode(403, new
+            {
+                message = "Tóm tắt AI là tính năng Premium. Vui lòng nâng cấp để sử dụng.",
+                requiresUpgrade = true
+            });
+        }
+
+        try
+        {
+            var summary = await _aiService.SummarizeProjectAsync(id, userId);
+            if (summary is null)
+            {
+                return BadRequest("Unauthorized or project not found.");
+            }
+
+            return Ok(new ProjectSummaryResponse { Summary = summary });
+        }
+        catch (InvalidOperationException)
+        {
+            // API key chưa cấu hình
+            return StatusCode(503, new { message = "Dịch vụ AI chưa được cấu hình trên máy chủ." });
+        }
+        catch (Exception)
+        {
+            return StatusCode(502, new { message = "Không tạo được tóm tắt. Vui lòng thử lại sau." });
+        }
     }
 
     [HttpGet("{id}/member-contributions")]
