@@ -261,9 +261,10 @@ public class ProjectsController : ControllerBase
             // API key chưa cấu hình
             return StatusCode(503, new { message = "Dịch vụ AI chưa được cấu hình trên máy chủ." });
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return StatusCode(502, new { message = "Không tạo được tóm tắt. Vui lòng thử lại sau." });
+            // Tạm thời hiện lỗi thật để chẩn đoán cấu hình AI.
+            return StatusCode(502, new { message = "Không tạo được tóm tắt: " + ex.Message });
         }
     }
 

@@ -103,11 +103,15 @@ public class AiService : IAiService
         http.Timeout = TimeSpan.FromSeconds(60);
 
         using var resp = await http.PostAsJsonAsync(url, requestBody);
-        resp.EnsureSuccessStatusCode();
+        var body = await resp.Content.ReadAsStringAsync();
 
-        using var stream = await resp.Content.ReadAsStreamAsync();
-        using var doc = await JsonDocument.ParseAsync(stream);
+        if (!resp.IsSuccessStatusCode)
+        {
+            // Đưa lỗi thật của Gemini ra ngoài để dễ chẩn đoán.
+            throw new HttpRequestException($"Gemini API {(int)resp.StatusCode}: {body}");
+        }
 
+        using var doc = JsonDocument.Parse(body);
         var text = ExtractText(doc.RootElement);
         return string.IsNullOrWhiteSpace(text) ? null : text;
     }
