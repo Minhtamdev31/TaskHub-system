@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ReCAPTCHA from "react-google-recaptcha";
 import { authService } from '../services/api';
+import GoogleLoginButton from '../components/GoogleLoginButton';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -10,6 +11,8 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const recaptchaRef = useRef(null);
+
+  const handleGoogleError = useCallback((message) => setError(message), []);
 
   const resetCaptcha = () => {
     recaptchaRef.current?.reset();
@@ -113,6 +116,14 @@ const LoginPage = () => {
             </p>
           )}
         </form>
+
+        <div className="flex items-center gap-3 my-6">
+          <div className="flex-1 h-px bg-slate-200" />
+          <span className="text-xs text-slate-400 uppercase tracking-wide">hoặc</span>
+          <div className="flex-1 h-px bg-slate-200" />
+        </div>
+
+        <GoogleLoginButton onError={handleGoogleError} />
 
         <div className="mt-8 pt-6 border-t border-slate-100 text-center">
           <p className="text-slate-600 text-sm">

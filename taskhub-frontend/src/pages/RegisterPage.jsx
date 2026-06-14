@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import ReCAPTCHA from "react-google-recaptcha";
 import { authService } from '../services/api';
 import { toast } from '../components/Toast';
+import GoogleLoginButton from '../components/GoogleLoginButton';
 
 const getError = (err, fallback) =>
   typeof err.response?.data === 'string'
@@ -130,6 +131,14 @@ const RegisterPage = () => {
             >
               {loading ? 'Đang gửi OTP...' : 'Đăng ký'}
             </button>
+
+            <div className="flex items-center gap-3 pt-2">
+              <div className="flex-1 h-px bg-slate-200" />
+              <span className="text-xs text-slate-400 uppercase tracking-wide">hoặc</span>
+              <div className="flex-1 h-px bg-slate-200" />
+            </div>
+
+            <GoogleLoginButton onError={setError} />
           </form>
         ) : (
           <form onSubmit={handleVerifyOtp} className="space-y-5">
