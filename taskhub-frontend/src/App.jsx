@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import MainLayout from './components/MainLayout.jsx';
 import AdminRoute from './components/AdminRoute.jsx';
 import { ToastContainer } from './components/Toast.jsx';
+import { ConfirmContainer } from './components/ConfirmDialog.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import ProjectListPage from './pages/ProjectListPage.jsx';
 import PasswordVaultPage from './pages/PasswordVaultPage.jsx';
@@ -25,6 +26,7 @@ function App() {
   return (
     <Router>
       <ToastContainer />
+      <ConfirmContainer />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

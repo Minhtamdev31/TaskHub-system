@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { adminService } from '../services/api';
 import { toast } from '../components/Toast';
+import { confirm } from '../components/ConfirmDialog';
 
 const TABS = [
   { id: 'overview', name: 'Tổng quan', icon: LayoutDashboard },
@@ -156,7 +157,7 @@ const UsersTab = () => {
     catch { toast.error('Đổi vai trò thất bại.'); }
   };
   const handleDelete = async (u) => {
-    if (!window.confirm(`Xóa người dùng ${u.username}?`)) return;
+    if (!(await confirm({ title: 'Xóa người dùng?', message: `Người dùng "${u.username}" sẽ bị xóa.`, confirmText: 'Xóa', danger: true }))) return;
     try { await adminService.deleteUser(u.id); toast.success('Đã xóa người dùng.'); load(); }
     catch { toast.error('Xóa thất bại.'); }
   };
@@ -257,7 +258,7 @@ const PlansTab = () => {
   };
 
   const handleDelete = async (p) => {
-    if (!window.confirm(`Xóa gói "${p.title}"?`)) return;
+    if (!(await confirm({ title: 'Xóa gói?', message: `Gói "${p.title}" sẽ bị xóa.`, confirmText: 'Xóa', danger: true }))) return;
     try { await adminService.deletePlan(p.id); toast.success('Đã xóa gói.'); load(); }
     catch { toast.error('Xóa thất bại.'); }
   };

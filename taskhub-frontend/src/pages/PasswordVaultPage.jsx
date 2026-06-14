@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { passwordVaultService } from '../services/api';
 import { Eye, EyeOff, Plus, Trash2, ShieldCheck, KeyRound } from 'lucide-react';
 import { toast } from '../components/Toast';
+import { confirm } from '../components/ConfirmDialog';
 import UpgradePanel from '../components/UpgradePanel';
 
 // Đánh giá độ mạnh mật khẩu theo độ dài và sự đa dạng ký tự. Trả về score 0–4.
@@ -91,7 +92,7 @@ const PasswordVaultPage = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Xóa thông tin này?")) return;
+    if (!(await confirm({ title: 'Xóa thông tin?', message: 'Mục mật khẩu này sẽ bị xóa vĩnh viễn.', confirmText: 'Xóa', danger: true }))) return;
     try {
       await passwordVaultService.delete(id);
       fetchVault();

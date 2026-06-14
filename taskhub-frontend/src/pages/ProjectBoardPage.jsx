@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { taskService, projectService, commentService, invitationService, userService, authService } from '../services/api';
 import { toast } from '../components/Toast';
+import { confirm } from '../components/ConfirmDialog';
 import { Plus, MoreHorizontal, Clock, X, ArrowLeft, Trash2, Send, UserPlus, MessageSquare, Search, Paperclip, Download, FileText, Users, Crown, Shield, Sparkles } from 'lucide-react';
 
 const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024; // 3MB
@@ -206,7 +207,7 @@ const ProjectBoardPage = () => {
   };
 
   const handleDeleteTask = async (taskId) => {
-    if (!window.confirm('Xóa công việc này?')) return;
+    if (!(await confirm({ title: 'Xóa công việc?', message: 'Công việc này sẽ bị xóa.', confirmText: 'Xóa', danger: true }))) return;
     try {
       await taskService.delete(taskId);
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
@@ -255,7 +256,7 @@ const ProjectBoardPage = () => {
   };
 
   const handleRemoveMember = async (targetUserId) => {
-    if (!window.confirm('Xóa thành viên này khỏi dự án?')) return;
+    if (!(await confirm({ title: 'Xóa thành viên?', message: 'Thành viên này sẽ bị xóa khỏi dự án.', confirmText: 'Xóa', danger: true }))) return;
     try {
       await projectService.removeMember(id, targetUserId);
       setProject((prev) => ({ ...prev, members: prev.members.filter((m) => m.userId !== targetUserId) }));
@@ -266,7 +267,7 @@ const ProjectBoardPage = () => {
   };
 
   const handleTransferOwner = async (targetUserId) => {
-    if (!window.confirm('Chuyển quyền sở hữu dự án cho thành viên này? Bạn sẽ trở thành Trưởng nhóm.')) return;
+    if (!(await confirm({ title: 'Chuyển quyền sở hữu?', message: 'Bạn sẽ chuyển quyền sở hữu dự án cho thành viên này và trở thành Trưởng nhóm.', confirmText: 'Chuyển quyền' }))) return;
     try {
       const res = await projectService.transferOwnership(id, targetUserId);
       setProject(res.data);
