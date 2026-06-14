@@ -4,17 +4,17 @@ import { projectService, taskService } from '../services/api';
 import { Link } from 'react-router-dom';
 
 const STATUS_META = [
-  { key: 'Todo', label: 'Todo', color: '#94a3b8' },
-  { key: 'InProgress', label: 'In Progress', color: '#6366f1' },
-  { key: 'Review', label: 'Review', color: '#f59e0b' },
-  { key: 'Done', label: 'Done', color: '#22c55e' },
+  { key: 'Todo', label: 'Cần làm', color: '#94a3b8' },
+  { key: 'InProgress', label: 'Đang làm', color: '#6366f1' },
+  { key: 'Review', label: 'Xem xét', color: '#f59e0b' },
+  { key: 'Done', label: 'Hoàn thành', color: '#22c55e' },
 ];
 
 const PRIORITY_META = [
-  { key: 'Critical', label: 'Critical', color: '#f43f5e' },
-  { key: 'High', label: 'High', color: '#f59e0b' },
-  { key: 'Medium', label: 'Medium', color: '#0ea5e9' },
-  { key: 'Low', label: 'Low', color: '#94a3b8' },
+  { key: 'Critical', label: 'Khẩn cấp', color: '#f43f5e' },
+  { key: 'High', label: 'Cao', color: '#f59e0b' },
+  { key: 'Medium', label: 'Trung bình', color: '#0ea5e9' },
+  { key: 'Low', label: 'Thấp', color: '#94a3b8' },
 ];
 
 // Lightweight SVG donut chart — no external chart library.
@@ -49,7 +49,7 @@ const DonutChart = ({ segments, total, size = 180, stroke = 22 }) => {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-3xl font-black text-slate-900">{total}</span>
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tasks</span>
+        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Công việc</span>
       </div>
     </div>
   );
@@ -111,7 +111,7 @@ const DashboardPage = () => {
   }, []);
 
   if (loading) {
-    return <div className="p-8 text-slate-500">Loading dashboard...</div>;
+    return <div className="p-8 text-slate-500">Đang tải tổng quan...</div>;
   }
 
   const total = tasks.length;
@@ -123,17 +123,17 @@ const DashboardPage = () => {
   const completionRate = total ? Math.round((doneCount / total) * 100) : 0;
 
   const cards = [
-    { label: 'Total Projects', value: projects.length, icon: FolderKanban, color: 'text-blue-600' },
-    { label: 'In Progress', value: inProgressCount, icon: Activity, color: 'text-indigo-600' },
-    { label: 'Completion Rate', value: `${completionRate}%`, icon: CheckCircle2, color: 'text-green-600' },
-    { label: 'Overdue', value: overdueCount, icon: AlertTriangle, color: 'text-rose-600' },
+    { label: 'Tổng dự án', value: projects.length, icon: FolderKanban, color: 'text-blue-600' },
+    { label: 'Đang làm', value: inProgressCount, icon: Activity, color: 'text-indigo-600' },
+    { label: 'Tỷ lệ hoàn thành', value: `${completionRate}%`, icon: CheckCircle2, color: 'text-green-600' },
+    { label: 'Quá hạn', value: overdueCount, icon: AlertTriangle, color: 'text-rose-600' },
   ];
 
   return (
     <div className="space-y-10">
       <div>
-        <h2 className="text-4xl font-black text-slate-900 tracking-tight">Dashboard</h2>
-        <p className="text-slate-500 mt-1">Real-time overview of your performance and team contributions.</p>
+        <h2 className="text-4xl font-black text-slate-900 tracking-tight">Tổng quan</h2>
+        <p className="text-slate-500 mt-1">Tổng quan thời gian thực về hiệu suất và đóng góp của nhóm.</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
@@ -153,10 +153,10 @@ const DashboardPage = () => {
         <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
           <h3 className="text-xl font-extrabold text-slate-900 mb-6 flex items-center gap-3">
             <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><BarChart3 size={20} /></div>
-            Tasks by Status
+            Công việc theo trạng thái
           </h3>
           {total === 0 ? (
-            <p className="text-slate-400 text-sm">No tasks yet.</p>
+            <p className="text-slate-400 text-sm">Chưa có công việc.</p>
           ) : (
             <div className="flex items-center gap-8">
               <DonutChart segments={statusCounts} total={total} />
@@ -177,10 +177,10 @@ const DashboardPage = () => {
         <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
           <h3 className="text-xl font-extrabold text-slate-900 mb-6 flex items-center gap-3">
             <div className="p-2 bg-rose-50 rounded-lg text-rose-600"><Activity size={20} /></div>
-            Tasks by Priority
+            Công việc theo độ ưu tiên
           </h3>
           {total === 0 ? (
-            <p className="text-slate-400 text-sm">No tasks yet.</p>
+            <p className="text-slate-400 text-sm">Chưa có công việc.</p>
           ) : (
             <div className="space-y-4">
               {priorityCounts.map((p) => (
@@ -195,17 +195,17 @@ const DashboardPage = () => {
       <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
         <h3 className="text-xl font-extrabold text-slate-900 mb-6 flex items-center gap-3">
           <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600"><FolderKanban size={20} /></div>
-          Project Progress
+          Tiến độ dự án
         </h3>
         {projectStats.length === 0 ? (
-          <p className="text-slate-400 text-sm">No projects yet. Create one from the Projects page.</p>
+          <p className="text-slate-400 text-sm">Chưa có dự án. Tạo dự án ở trang Dự án.</p>
         ) : (
           <div className="space-y-5">
             {projectStats.map((p) => (
               <Link key={p.id} to={`/projects/${p.id}`} className="block group">
                 <div className="flex justify-between items-center text-sm mb-1.5">
                   <span className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{p.name}</span>
-                  <span className="text-slate-400 font-medium">{p.done}/{p.total} done · <span className="font-bold text-slate-700">{p.pct}%</span></span>
+                  <span className="text-slate-400 font-medium">{p.done}/{p.total} xong · <span className="font-bold text-slate-700">{p.pct}%</span></span>
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-3">
                   <div className="bg-indigo-600 h-3 rounded-full transition-all" style={{ width: `${p.pct}%` }} />

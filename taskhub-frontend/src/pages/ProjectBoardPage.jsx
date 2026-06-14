@@ -16,13 +16,19 @@ const readFileAsDataUrl = (file) =>
 
 const columns = ['Todo', 'InProgress', 'Review', 'Done'];
 
+// Nhãn hiển thị tiếng Việt; key vẫn giữ tiếng Anh để khớp dữ liệu BE.
+const statusLabels = { Todo: 'Cần làm', InProgress: 'Đang làm', Review: 'Xem xét', Done: 'Hoàn thành' };
+const statusLabel = (s) => statusLabels[s] || s;
+
+const roleLabels = { Owner: 'Chủ sở hữu', Leader: 'Trưởng nhóm', Member: 'Thành viên' };
+
 const priorities = ['Low', 'Medium', 'High', 'Critical'];
 
 const priorityConfig = {
-  Low: { label: 'Low', badge: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400' },
-  Medium: { label: 'Medium', badge: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500' },
-  High: { label: 'High', badge: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
-  Critical: { label: 'Critical', badge: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500' },
+  Low: { label: 'Thấp', badge: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400' },
+  Medium: { label: 'Trung bình', badge: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500' },
+  High: { label: 'Cao', badge: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
+  Critical: { label: 'Khẩn cấp', badge: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500' },
 };
 
 const priorityBadge = (p) => priorityConfig[p] || priorityConfig.Medium;
@@ -90,7 +96,7 @@ const ProjectBoardPage = () => {
           loadUserNames(pRes.data.members, tRes.data);
         }
       } catch {
-        toast.error('Failed to load board data.');
+        toast.error('Không tải được dữ liệu bảng.');
       }
     })();
     return () => { cancelled = true; };
@@ -102,7 +108,7 @@ const ProjectBoardPage = () => {
       setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
       setSelectedTask((prev) => (prev && prev.id === taskId ? { ...prev, status: newStatus } : prev));
     } catch {
-      toast.error('Failed to update task status.');
+      toast.error('Không cập nhật được trạng thái.');
     }
   };
 
@@ -112,7 +118,7 @@ const ProjectBoardPage = () => {
       setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, priority: newPriority } : t)));
       setSelectedTask((prev) => (prev && prev.id === taskId ? { ...prev, priority: newPriority } : prev));
     } catch {
-      toast.error('Failed to update priority.');
+      toast.error('Không cập nhật được độ ưu tiên.');
     }
   };
 
@@ -145,23 +151,23 @@ const ProjectBoardPage = () => {
       setTasks((prev) => [...prev, res.data]);
       setIsModalOpen(false);
       setNewTask({ title: '', description: '', dueDate: '', priority: 'Medium' });
-      toast.success('Task created.');
+      toast.success('Đã tạo công việc.');
     } catch {
-      toast.error('Failed to create task.');
+      toast.error('Tạo công việc thất bại.');
     } finally {
       setCreating(false);
     }
   };
 
   const handleDeleteTask = async (taskId) => {
-    if (!window.confirm('Delete this task?')) return;
+    if (!window.confirm('Xóa công việc này?')) return;
     try {
       await taskService.delete(taskId);
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
       setSelectedTask(null);
-      toast.success('Task deleted.');
+      toast.success('Đã xóa công việc.');
     } catch {
-      toast.error('Failed to delete task.');
+      toast.error('Xóa công việc thất bại.');
     }
   };
 
@@ -170,9 +176,9 @@ const ProjectBoardPage = () => {
       await taskService.assign(taskId, targetUserId);
       setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, userId: targetUserId } : t)));
       setSelectedTask((prev) => (prev && prev.id === taskId ? { ...prev, userId: targetUserId } : prev));
-      toast.success('Task assigned.');
+      toast.success('Đã giao việc.');
     } catch {
-      toast.error('Failed to assign task.');
+      toast.error('Giao việc thất bại.');
     }
   };
 
@@ -181,11 +187,11 @@ const ProjectBoardPage = () => {
     setInviting(true);
     try {
       await invitationService.invite({ projectId: id, invitedEmail: inviteEmail });
-      toast.success(`Invitation sent to ${inviteEmail}.`);
+      toast.success(`Đã gửi lời mời tới ${inviteEmail}.`);
       setInviteEmail('');
       setInviteOpen(false);
     } catch (err) {
-      const msg = typeof err.response?.data === 'string' ? err.response.data : 'Failed to send invitation.';
+      const msg = typeof err.response?.data === 'string' ? err.response.data : 'Gửi lời mời thất bại.';
       toast.error(msg);
     } finally {
       setInviting(false);
@@ -196,35 +202,35 @@ const ProjectBoardPage = () => {
     try {
       const res = await projectService.changeMemberRole(id, targetUserId, newRole);
       setProject(res.data);
-      toast.success('Member role updated.');
+      toast.success('Đã cập nhật vai trò.');
     } catch {
-      toast.error('Failed to update role.');
+      toast.error('Cập nhật vai trò thất bại.');
     }
   };
 
   const handleRemoveMember = async (targetUserId) => {
-    if (!window.confirm('Remove this member from the project?')) return;
+    if (!window.confirm('Xóa thành viên này khỏi dự án?')) return;
     try {
       await projectService.removeMember(id, targetUserId);
       setProject((prev) => ({ ...prev, members: prev.members.filter((m) => m.userId !== targetUserId) }));
-      toast.success('Member removed.');
+      toast.success('Đã xóa thành viên.');
     } catch {
-      toast.error('Failed to remove member.');
+      toast.error('Xóa thành viên thất bại.');
     }
   };
 
   const handleTransferOwner = async (targetUserId) => {
-    if (!window.confirm('Transfer project ownership to this member? You will become a Leader.')) return;
+    if (!window.confirm('Chuyển quyền sở hữu dự án cho thành viên này? Bạn sẽ trở thành Trưởng nhóm.')) return;
     try {
       const res = await projectService.transferOwnership(id, targetUserId);
       setProject(res.data);
-      toast.success('Ownership transferred.');
+      toast.success('Đã chuyển quyền sở hữu.');
     } catch {
-      toast.error('Failed to transfer ownership.');
+      toast.error('Chuyển quyền sở hữu thất bại.');
     }
   };
 
-  if (!project) return <div className="p-8 text-slate-500">Loading board...</div>;
+  if (!project) return <div className="p-8 text-slate-500">Đang tải bảng...</div>;
 
   const q = search.trim().toLowerCase();
   const visibleTasks = tasks.filter((t) => {
@@ -242,10 +248,10 @@ const ProjectBoardPage = () => {
       <div className="flex justify-between items-end">
         <div>
           <Link to="/projects" className="text-sm font-medium text-slate-400 hover:text-indigo-600 flex items-center gap-1 mb-2">
-            <ArrowLeft size={14} /> Back to Projects
+            <ArrowLeft size={14} /> Quay lại Dự án
           </Link>
-          <nav className="text-sm font-medium text-slate-400 mb-1">Projects / {project.name}</nav>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Kanban Board</h2>
+          <nav className="text-sm font-medium text-slate-400 mb-1">Dự án / {project.name}</nav>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Bảng Kanban</h2>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex -space-x-2 mr-2">
@@ -259,19 +265,19 @@ const ProjectBoardPage = () => {
             onClick={() => setManageOpen(true)}
             className="border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2"
           >
-            <Users size={16} /> Members
+            <Users size={16} /> Thành viên
           </button>
           <button
             onClick={() => setInviteOpen(true)}
             className="border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2"
           >
-            <UserPlus size={16} /> Invite
+            <UserPlus size={16} /> Mời
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
             className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md hover:bg-indigo-700 transition-all flex items-center gap-2"
           >
-            <Plus size={16} /> Create Task
+            <Plus size={16} /> Tạo công việc
           </button>
         </div>
       </div>
@@ -282,19 +288,19 @@ const ProjectBoardPage = () => {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Search tasks..."
+            placeholder="Tìm công việc..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
           />
         </div>
         <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-          <option value="All">All priorities</option>
-          {priorities.map((p) => <option key={p} value={p}>{p}</option>)}
+          <option value="All">Tất cả độ ưu tiên</option>
+          {priorities.map((p) => <option key={p} value={p}>{priorityConfig[p].label}</option>)}
         </select>
         <select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)} className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-          <option value="All">All assignees</option>
-          <option value="Unassigned">Unassigned</option>
+          <option value="All">Tất cả người nhận</option>
+          <option value="Unassigned">Chưa giao</option>
           {(project.members || []).map((m) => <option key={m.userId} value={m.userId}>{displayName(m.userId)}</option>)}
         </select>
         {filtersActive && (
@@ -302,10 +308,10 @@ const ProjectBoardPage = () => {
             onClick={() => { setSearch(''); setPriorityFilter('All'); setAssigneeFilter('All'); }}
             className="text-sm font-medium text-slate-500 hover:text-indigo-600 flex items-center gap-1"
           >
-            <X size={14} /> Clear
+            <X size={14} /> Xóa lọc
           </button>
         )}
-        <span className="text-xs font-bold text-slate-400 ml-auto">{visibleTasks.length} / {tasks.length} tasks</span>
+        <span className="text-xs font-bold text-slate-400 ml-auto">{visibleTasks.length} / {tasks.length} công việc</span>
       </div>
 
       <div className="flex gap-6 overflow-x-auto pb-6">
@@ -313,7 +319,7 @@ const ProjectBoardPage = () => {
           <div key={column} className="flex-shrink-0 w-80 flex flex-col">
             <div className="flex justify-between items-center mb-4 px-2">
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-slate-700">{column}</h3>
+                <h3 className="font-bold text-slate-700">{statusLabel(column)}</h3>
                 <span className="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full font-black">
                   {visibleTasks.filter((t) => t.status === column).length}
                 </span>
@@ -358,7 +364,7 @@ const ProjectBoardPage = () => {
                     <div className="flex items-center gap-3 text-slate-400">
                       {task.dueDate && (
                         <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
-                          <Clock size={12} /> {new Date(task.dueDate).toLocaleDateString()}
+                          <Clock size={12} /> {new Date(task.dueDate).toLocaleDateString('vi-VN')}
                         </div>
                       )}
                     </div>
@@ -374,7 +380,7 @@ const ProjectBoardPage = () => {
                         onClick={() => handleUpdateStatus(task.id, c)}
                         className="text-[9px] font-bold px-2 py-1 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 rounded-md transition-colors"
                       >
-                        Move to {c}
+                        Chuyển sang {statusLabel(c)}
                       </button>
                     ))}
                   </div>
@@ -392,33 +398,33 @@ const ProjectBoardPage = () => {
             <button type="button" onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
               <X size={20} />
             </button>
-            <h3 className="text-2xl font-bold mb-6">Create Task</h3>
+            <h3 className="text-2xl font-bold mb-6">Tạo công việc</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Tiêu đề</label>
                 <input type="text" required className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={newTask.title} onChange={(e) => setNewTask({ ...newTask, title: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Mô tả</label>
                 <textarea rows={3} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={newTask.description} onChange={(e) => setNewTask({ ...newTask, description: e.target.value })} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Priority</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Độ ưu tiên</label>
                   <select className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={newTask.priority} onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}>
-                    {priorities.map((p) => <option key={p} value={p}>{p}</option>)}
+                    {priorities.map((p) => <option key={p} value={p}>{priorityConfig[p].label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Due Date</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Hạn chót</label>
                   <input type="date" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={newTask.dueDate} onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })} />
                 </div>
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-500 font-medium px-4">Cancel</button>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-500 font-medium px-4">Hủy</button>
               <button type="submit" disabled={creating} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 disabled:opacity-50">
-                {creating ? 'Creating...' : 'Create Task'}
+                {creating ? 'Đang tạo...' : 'Tạo công việc'}
               </button>
             </div>
           </form>
@@ -432,13 +438,13 @@ const ProjectBoardPage = () => {
             <button type="button" onClick={() => setInviteOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
               <X size={20} />
             </button>
-            <h3 className="text-2xl font-bold mb-2">Invite Member</h3>
-            <p className="text-sm text-slate-500 mb-6">Send a project invitation to a teammate's email.</p>
-            <input type="email" required placeholder="teammate@example.com" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} />
+            <h3 className="text-2xl font-bold mb-2">Mời thành viên</h3>
+            <p className="text-sm text-slate-500 mb-6">Gửi lời mời dự án tới email của đồng đội.</p>
+            <input type="email" required placeholder="dongdoi@example.com" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} />
             <div className="flex justify-end gap-3 mt-6">
-              <button type="button" onClick={() => setInviteOpen(false)} className="text-slate-500 font-medium px-4">Cancel</button>
+              <button type="button" onClick={() => setInviteOpen(false)} className="text-slate-500 font-medium px-4">Hủy</button>
               <button type="submit" disabled={inviting} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 disabled:opacity-50">
-                {inviting ? 'Sending...' : 'Send Invite'}
+                {inviting ? 'Đang gửi...' : 'Gửi lời mời'}
               </button>
             </div>
           </form>
@@ -487,7 +493,7 @@ const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, 
     setLoadingComments(true);
     commentService.getByTask(task.id)
       .then((res) => { if (!cancelled) setComments(res.data); })
-      .catch(() => { if (!cancelled) toast.error('Failed to load comments.'); })
+      .catch(() => { if (!cancelled) toast.error('Không tải được bình luận.'); })
       .finally(() => { if (!cancelled) setLoadingComments(false); });
     return () => { cancelled = true; };
   }, [task.id]);
@@ -497,14 +503,14 @@ const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, 
     e.target.value = ''; // allow re-picking same file
     if (!file) return;
     if (file.size > MAX_ATTACHMENT_BYTES) {
-      toast.error('Attachment too large (max 3MB).');
+      toast.error('Tệp đính kèm quá lớn (tối đa 3MB).');
       return;
     }
     try {
       const dataUrl = await readFileAsDataUrl(file);
       setAttachment({ name: file.name, type: file.type || 'application/octet-stream', dataUrl });
     } catch {
-      toast.error('Failed to read file.');
+      toast.error('Không đọc được tệp.');
     }
   };
 
@@ -524,7 +530,7 @@ const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, 
       setNewComment('');
       setAttachment(null);
     } catch {
-      toast.error('Failed to add comment.');
+      toast.error('Không gửi được bình luận.');
     } finally {
       setPosting(false);
     }
@@ -540,40 +546,40 @@ const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, 
 
           <div className="grid grid-cols-3 gap-4 mt-5">
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Trạng thái</label>
               <select value={task.status} onChange={(e) => onStatusChange(task.id, e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                {columns.map((c) => <option key={c} value={c}>{c}</option>)}
+                {columns.map((c) => <option key={c} value={c}>{statusLabel(c)}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Priority</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Độ ưu tiên</label>
               <select value={task.priority || 'Medium'} onChange={(e) => onPriorityChange(task.id, e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                {priorities.map((p) => <option key={p} value={p}>{p}</option>)}
+                {priorities.map((p) => <option key={p} value={p}>{priorityConfig[p].label}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Assignee</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Người nhận</label>
               <select value={task.userId || ''} onChange={(e) => onAssign(task.id, e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                <option value="" disabled>Select member</option>
+                <option value="" disabled>Chọn thành viên</option>
                 {members.map((m) => <option key={m.userId} value={m.userId}>{displayName(m.userId)}</option>)}
               </select>
             </div>
           </div>
           {task.dueDate && (
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 mt-4 uppercase tracking-wider">
-              <Clock size={14} /> Due {new Date(task.dueDate).toLocaleDateString()}
+              <Clock size={14} /> Hạn {new Date(task.dueDate).toLocaleDateString('vi-VN')}
             </div>
           )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-8 pt-5">
           <h4 className="font-bold text-slate-700 flex items-center gap-2 mb-4">
-            <MessageSquare size={16} /> Comments ({comments.length})
+            <MessageSquare size={16} /> Bình luận ({comments.length})
           </h4>
           {loadingComments ? (
-            <p className="text-sm text-slate-400">Loading comments...</p>
+            <p className="text-sm text-slate-400">Đang tải bình luận...</p>
           ) : comments.length === 0 ? (
-            <p className="text-sm text-slate-400">No comments yet. Start the discussion.</p>
+            <p className="text-sm text-slate-400">Chưa có bình luận. Bắt đầu trao đổi.</p>
           ) : (
             <div className="space-y-4">
               {comments.map((c) => (
@@ -584,7 +590,7 @@ const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, 
                   <div className="flex-1 bg-slate-50 rounded-xl px-4 py-2.5">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-bold text-slate-800">{displayName(c.userId)}</span>
-                      <span className="text-[10px] text-slate-400">{new Date(c.createdAt).toLocaleString()}</span>
+                      <span className="text-[10px] text-slate-400">{new Date(c.createdAt).toLocaleString('vi-VN')}</span>
                     </div>
                     {c.content && <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">{c.content}</p>}
                     {c.attachmentData && <CommentAttachment attachment={c} />}
@@ -606,15 +612,15 @@ const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, 
             </div>
           )}
           <div className="flex items-center gap-3">
-            <button onClick={() => onDelete(task.id)} className="text-slate-300 hover:text-rose-600 p-2.5 hover:bg-rose-50 rounded-xl transition-all shrink-0" title="Delete task">
+            <button onClick={() => onDelete(task.id)} className="text-slate-300 hover:text-rose-600 p-2.5 hover:bg-rose-50 rounded-xl transition-all shrink-0" title="Xóa công việc">
               <Trash2 size={18} />
             </button>
             <form onSubmit={handleAddComment} className="flex-1 flex gap-2">
-              <label className="shrink-0 cursor-pointer text-slate-400 hover:text-indigo-600 p-2.5 hover:bg-indigo-50 rounded-xl transition-all flex items-center" title="Attach file">
+              <label className="shrink-0 cursor-pointer text-slate-400 hover:text-indigo-600 p-2.5 hover:bg-indigo-50 rounded-xl transition-all flex items-center" title="Đính kèm tệp">
                 <Paperclip size={18} />
                 <input type="file" className="hidden" onChange={handlePickFile} />
               </label>
-              <input type="text" placeholder="Write a comment..." className="flex-1 px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={newComment} onChange={(e) => setNewComment(e.target.value)} />
+              <input type="text" placeholder="Viết bình luận..." className="flex-1 px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={newComment} onChange={(e) => setNewComment(e.target.value)} />
               <button type="submit" disabled={posting || (!newComment.trim() && !attachment)} className="bg-indigo-600 text-white px-4 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2">
                 <Send size={16} />
               </button>
@@ -643,7 +649,7 @@ const ManageMembersModal = ({ project, currentUserId, displayName, onClose, onCh
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl relative max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2"><Users size={20} /> Members ({sorted.length})</h3>
+          <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2"><Users size={20} /> Thành viên ({sorted.length})</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
 
@@ -658,13 +664,13 @@ const ManageMembersModal = ({ project, currentUserId, displayName, onClose, onCh
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-slate-800 truncate">
-                    {displayName(m.userId)} {isSelf && <span className="text-slate-400 font-medium">(you)</span>}
+                    {displayName(m.userId)} {isSelf && <span className="text-slate-400 font-medium">(bạn)</span>}
                   </p>
                   <span className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider mt-0.5 ${
                     memberIsOwner ? 'text-amber-600' : m.projectRole === 'Leader' ? 'text-indigo-600' : 'text-slate-400'
                   }`}>
                     {memberIsOwner ? <Crown size={11} /> : m.projectRole === 'Leader' ? <Shield size={11} /> : null}
-                    {memberIsOwner ? 'Owner' : m.projectRole}
+                    {memberIsOwner ? roleLabels.Owner : (roleLabels[m.projectRole] || m.projectRole)}
                   </span>
                 </div>
 
@@ -675,13 +681,13 @@ const ManageMembersModal = ({ project, currentUserId, displayName, onClose, onCh
                       onChange={(e) => onChangeRole(m.userId, e.target.value)}
                       className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none"
                     >
-                      <option value="Member">Member</option>
-                      <option value="Leader">Leader</option>
+                      <option value="Member">Thành viên</option>
+                      <option value="Leader">Trưởng nhóm</option>
                     </select>
                     {isOwner && (
                       <button
                         onClick={() => onTransferOwner(m.userId)}
-                        title="Transfer ownership"
+                        title="Chuyển quyền sở hữu"
                         className="text-slate-400 hover:text-amber-600 p-1.5 hover:bg-amber-50 rounded-lg transition-colors"
                       >
                         <Crown size={16} />
@@ -689,7 +695,7 @@ const ManageMembersModal = ({ project, currentUserId, displayName, onClose, onCh
                     )}
                     <button
                       onClick={() => onRemove(m.userId)}
-                      title="Remove member"
+                      title="Xóa thành viên"
                       className="text-slate-400 hover:text-rose-600 p-1.5 hover:bg-rose-50 rounded-lg transition-colors"
                     >
                       <Trash2 size={16} />
@@ -703,7 +709,7 @@ const ManageMembersModal = ({ project, currentUserId, displayName, onClose, onCh
 
         {!canManage && (
           <div className="px-6 py-3 text-xs text-slate-400 border-t border-slate-100">
-            Only the owner or a leader can manage members.
+            Chỉ chủ sở hữu hoặc trưởng nhóm mới quản lý được thành viên.
           </div>
         )}
       </div>

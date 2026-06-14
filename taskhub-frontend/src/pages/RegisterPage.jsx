@@ -21,17 +21,17 @@ const RegisterPage = () => {
   const handleRegister = async (e) => {
     e.preventDefault();
     setError('');
-    if (formData.password !== formData.confirmPassword) return setError("Passwords do not match.");
-    if (formData.password.length < 6) return setError("Password must be at least 6 characters.");
-    if (!captchaToken) return setError('Please verify you are not a robot.');
+    if (formData.password !== formData.confirmPassword) return setError("Mật khẩu không khớp.");
+    if (formData.password.length < 6) return setError("Mật khẩu phải có ít nhất 6 ký tự.");
+    if (!captchaToken) return setError('Vui lòng xác minh bạn không phải robot.');
 
     setLoading(true);
     try {
       await authService.register({ ...formData, captchaToken });
-      toast.success('OTP code sent to your email.');
+      toast.success('Mã OTP đã được gửi tới email của bạn.');
       setStep(2);
     } catch (err) {
-      setError(getError(err, 'Registration failed.'));
+      setError(getError(err, 'Đăng ký thất bại.'));
     } finally {
       setLoading(false);
     }
@@ -48,10 +48,10 @@ const RegisterPage = () => {
         password: formData.password,
         otpCode,
       });
-      toast.success('Registration successful! You can now log in.');
+      toast.success('Đăng ký thành công! Bạn có thể đăng nhập ngay.');
       navigate('/login');
     } catch (err) {
-      setError(getError(err, 'Verification failed.'));
+      setError(getError(err, 'Xác minh thất bại.'));
     } finally {
       setLoading(false);
     }
@@ -62,10 +62,10 @@ const RegisterPage = () => {
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold text-slate-900">
-            {step === 1 ? 'Create Account' : 'Verify Your Email'}
+            {step === 1 ? 'Tạo tài khoản' : 'Xác minh email'}
           </h2>
           <p className="text-slate-500 mt-2">
-            {step === 1 ? 'Join TaskHub to start collaborating' : `Enter the code we sent to ${formData.email}`}
+            {step === 1 ? 'Tham gia TaskHub để bắt đầu cộng tác' : `Nhập mã chúng tôi đã gửi tới ${formData.email}`}
           </p>
         </div>
 
@@ -74,7 +74,7 @@ const RegisterPage = () => {
         {step === 1 ? (
           <form onSubmit={handleRegister} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Username</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Tên người dùng</label>
               <input
                 type="text"
                 required
@@ -95,7 +95,7 @@ const RegisterPage = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Mật khẩu</label>
                 <input
                   type="password"
                   required
@@ -105,7 +105,7 @@ const RegisterPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Confirm</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Xác nhận</label>
                 <input
                   type="password"
                   required
@@ -128,18 +128,18 @@ const RegisterPage = () => {
               disabled={loading}
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-colors shadow-lg disabled:opacity-50"
             >
-              {loading ? 'Sending OTP...' : 'Sign Up'}
+              {loading ? 'Đang gửi OTP...' : 'Đăng ký'}
             </button>
           </form>
         ) : (
           <form onSubmit={handleVerifyOtp} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">OTP Code</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Mã OTP</label>
               <input
                 type="text"
                 required
                 maxLength={6}
-                placeholder="6-digit code"
+                placeholder="Mã 6 chữ số"
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none tracking-[0.3em] text-center font-bold text-lg"
                 value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
@@ -150,21 +150,21 @@ const RegisterPage = () => {
               disabled={loading}
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-colors shadow-lg disabled:opacity-50"
             >
-              {loading ? 'Verifying...' : 'Verify & Complete'}
+              {loading ? 'Đang xác minh...' : 'Xác minh & Hoàn tất'}
             </button>
             <button
               type="button"
               onClick={() => setStep(1)}
               className="w-full text-sm text-slate-500 hover:text-indigo-600 font-medium"
             >
-              Back to form
+              Quay lại
             </button>
           </form>
         )}
 
         <div className="mt-8 pt-6 border-t border-slate-100 text-center">
           <p className="text-slate-600 text-sm">
-            Already have an account? <Link to="/login" className="text-blue-600 font-bold hover:underline">Log In</Link>
+            Đã có tài khoản? <Link to="/login" className="text-blue-600 font-bold hover:underline">Đăng nhập</Link>
           </p>
         </div>
       </div>

@@ -62,7 +62,7 @@ const PasswordVaultPage = () => {
       .then((res) => { setCredentials(res.data); setLocked(false); })
       .catch((err) => {
         if (err.response?.status === 403) setLocked(true);
-        else toast.error('Failed to load vault.');
+        else toast.error('Không tải được kho mật khẩu.');
       })
       .finally(() => setLoading(false));
   };
@@ -78,26 +78,26 @@ const PasswordVaultPage = () => {
       setIsModalOpen(false);
       setNewCred({ title: '', username: '', password: '', url: '' });
       fetchVault();
-      toast.success('Credential saved.');
+      toast.success('Đã lưu thông tin.');
     } catch (err) {
       if (err.response?.status === 403) {
         setIsModalOpen(false);
         setLocked(true);
-        toast.error(err.response?.data?.message || 'Password Vault là tính năng Premium.');
+        toast.error(err.response?.data?.message || 'Kho mật khẩu là tính năng Premium.');
       } else {
-        toast.error('Failed to save credential.');
+        toast.error('Lưu thông tin thất bại.');
       }
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this credential?")) return;
+    if (!window.confirm("Xóa thông tin này?")) return;
     try {
       await passwordVaultService.delete(id);
       fetchVault();
-      toast.success('Credential deleted.');
+      toast.success('Đã xóa thông tin.');
     } catch {
-      toast.error('Failed to delete credential.');
+      toast.error('Xóa thất bại.');
     }
   };
 
@@ -113,22 +113,22 @@ const PasswordVaultPage = () => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-4xl font-black text-slate-900 flex items-center gap-4 tracking-tight">
-            <ShieldCheck className="text-indigo-600" size={40} /> Password Vault
+            <ShieldCheck className="text-indigo-600" size={40} /> Kho mật khẩu
           </h2>
-          <p className="text-slate-500 mt-2 text-lg">Manage your project credentials within a secure zero-knowledge environment.</p>
+          <p className="text-slate-500 mt-2 text-lg">Quản lý thông tin đăng nhập dự án trong môi trường bảo mật.</p>
         </div>
         {!locked && (
           <button
             onClick={() => setIsModalOpen(true)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-2xl text-sm shadow-lg shadow-indigo-600/20 flex items-center gap-2 transition-all active:scale-95"
           >
-            <Plus size={18} strokeWidth={3} /> Add Credential
+            <Plus size={18} strokeWidth={3} /> Thêm thông tin
           </button>
         )}
       </div>
 
       {loading ? (
-        <div className="p-8 text-slate-500">Loading vault...</div>
+        <div className="p-8 text-slate-500">Đang tải kho mật khẩu...</div>
       ) : locked ? (
         <UpgradePanel
           title="Password Vault là tính năng Premium"

@@ -64,20 +64,20 @@ const Sidebar = () => {
   const handleToggleTheme = () => setThemeState(toggleTheme());
 
   const menu = [
-    { title: 'Main', items: [
-      { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, matchPrefix: false },
-      { name: 'Projects', path: '/projects', icon: FolderKanban, matchPrefix: true },
+    { title: 'Chính', items: [
+      { name: 'Tổng quan', path: '/dashboard', icon: LayoutDashboard, matchPrefix: false },
+      { name: 'Dự án', path: '/projects', icon: FolderKanban, matchPrefix: true },
     ]},
-    { title: 'Workspace', items: [
-      { name: 'Vault', path: '/vault', icon: KeyRound, matchPrefix: false },
-      { name: 'Notifications', path: '/notifications', icon: Bell, matchPrefix: false, badge: unread },
-      { name: 'Settings', path: '/settings', icon: Settings, matchPrefix: false },
+    { title: 'Làm việc', items: [
+      { name: 'Kho mật khẩu', path: '/vault', icon: KeyRound, matchPrefix: false },
+      { name: 'Thông báo', path: '/notifications', icon: Bell, matchPrefix: false, badge: unread },
+      { name: 'Cài đặt', path: '/settings', icon: Settings, matchPrefix: false },
     ]},
-    { title: 'Billing', items: [
-      { name: 'Upgrade', path: '/pricing', icon: Crown, matchPrefix: false },
+    { title: 'Thanh toán', items: [
+      { name: 'Nâng cấp', path: '/pricing', icon: Crown, matchPrefix: false },
     ]},
-    ...(isAdmin ? [{ title: 'Admin', items: [
-      { name: 'Admin Dashboard', path: '/admin', icon: ShieldCheck, matchPrefix: false },
+    ...(isAdmin ? [{ title: 'Quản trị', items: [
+      { name: 'Bảng quản trị', path: '/admin', icon: ShieldCheck, matchPrefix: false },
     ]}] : []),
   ];
 
@@ -134,14 +134,14 @@ const Sidebar = () => {
           className="flex items-center gap-3 px-3 py-2.5 w-full text-slate-400 hover:text-amber-300 hover:bg-slate-800 rounded-lg transition-colors font-medium text-sm"
         >
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+          <span>{theme === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'}</span>
         </button>
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2.5 w-full text-slate-400 hover:text-rose-400 hover:bg-rose-400/5 rounded-lg transition-colors font-medium text-sm"
         >
           <LogOut size={18} />
-          <span>Logout</span>
+          <span>Đăng xuất</span>
         </button>
       </div>
     </aside>

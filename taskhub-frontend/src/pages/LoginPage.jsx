@@ -34,7 +34,7 @@ const LoginPage = () => {
     } catch (err) {
       const errorMessage = typeof err.response?.data === 'string'
         ? err.response.data
-        : (err.response?.data?.message || err.message || "An unknown error occurred");
+        : (err.response?.data?.message || err.message || "Đã xảy ra lỗi không xác định");
       setError(errorMessage);
       // Token reCAPTCHA chỉ dùng được 1 lần → phải xác thực lại trước khi thử lại
       resetCaptcha();
@@ -46,15 +46,15 @@ const LoginPage = () => {
     <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-extrabold text-slate-900">Welcome Back</h2>
-          <p className="text-slate-500 mt-2">Log in to manage your projects</p>
+          <h2 className="text-3xl font-extrabold text-slate-900">Chào mừng trở lại</h2>
+          <p className="text-slate-500 mt-2">Đăng nhập để quản lý dự án của bạn</p>
         </div>
 
         {error && <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg mb-6 text-sm">{error}</div>}
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Địa chỉ email</label>
             <input
               type="email"
               required
@@ -65,7 +65,7 @@ const LoginPage = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Mật khẩu</label>
             <input
               type="password"
               required
@@ -78,7 +78,7 @@ const LoginPage = () => {
 
           <div className="flex justify-end -mt-2">
             <Link to="/forgot-password" className="text-sm text-blue-600 font-medium hover:underline">
-              Forgot password?
+              Quên mật khẩu?
             </Link>
           </div>
 
@@ -103,7 +103,7 @@ const LoginPage = () => {
                 Đang đăng nhập...
               </>
             ) : (
-              'Log In'
+              'Đăng nhập'
             )}
           </button>
 
@@ -116,7 +116,7 @@ const LoginPage = () => {
 
         <div className="mt-8 pt-6 border-t border-slate-100 text-center">
           <p className="text-slate-600 text-sm">
-            Don't have an account? <Link to="/register" className="text-blue-600 font-bold hover:underline">Sign Up</Link>
+            Chưa có tài khoản? <Link to="/register" className="text-blue-600 font-bold hover:underline">Đăng ký</Link>
           </p>
         </div>
       </div>

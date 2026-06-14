@@ -9,6 +9,13 @@ const typeIcons = {
   Deadline: Clock,
 };
 
+const typeLabels = {
+  Project: 'Dự án',
+  Task: 'Công việc',
+  Deadline: 'Hạn chót',
+  Mention: 'Nhắc đến',
+};
+
 const NotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [invitations, setInvitations] = useState([]);
@@ -40,9 +47,9 @@ const NotificationsPage = () => {
       await invitationService.respond(invitationId, accept);
       setInvitations((prev) => prev.filter((i) => i.id !== invitationId));
       window.dispatchEvent(new Event('notifications-updated'));
-      toast.success(accept ? 'Invitation accepted. You joined the project.' : 'Invitation declined.');
+      toast.success(accept ? 'Đã chấp nhận lời mời. Bạn đã tham gia dự án.' : 'Đã từ chối lời mời.');
     } catch {
-      toast.error('Failed to respond to invitation.');
+      toast.error('Phản hồi lời mời thất bại.');
     }
   };
 
@@ -68,7 +75,7 @@ const NotificationsPage = () => {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   if (loading) {
-    return <div className="p-8 text-slate-500">Loading notifications...</div>;
+    return <div className="p-8 text-slate-500">Đang tải thông báo...</div>;
   }
 
   return (
@@ -77,10 +84,10 @@ const NotificationsPage = () => {
         <div>
           <h2 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
             <Bell className="text-indigo-600" size={36} />
-            Notifications
+            Thông báo
           </h2>
           <p className="text-slate-500 mt-1">
-            {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : 'All caught up!'}
+            {unreadCount > 0 ? `${unreadCount} thông báo chưa đọc` : 'Đã xem hết!'}
           </p>
         </div>
         {unreadCount > 0 && (
@@ -89,7 +96,7 @@ const NotificationsPage = () => {
             className="flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-700 px-4 py-2 rounded-xl hover:bg-indigo-50 transition-colors"
           >
             <CheckCheck size={18} />
-            Mark all read
+            Đánh dấu đã đọc tất cả
           </button>
         )}
       </div>
@@ -97,7 +104,7 @@ const NotificationsPage = () => {
       {invitations.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-            <Mail size={16} /> Project Invitations
+            <Mail size={16} /> Lời mời dự án
           </h3>
           <div className="bg-white border border-indigo-200 rounded-3xl shadow-sm overflow-hidden divide-y divide-slate-100">
             {invitations.map((inv) => (
@@ -107,16 +114,16 @@ const NotificationsPage = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-900 font-semibold">
-                    {inv.inviterName || 'Someone'} invited you to <span className="text-indigo-600">{inv.projectName || 'a project'}</span>
+                    {inv.inviterName || 'Ai đó'} đã mời bạn vào <span className="text-indigo-600">{inv.projectName || 'một dự án'}</span>
                   </p>
-                  <p className="text-xs text-slate-400 mt-1">{new Date(inv.createdAt).toLocaleString()}</p>
+                  <p className="text-xs text-slate-400 mt-1">{new Date(inv.createdAt).toLocaleString('vi-VN')}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button onClick={() => handleRespondInvitation(inv.id, true)} className="flex items-center gap-1 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded-lg transition-colors">
-                    <Check size={14} /> Accept
+                    <Check size={14} /> Chấp nhận
                   </button>
                   <button onClick={() => handleRespondInvitation(inv.id, false)} className="flex items-center gap-1 text-xs font-bold text-slate-500 hover:bg-slate-100 px-3 py-2 rounded-lg transition-colors">
-                    <X size={14} /> Decline
+                    <X size={14} /> Từ chối
                   </button>
                 </div>
               </div>
@@ -129,8 +136,8 @@ const NotificationsPage = () => {
         {notifications.length === 0 ? (
           <div className="text-center py-20 text-slate-400">
             <Bell size={48} className="mx-auto mb-4 opacity-20" />
-            <p className="text-lg font-medium">No notifications yet</p>
-            <p className="text-sm">Updates about your projects and tasks will appear here.</p>
+            <p className="text-lg font-medium">Chưa có thông báo</p>
+            <p className="text-sm">Cập nhật về dự án và công việc của bạn sẽ hiện ở đây.</p>
           </div>
         ) : (
           notifications.map((notification) => {
@@ -150,9 +157,9 @@ const NotificationsPage = () => {
                     {notification.message}
                   </p>
                   <p className="text-xs text-slate-400 mt-1">
-                    {new Date(notification.createdAt).toLocaleString()}
+                    {new Date(notification.createdAt).toLocaleString('vi-VN')}
                     {notification.type && (
-                      <span className="ml-2 uppercase tracking-wider font-bold">{notification.type}</span>
+                      <span className="ml-2 uppercase tracking-wider font-bold">{typeLabels[notification.type] || notification.type}</span>
                     )}
                   </p>
                 </div>
@@ -161,7 +168,7 @@ const NotificationsPage = () => {
                     onClick={() => handleMarkRead(notification.id)}
                     className="text-xs font-bold text-indigo-600 hover:text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors shrink-0"
                   >
-                    Mark read
+                    Đánh dấu đã đọc
                   </button>
                 )}
               </div>
