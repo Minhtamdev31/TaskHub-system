@@ -85,7 +85,7 @@ const ForgotPasswordPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-colors shadow-lg disabled:opacity-50"
+              className="w-full bg-brand-gradient hover:opacity-90 text-white font-bold py-3 rounded-lg transition-opacity shadow-lg disabled:opacity-50"
             >
               {loading ? 'Đang gửi...' : 'Gửi mã đặt lại'}
             </button>
@@ -127,7 +127,7 @@ const ForgotPasswordPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-colors shadow-lg disabled:opacity-50"
+              className="w-full bg-brand-gradient hover:opacity-90 text-white font-bold py-3 rounded-lg transition-opacity shadow-lg disabled:opacity-50"
             >
               {loading ? 'Đang đặt lại...' : 'Đặt lại mật khẩu'}
             </button>

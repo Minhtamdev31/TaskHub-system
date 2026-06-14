@@ -49,6 +49,7 @@ const LoginPage = () => {
     <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-8">
+          <img src="/TaskHubLogo.png" alt="TaskHub" className="h-20 w-auto mx-auto mb-4" />
           <h2 className="text-3xl font-extrabold text-slate-900">Chào mừng trở lại</h2>
           <p className="text-slate-500 mt-2">Đăng nhập để quản lý dự án của bạn</p>
         </div>
@@ -98,7 +99,7 @@ const LoginPage = () => {
           <button
             type="submit"
             disabled={loading || !captchaToken}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full bg-brand-gradient hover:opacity-90 text-white font-bold py-3 rounded-lg transition-opacity shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loading ? (
               <>

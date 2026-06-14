@@ -5,7 +5,6 @@ import {
   FolderKanban,
   KeyRound,
   Bell,
-  Layers,
   Settings,
   Crown,
   ShieldCheck,
@@ -88,11 +87,8 @@ const Sidebar = () => {
 
   return (
     <aside className="w-64 bg-slate-900 text-white min-h-screen fixed left-0 top-0 flex flex-col border-r border-slate-800 z-50">
-      <NavLink to="/dashboard" className="p-6 flex items-center gap-3 hover:opacity-90 transition-opacity">
-        <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-          <Layers size={22} />
-        </div>
-        <span className="text-xl font-bold tracking-tight">TaskHub</span>
+      <NavLink to="/dashboard" className="p-6 flex items-center justify-center hover:opacity-90 transition-opacity">
+        <img src="/TaskHubLogo.png" alt="TaskHub" className="h-20 w-auto" />
       </NavLink>
 
       <nav className="flex-1 px-4 space-y-8 mt-4">

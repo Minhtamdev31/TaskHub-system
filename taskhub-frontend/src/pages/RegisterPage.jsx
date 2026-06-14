@@ -62,6 +62,7 @@ const RegisterPage = () => {
     <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-8">
+          <img src="/TaskHubLogo.png" alt="TaskHub" className="h-20 w-auto mx-auto mb-4" />
           <h2 className="text-3xl font-extrabold text-slate-900">
             {step === 1 ? 'Tạo tài khoản' : 'Xác minh email'}
           </h2>
@@ -127,7 +128,7 @@ const RegisterPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-colors shadow-lg disabled:opacity-50"
+              className="w-full bg-brand-gradient hover:opacity-90 text-white font-bold py-3 rounded-lg transition-opacity shadow-lg disabled:opacity-50"
             >
               {loading ? 'Đang gửi OTP...' : 'Đăng ký'}
             </button>
@@ -157,7 +158,7 @@ const RegisterPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-colors shadow-lg disabled:opacity-50"
+              className="w-full bg-brand-gradient hover:opacity-90 text-white font-bold py-3 rounded-lg transition-opacity shadow-lg disabled:opacity-50"
             >
               {loading ? 'Đang xác minh...' : 'Xác minh & Hoàn tất'}
             </button>
