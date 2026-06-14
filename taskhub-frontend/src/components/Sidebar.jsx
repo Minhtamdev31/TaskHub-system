@@ -9,18 +9,59 @@ import {
   Settings,
   Crown,
   ShieldCheck,
-  LogOut
+  LogOut,
+  Moon,
+  Sun
 } from 'lucide-react';
-import { authService } from '../services/api';
+import { authService, notificationService, invitationService } from '../services/api';
+import { getStoredTheme, toggleTheme } from '../theme';
+
+const POLL_INTERVAL_MS = 30000;
 
 const Sidebar = () => {
   const [isAdmin, setIsAdmin] = useState(false);
+  const [theme, setThemeState] = useState(getStoredTheme());
+  const [unread, setUnread] = useState(0);
 
   useEffect(() => {
     authService.getCurrentUser()
       .then((res) => setIsAdmin((res.data?.role || '').toLowerCase() === 'admin'))
       .catch(() => {});
+    const onThemeChange = (e) => setThemeState(e.detail);
+    window.addEventListener('themechange', onThemeChange);
+    return () => window.removeEventListener('themechange', onThemeChange);
   }, []);
+
+  // Live-ish notification badge: poll unread notifications + pending invitations.
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const [nRes, iRes] = await Promise.all([
+          notificationService.getAll().catch(() => ({ data: [] })),
+          invitationService.getMyInvitations().catch(() => ({ data: [] })),
+        ]);
+        if (cancelled) return;
+        const unreadNotifs = (nRes.data || []).filter((n) => !n.isRead).length;
+        const pendingInvites = (iRes.data || []).length;
+        setUnread(unreadNotifs + pendingInvites);
+      } catch { /* ignore */ }
+    };
+    refresh();
+    const timer = setInterval(refresh, POLL_INTERVAL_MS);
+    const onFocus = () => refresh();
+    const onUpdated = () => refresh();
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('notifications-updated', onUpdated);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('notifications-updated', onUpdated);
+    };
+  }, []);
+
+  const handleToggleTheme = () => setThemeState(toggleTheme());
 
   const menu = [
     { title: 'Main', items: [
@@ -29,7 +70,7 @@ const Sidebar = () => {
     ]},
     { title: 'Workspace', items: [
       { name: 'Vault', path: '/vault', icon: KeyRound, matchPrefix: false },
-      { name: 'Notifications', path: '/notifications', icon: Bell, matchPrefix: false },
+      { name: 'Notifications', path: '/notifications', icon: Bell, matchPrefix: false, badge: unread },
       { name: 'Settings', path: '/settings', icon: Settings, matchPrefix: false },
     ]},
     { title: 'Billing', items: [
@@ -74,7 +115,12 @@ const Sidebar = () => {
                   `}
                 >
                   <item.icon size={18} />
-                  {item.name}
+                  <span className="flex-1">{item.name}</span>
+                  {item.badge > 0 && (
+                    <span className="ml-auto bg-rose-500 text-white text-[10px] font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center">
+                      {item.badge > 9 ? '9+' : item.badge}
+                    </span>
+                  )}
                 </NavLink>
               ))}
             </div>
@@ -82,7 +128,14 @@ const Sidebar = () => {
         ))}
       </nav>
 
-      <div className="p-4 mt-auto border-t border-slate-800">
+      <div className="p-4 mt-auto border-t border-slate-800 space-y-1">
+        <button
+          onClick={handleToggleTheme}
+          className="flex items-center gap-3 px-3 py-2.5 w-full text-slate-400 hover:text-amber-300 hover:bg-slate-800 rounded-lg transition-colors font-medium text-sm"
+        >
+          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+        </button>
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2.5 w-full text-slate-400 hover:text-rose-400 hover:bg-rose-400/5 rounded-lg transition-colors font-medium text-sm"

@@ -15,6 +15,7 @@ public sealed class TaskResponse
         Title = task.Title ?? string.Empty;
         Description = task.Description ?? string.Empty;
         Status = task.Status ?? "Todo";
+        Priority = task.Priority ?? "Medium";
         DueDate = task.DueDate;
         UserId = task.UserId ?? string.Empty;
         CreatedAt = task.CreatedAt;
@@ -25,6 +26,7 @@ public sealed class TaskResponse
     public string Title { get; }
     public string Description { get; }
     public string Status { get; }
+    public string Priority { get; }
     public DateTime? DueDate { get; }
     public string UserId { get; }
     public DateTime CreatedAt { get; }

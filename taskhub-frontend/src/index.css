@@ -4,3 +4,54 @@
   from { opacity: 0; transform: translateX(1rem); }
   to { opacity: 1; transform: translateX(0); }
 }
+
+/* ============================================================
+   Dark mode
+   The app uses a light slate/white palette across all pages
+   without per-element dark: variants. This override layer remaps
+   those utilities when <html class="dark"> is set, giving a
+   coherent dark theme app-wide. Sidebar is already dark, so it's
+   intentionally excluded from most remaps.
+   ============================================================ */
+.dark { color-scheme: dark; }
+
+@layer dark-overrides {
+  /* Surfaces / backgrounds */
+  .dark .bg-slate-50 { background-color: #0b1220 !important; }
+  .dark .bg-white { background-color: #1e293b !important; }
+  .dark .bg-slate-100 { background-color: #1e293b !important; }
+  .dark .bg-slate-100\/50 { background-color: rgba(30, 41, 59, 0.5) !important; }
+  .dark .bg-slate-200 { background-color: #334155 !important; }
+  .dark .bg-slate-50\/50 { background-color: rgba(15, 23, 42, 0.5) !important; }
+
+  /* Text */
+  .dark .text-slate-900 { color: #f1f5f9 !important; }
+  .dark .text-slate-800 { color: #e2e8f0 !important; }
+  .dark .text-slate-700 { color: #cbd5e1 !important; }
+  .dark .text-slate-600 { color: #94a3b8 !important; }
+  .dark .text-slate-500 { color: #94a3b8 !important; }
+
+  /* Borders */
+  .dark .border-slate-100 { border-color: #1e293b !important; }
+  .dark .border-slate-200 { border-color: #334155 !important; }
+  .dark .border-slate-200\/50 { border-color: rgba(51, 65, 85, 0.5) !important; }
+  .dark .border-slate-300 { border-color: #475569 !important; }
+
+  /* Inputs / selects / textareas */
+  .dark input,
+  .dark textarea,
+  .dark select {
+    background-color: #0f172a !important;
+    color: #e2e8f0 !important;
+    border-color: #334155 !important;
+  }
+  .dark input::placeholder,
+  .dark textarea::placeholder { color: #64748b !important; }
+
+  /* Hover states on light surfaces */
+  .dark .hover\:bg-slate-50:hover { background-color: #243044 !important; }
+  .dark .hover\:bg-slate-100:hover { background-color: #243044 !important; }
+}
+
+/* The Sidebar is already dark by design — keep its own colors. */
+.dark aside.bg-slate-900 { background-color: #0b1220 !important; }

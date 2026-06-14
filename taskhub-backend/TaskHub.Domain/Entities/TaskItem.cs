@@ -19,6 +19,9 @@ public class TaskItem
     [BsonElement("status")]
     public string Status { get; set; } = "Todo";
 
+    [BsonElement("priority")]
+    public string Priority { get; set; } = "Medium";
+
     [BsonElement("dueDate")]
     public DateTime? DueDate { get; set; }
 

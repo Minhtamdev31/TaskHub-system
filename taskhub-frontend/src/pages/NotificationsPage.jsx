@@ -39,6 +39,7 @@ const NotificationsPage = () => {
     try {
       await invitationService.respond(invitationId, accept);
       setInvitations((prev) => prev.filter((i) => i.id !== invitationId));
+      window.dispatchEvent(new Event('notifications-updated'));
       toast.success(accept ? 'Invitation accepted. You joined the project.' : 'Invitation declined.');
     } catch {
       toast.error('Failed to respond to invitation.');
@@ -51,6 +52,7 @@ const NotificationsPage = () => {
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
+      window.dispatchEvent(new Event('notifications-updated'));
     } catch (err) {
       console.error('Failed to mark notification as read', err);
     }
@@ -60,6 +62,7 @@ const NotificationsPage = () => {
     const unread = notifications.filter((n) => !n.isRead);
     await Promise.all(unread.map((n) => notificationService.markAsRead(n.id)));
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    window.dispatchEvent(new Event('notifications-updated'));
   };
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;

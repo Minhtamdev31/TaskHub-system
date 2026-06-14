@@ -15,6 +15,9 @@ public sealed class CommentResponse
         Content = comment.Content ?? string.Empty;
         TaskId = comment.TaskId ?? string.Empty;
         UserId = comment.UserId ?? string.Empty;
+        AttachmentName = comment.AttachmentName;
+        AttachmentType = comment.AttachmentType;
+        AttachmentData = comment.AttachmentData;
         CreatedAt = comment.CreatedAt;
     }
 
@@ -22,5 +25,8 @@ public sealed class CommentResponse
     public string Content { get; }
     public string TaskId { get; }
     public string UserId { get; }
+    public string? AttachmentName { get; }
+    public string? AttachmentType { get; }
+    public string? AttachmentData { get; }
     public DateTime CreatedAt { get; }
 }

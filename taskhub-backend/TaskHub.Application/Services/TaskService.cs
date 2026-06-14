@@ -25,6 +25,7 @@ public class TaskService : ITaskService
     private readonly INotificationService _notificationService;
 
     private static readonly string[] ValidStatuses = { "Todo", "InProgress", "Review", "Done" };
+    private static readonly string[] ValidPriorities = { "Low", "Medium", "High", "Critical" };
 
     public TaskService(
         IMongoRepository<TaskItem> taskRepository, 
@@ -71,6 +72,7 @@ public class TaskService : ITaskService
             Title = dto.Title.Trim(),
             Description = dto.Description?.Trim() ?? string.Empty,
             Status = "Todo",
+            Priority = ValidPriorities.Contains(dto.Priority, StringComparer.OrdinalIgnoreCase) ? dto.Priority : "Medium",
             DueDate = dto.DueDate,
             UserId = userId,
             ProjectId = dto.ProjectId.Trim(),
@@ -139,6 +141,17 @@ public class TaskService : ITaskService
                     "Task",
                     taskId);
             }
+        }
+
+        if (!string.IsNullOrWhiteSpace(dto.Priority))
+        {
+            var normalizedPriority = dto.Priority.Trim();
+            if (!ValidPriorities.Contains(normalizedPriority, StringComparer.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            existingTask.Priority = normalizedPriority;
         }
 
         if (dto.DueDate.HasValue)

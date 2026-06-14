@@ -22,9 +22,10 @@ public class CommentsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> AddComment([FromBody] CreateCommentDto request)
     {
-        if (request is null || string.IsNullOrWhiteSpace(request.Content) || string.IsNullOrWhiteSpace(request.TaskId))
+        if (request is null || string.IsNullOrWhiteSpace(request.TaskId) ||
+            (string.IsNullOrWhiteSpace(request.Content) && string.IsNullOrWhiteSpace(request.AttachmentData)))
         {
-            return BadRequest("Content and TaskId are required.");
+            return BadRequest("TaskId and either content or an attachment are required.");
         }
 
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

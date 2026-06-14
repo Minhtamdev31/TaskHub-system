@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { User, Shield, Bell, Moon, Crown, Check } from 'lucide-react';
 import { userService, authService, paymentService } from '../services/api';
 import { toast } from '../components/Toast';
+import { setTheme as applyAppTheme } from '../theme';
 
 const TABS = [
   { id: 'profile', name: 'Profile', icon: User },
@@ -45,10 +46,13 @@ const SettingsPage = () => {
           jobTitle: u.profile?.jobTitle || '',
           phoneNumber: u.profile?.phoneNumber || '',
         });
+        const accountTheme = u.settings?.theme || 'Light';
         setSettings({
-          theme: u.settings?.theme || 'Light',
+          theme: accountTheme,
           enableNotifications: u.settings?.enableNotifications ?? true,
         });
+        // Sync the saved account theme to the live app theme.
+        applyAppTheme(accountTheme.toLowerCase() === 'dark' ? 'dark' : 'light');
         setSubscription(u.subscription || null);
       })
       .catch(() => toast.error('Failed to load profile.'))
@@ -101,6 +105,8 @@ const SettingsPage = () => {
 
   const handleSaveSettings = async (next) => {
     setSettings(next);
+    // Apply theme live so the change is visible immediately.
+    applyAppTheme(next.theme?.toLowerCase() === 'dark' ? 'dark' : 'light');
     try {
       await userService.updateProfile({
         theme: next.theme,

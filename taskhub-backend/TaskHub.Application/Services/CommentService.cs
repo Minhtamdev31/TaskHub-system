@@ -31,9 +31,24 @@ public class CommentService : ICommentService
         _notificationService = notificationService;
     }
 
+    // Giới hạn dung lượng đính kèm: ~4MB base64 (~3MB nhị phân) để không vượt giới hạn document MongoDB.
+    private const int MaxAttachmentBase64Length = 4 * 1024 * 1024;
+
     public async Task<Comment?> AddCommentAsync(CreateCommentDto dto, string userId)
     {
-        if (dto is null || string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(dto.Content) || string.IsNullOrWhiteSpace(dto.TaskId))
+        if (dto is null || string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(dto.TaskId))
+        {
+            return null;
+        }
+
+        var hasAttachment = !string.IsNullOrWhiteSpace(dto.AttachmentData);
+        // Cho phép comment chỉ có đính kèm (không cần nội dung text), nhưng phải có ít nhất một trong hai.
+        if (string.IsNullOrWhiteSpace(dto.Content) && !hasAttachment)
+        {
+            return null;
+        }
+
+        if (hasAttachment && dto.AttachmentData!.Length > MaxAttachmentBase64Length)
         {
             return null;
         }
@@ -59,11 +74,18 @@ public class CommentService : ICommentService
 
         var comment = new Comment
         {
-            Content = dto.Content.Trim(),
+            Content = dto.Content?.Trim() ?? string.Empty,
             TaskId = dto.TaskId.Trim(),
             UserId = userId,
             CreatedAt = DateTime.UtcNow
         };
+
+        if (hasAttachment)
+        {
+            comment.AttachmentData = dto.AttachmentData;
+            comment.AttachmentName = string.IsNullOrWhiteSpace(dto.AttachmentName) ? "attachment" : dto.AttachmentName.Trim();
+            comment.AttachmentType = string.IsNullOrWhiteSpace(dto.AttachmentType) ? "application/octet-stream" : dto.AttachmentType.Trim();
+        }
 
         await _commentRepository.CreateAsync(comment);
 

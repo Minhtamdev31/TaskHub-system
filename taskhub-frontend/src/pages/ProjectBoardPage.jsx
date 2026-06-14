@@ -2,9 +2,30 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { taskService, projectService, commentService, invitationService, userService } from '../services/api';
 import { toast } from '../components/Toast';
-import { Plus, MoreHorizontal, Clock, X, ArrowLeft, Trash2, Send, UserPlus, MessageSquare } from 'lucide-react';
+import { Plus, MoreHorizontal, Clock, X, ArrowLeft, Trash2, Send, UserPlus, MessageSquare, Search, Paperclip, Download, FileText } from 'lucide-react';
+
+const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024; // 3MB
+
+const readFileAsDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 
 const columns = ['Todo', 'InProgress', 'Review', 'Done'];
+
+const priorities = ['Low', 'Medium', 'High', 'Critical'];
+
+const priorityConfig = {
+  Low: { label: 'Low', badge: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400' },
+  Medium: { label: 'Medium', badge: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500' },
+  High: { label: 'High', badge: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
+  Critical: { label: 'Critical', badge: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500' },
+};
+
+const priorityBadge = (p) => priorityConfig[p] || priorityConfig.Medium;
 
 const initials = (name) => (name || 'NA').substring(0, 2).toUpperCase();
 
@@ -15,7 +36,11 @@ const ProjectBoardPage = () => {
   const [userMap, setUserMap] = useState({}); // userId -> { username, fullName }
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [newTask, setNewTask] = useState({ title: '', description: '', dueDate: '' });
+  const [newTask, setNewTask] = useState({ title: '', description: '', dueDate: '', priority: 'Medium' });
+
+  const [search, setSearch] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('All');
+  const [assigneeFilter, setAssigneeFilter] = useState('All');
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -76,6 +101,16 @@ const ProjectBoardPage = () => {
     }
   };
 
+  const handleUpdatePriority = async (taskId, newPriority) => {
+    try {
+      await taskService.update(taskId, { priority: newPriority });
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, priority: newPriority } : t)));
+      setSelectedTask((prev) => (prev && prev.id === taskId ? { ...prev, priority: newPriority } : prev));
+    } catch {
+      toast.error('Failed to update priority.');
+    }
+  };
+
   // --- Drag & drop ---
   const handleDragStart = (taskId) => setDraggedTaskId(taskId);
   const handleDragEnd = () => { setDraggedTaskId(null); setDragOverColumn(null); };
@@ -100,10 +135,11 @@ const ProjectBoardPage = () => {
         description: newTask.description,
         projectId: id,
         dueDate: newTask.dueDate || null,
+        priority: newTask.priority,
       });
       setTasks((prev) => [...prev, res.data]);
       setIsModalOpen(false);
-      setNewTask({ title: '', description: '', dueDate: '' });
+      setNewTask({ title: '', description: '', dueDate: '', priority: 'Medium' });
       toast.success('Task created.');
     } catch {
       toast.error('Failed to create task.');
@@ -153,6 +189,17 @@ const ProjectBoardPage = () => {
 
   if (!project) return <div className="p-8 text-slate-500">Loading board...</div>;
 
+  const q = search.trim().toLowerCase();
+  const visibleTasks = tasks.filter((t) => {
+    if (q && !(`${t.title} ${t.description || ''}`.toLowerCase().includes(q))) return false;
+    if (priorityFilter !== 'All' && (t.priority || 'Medium') !== priorityFilter) return false;
+    if (assigneeFilter !== 'All') {
+      if (assigneeFilter === 'Unassigned' ? !!t.userId : t.userId !== assigneeFilter) return false;
+    }
+    return true;
+  });
+  const filtersActive = q || priorityFilter !== 'All' || assigneeFilter !== 'All';
+
   return (
     <div className="h-full flex flex-col space-y-6">
       <div className="flex justify-between items-end">
@@ -186,6 +233,38 @@ const ProjectBoardPage = () => {
         </div>
       </div>
 
+      {/* Search & Filter toolbar */}
+      <div className="flex flex-wrap items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+          />
+        </div>
+        <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          <option value="All">All priorities</option>
+          {priorities.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)} className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          <option value="All">All assignees</option>
+          <option value="Unassigned">Unassigned</option>
+          {(project.members || []).map((m) => <option key={m.userId} value={m.userId}>{displayName(m.userId)}</option>)}
+        </select>
+        {filtersActive && (
+          <button
+            onClick={() => { setSearch(''); setPriorityFilter('All'); setAssigneeFilter('All'); }}
+            className="text-sm font-medium text-slate-500 hover:text-indigo-600 flex items-center gap-1"
+          >
+            <X size={14} /> Clear
+          </button>
+        )}
+        <span className="text-xs font-bold text-slate-400 ml-auto">{visibleTasks.length} / {tasks.length} tasks</span>
+      </div>
+
       <div className="flex gap-6 overflow-x-auto pb-6">
         {columns.map((column) => (
           <div key={column} className="flex-shrink-0 w-80 flex flex-col">
@@ -193,7 +272,7 @@ const ProjectBoardPage = () => {
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-slate-700">{column}</h3>
                 <span className="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full font-black">
-                  {tasks.filter((t) => t.status === column).length}
+                  {visibleTasks.filter((t) => t.status === column).length}
                 </span>
               </div>
               <button className="text-slate-400 hover:text-slate-600"><MoreHorizontal size={18} /></button>
@@ -209,7 +288,7 @@ const ProjectBoardPage = () => {
                   : 'bg-slate-100/50 border-slate-200/50'
               }`}
             >
-              {tasks.filter((t) => t.status === column).map((task) => (
+              {visibleTasks.filter((t) => t.status === column).map((task) => (
                 <div
                   key={task.id}
                   draggable
@@ -220,9 +299,14 @@ const ProjectBoardPage = () => {
                     draggedTaskId === task.id ? 'opacity-40' : ''
                   }`}
                 >
-                  <h4 className="font-bold text-slate-900 mb-3 group-hover:text-indigo-600 transition-colors">
-                    {task.title}
-                  </h4>
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                      {task.title}
+                    </h4>
+                    <span className={`shrink-0 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${priorityBadge(task.priority).badge}`}>
+                      {priorityBadge(task.priority).label}
+                    </span>
+                  </div>
                   {task.description && (
                     <p className="text-xs text-slate-500 mb-3 line-clamp-2">{task.description}</p>
                   )}
@@ -275,9 +359,17 @@ const ProjectBoardPage = () => {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
                 <textarea rows={3} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={newTask.description} onChange={(e) => setNewTask({ ...newTask, description: e.target.value })} />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Due Date</label>
-                <input type="date" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={newTask.dueDate} onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })} />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Priority</label>
+                  <select className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={newTask.priority} onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}>
+                    {priorities.map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Due Date</label>
+                  <input type="date" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={newTask.dueDate} onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })} />
+                </div>
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
@@ -318,6 +410,7 @@ const ProjectBoardPage = () => {
           displayName={displayName}
           onClose={() => setSelectedTask(null)}
           onStatusChange={handleUpdateStatus}
+          onPriorityChange={handleUpdatePriority}
           onAssign={handleAssign}
           onDelete={handleDeleteTask}
         />
@@ -326,11 +419,12 @@ const ProjectBoardPage = () => {
   );
 };
 
-const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, onAssign, onDelete }) => {
+const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, onPriorityChange, onAssign, onDelete }) => {
   const [comments, setComments] = useState([]);
   const [loadingComments, setLoadingComments] = useState(true);
   const [newComment, setNewComment] = useState('');
   const [posting, setPosting] = useState(false);
+  const [attachment, setAttachment] = useState(null); // { name, type, dataUrl }
 
   useEffect(() => {
     let cancelled = false;
@@ -342,14 +436,37 @@ const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, 
     return () => { cancelled = true; };
   }, [task.id]);
 
+  const handlePickFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-picking same file
+    if (!file) return;
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      toast.error('Attachment too large (max 3MB).');
+      return;
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setAttachment({ name: file.name, type: file.type || 'application/octet-stream', dataUrl });
+    } catch {
+      toast.error('Failed to read file.');
+    }
+  };
+
   const handleAddComment = async (e) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    if (!newComment.trim() && !attachment) return;
     setPosting(true);
     try {
-      const res = await commentService.create({ content: newComment.trim(), taskId: task.id });
+      const payload = { content: newComment.trim(), taskId: task.id };
+      if (attachment) {
+        payload.attachmentName = attachment.name;
+        payload.attachmentType = attachment.type;
+        payload.attachmentData = attachment.dataUrl;
+      }
+      const res = await commentService.create(payload);
       setComments((prev) => [...prev, res.data]);
       setNewComment('');
+      setAttachment(null);
     } catch {
       toast.error('Failed to add comment.');
     } finally {
@@ -365,11 +482,17 @@ const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, 
           <h3 className="text-2xl font-bold text-slate-900 pr-8">{task.title}</h3>
           {task.description && <p className="text-slate-600 mt-3 whitespace-pre-wrap">{task.description}</p>}
 
-          <div className="grid grid-cols-2 gap-4 mt-5">
+          <div className="grid grid-cols-3 gap-4 mt-5">
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
               <select value={task.status} onChange={(e) => onStatusChange(task.id, e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                 {columns.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Priority</label>
+              <select value={task.priority || 'Medium'} onChange={(e) => onPriorityChange(task.id, e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                {priorities.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
             <div>
@@ -407,7 +530,8 @@ const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, 
                       <span className="text-sm font-bold text-slate-800">{displayName(c.userId)}</span>
                       <span className="text-[10px] text-slate-400">{new Date(c.createdAt).toLocaleString()}</span>
                     </div>
-                    <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">{c.content}</p>
+                    {c.content && <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">{c.content}</p>}
+                    {c.attachmentData && <CommentAttachment attachment={c} />}
                   </div>
                 </div>
               ))}
@@ -415,19 +539,57 @@ const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, 
           )}
         </div>
 
-        <div className="p-6 border-t border-slate-100 flex items-center gap-3">
-          <button onClick={() => onDelete(task.id)} className="text-slate-300 hover:text-rose-600 p-2.5 hover:bg-rose-50 rounded-xl transition-all shrink-0" title="Delete task">
-            <Trash2 size={18} />
-          </button>
-          <form onSubmit={handleAddComment} className="flex-1 flex gap-2">
-            <input type="text" placeholder="Write a comment..." className="flex-1 px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={newComment} onChange={(e) => setNewComment(e.target.value)} />
-            <button type="submit" disabled={posting || !newComment.trim()} className="bg-indigo-600 text-white px-4 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2">
-              <Send size={16} />
+        <div className="p-6 border-t border-slate-100">
+          {attachment && (
+            <div className="flex items-center gap-2 mb-3 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm">
+              {attachment.type.startsWith('image/')
+                ? <img src={attachment.dataUrl} alt="" className="w-8 h-8 rounded object-cover" />
+                : <FileText size={18} className="text-slate-400" />}
+              <span className="flex-1 truncate text-slate-700">{attachment.name}</span>
+              <button type="button" onClick={() => setAttachment(null)} className="text-slate-400 hover:text-rose-600"><X size={16} /></button>
+            </div>
+          )}
+          <div className="flex items-center gap-3">
+            <button onClick={() => onDelete(task.id)} className="text-slate-300 hover:text-rose-600 p-2.5 hover:bg-rose-50 rounded-xl transition-all shrink-0" title="Delete task">
+              <Trash2 size={18} />
             </button>
-          </form>
+            <form onSubmit={handleAddComment} className="flex-1 flex gap-2">
+              <label className="shrink-0 cursor-pointer text-slate-400 hover:text-indigo-600 p-2.5 hover:bg-indigo-50 rounded-xl transition-all flex items-center" title="Attach file">
+                <Paperclip size={18} />
+                <input type="file" className="hidden" onChange={handlePickFile} />
+              </label>
+              <input type="text" placeholder="Write a comment..." className="flex-1 px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={newComment} onChange={(e) => setNewComment(e.target.value)} />
+              <button type="submit" disabled={posting || (!newComment.trim() && !attachment)} className="bg-indigo-600 text-white px-4 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2">
+                <Send size={16} />
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
+  );
+};
+
+const CommentAttachment = ({ attachment }) => {
+  const { attachmentData, attachmentName, attachmentType } = attachment;
+  const isImage = (attachmentType || '').startsWith('image/');
+
+  if (isImage) {
+    return (
+      <a href={attachmentData} target="_blank" rel="noopener noreferrer" className="inline-block mt-2">
+        <img src={attachmentData} alt={attachmentName} className="max-h-48 rounded-lg border border-slate-200" />
+      </a>
+    );
+  }
+
+  return (
+    <a
+      href={attachmentData}
+      download={attachmentName}
+      className="mt-2 inline-flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 hover:border-indigo-300 hover:text-indigo-600 transition-colors"
+    >
+      <Download size={15} /> {attachmentName}
+    </a>
   );
 };
 

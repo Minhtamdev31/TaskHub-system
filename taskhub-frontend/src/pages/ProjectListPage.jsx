@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { projectService } from '../services/api';
 import { Link } from 'react-router-dom';
-import { Plus, Folder, Users, Calendar, ArrowRight, X } from 'lucide-react';
+import { Plus, Folder, Users, Calendar, ArrowRight, X, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from '../components/Toast';
+
+const PAGE_SIZE = 6;
 
 const ProjectListPage = () => {
   const [projects, setProjects] = useState([]);
@@ -10,6 +12,25 @@ const ProjectListPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newProject, setNewProject] = useState({ name: '', description: '' });
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return projects;
+    return projects.filter((p) =>
+      `${p.name} ${p.description || ''}`.toLowerCase().includes(q)
+    );
+  }, [projects, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const handleSearchChange = (value) => {
+    setSearch(value);
+    setPage(1);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +84,19 @@ const ProjectListPage = () => {
         </button>
       </div>
 
+      {projects.length > 0 && (
+        <div className="relative max-w-md">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search projects..."
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+          />
+        </div>
+      )}
+
       {projects.length === 0 ? (
         <div className="text-center py-20 bg-white border border-slate-200 rounded-3xl">
           <Folder size={48} className="mx-auto mb-4 text-slate-300" />
@@ -75,9 +109,15 @@ const ProjectListPage = () => {
             Create Project
           </button>
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16 bg-white border border-slate-200 rounded-3xl">
+          <Search size={40} className="mx-auto mb-3 text-slate-300" />
+          <p className="text-slate-600 font-medium">No projects match "{search}"</p>
+        </div>
       ) : (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project) => (
+          {pageItems.map((project) => (
             <div key={project.id} className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all group flex flex-col justify-between">
               <div>
                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
@@ -125,6 +165,37 @@ const ProjectListPage = () => {
             </div>
           ))}
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 pt-4">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`w-9 h-9 rounded-lg text-sm font-bold transition-colors ${
+                  p === currentPage ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
+        </>
       )}
 
       {isModalOpen && (
