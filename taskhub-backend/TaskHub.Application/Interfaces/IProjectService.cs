@@ -12,6 +12,7 @@ public interface IProjectService
     Task<bool> AddMemberToProjectAsync(string projectId, AddMemberDto dto, string currentUserId);
     Task<bool> RemoveMemberFromProjectAsync(string projectId, string memberUserId, string currentUserId);
     Task<bool> ChangeMemberRoleAsync(string projectId, ChangeRoleDto dto, string currentUserId);
+    Task<bool> TransferOwnershipAsync(string projectId, string newOwnerUserId, string currentUserId);
     Task<bool> DeleteProjectAsync(string projectId, string currentUserId);
     Task<ProjectDashboardDto?> GetProjectDashboardAsync(string projectId, string userId);
     Task<List<MemberContributionDto>> GetMemberContributionsAsync(string projectId, string currentUserId);

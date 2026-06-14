@@ -277,6 +277,68 @@ public class ProjectService : IProjectService
         return true;
     }
 
+    public async Task<bool> TransferOwnershipAsync(string projectId, string newOwnerUserId, string currentUserId)
+    {
+        if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(newOwnerUserId) || string.IsNullOrEmpty(currentUserId))
+        {
+            return false;
+        }
+
+        var project = await GetProjectByIdAsync(projectId);
+        if (project is null)
+        {
+            return false;
+        }
+
+        // Chỉ chủ sở hữu hiện tại mới được chuyển quyền sở hữu.
+        if (!project.OwnerId.Equals(currentUserId, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        // Không cần chuyển cho chính mình.
+        if (newOwnerUserId.Equals(currentUserId, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        // Người nhận phải là thành viên hiện tại của dự án.
+        var newOwnerMember = project.Members.FirstOrDefault(m => m.UserId.Equals(newOwnerUserId, StringComparison.OrdinalIgnoreCase));
+        if (newOwnerMember is null)
+        {
+            return false;
+        }
+
+        var previousOwnerId = project.OwnerId;
+        project.OwnerId = newOwnerUserId;
+
+        // Chủ mới luôn là Leader.
+        newOwnerMember.ProjectRole = "Leader";
+
+        // Chủ cũ vẫn ở lại dự án với vai trò Leader (giữ quyền quản lý).
+        var previousOwnerMember = project.Members.FirstOrDefault(m => m.UserId.Equals(previousOwnerId, StringComparison.OrdinalIgnoreCase));
+        if (previousOwnerMember is null)
+        {
+            project.Members.Add(new ProjectMember { UserId = previousOwnerId, ProjectRole = "Leader" });
+        }
+        else
+        {
+            previousOwnerMember.ProjectRole = "Leader";
+        }
+
+        project.UpdatedAt = DateTime.UtcNow;
+        await _projectRepository.UpdateAsync(projectId, project);
+
+        // Thông báo cho chủ mới.
+        await _notificationService.CreateAndSendNotificationAsync(
+            newOwnerUserId,
+            $"Bạn đã được chuyển quyền sở hữu dự án \"{project.Name}\".",
+            "Project",
+            projectId);
+
+        return true;
+    }
+
     public async Task<ProjectDashboardDto?> GetProjectDashboardAsync(string projectId, string userId)
     {
         if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(userId))

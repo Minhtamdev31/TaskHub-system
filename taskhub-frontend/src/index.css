@@ -13,7 +13,7 @@
    coherent dark theme app-wide. Sidebar is already dark, so it's
    intentionally excluded from most remaps.
    ============================================================ */
-.dark { color-scheme: dark; }
+.dark { color-scheme: dark; --donut-track: #334155; }
 
 @layer dark-overrides {
   /* Surfaces / backgrounds */

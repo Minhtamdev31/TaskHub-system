@@ -63,6 +63,9 @@ export const projectService = {
   getDashboard: (id) => apiClient.get(`/projects/${id}/dashboard`),
   addMember: (id, data) => apiClient.post(`/projects/${id}/members`, data),
   removeMember: (id, userId) => apiClient.delete(`/projects/${id}/members/${userId}`),
+  changeMemberRole: (id, targetUserId, newProjectRole) => apiClient.put(`/projects/${id}/members/role`, { targetUserId, newProjectRole }),
+  transferOwnership: (id, newOwnerUserId) => apiClient.put(`/projects/${id}/transfer-owner`, { newOwnerUserId }),
+  memberContributions: (id) => apiClient.get(`/projects/${id}/member-contributions`),
   getInvitations: () => apiClient.get('/projects/invitations'),
   respondToInvitation: (id, accept) => apiClient.post(`/projects/invitations/${id}/respond`, { accept }),
 };

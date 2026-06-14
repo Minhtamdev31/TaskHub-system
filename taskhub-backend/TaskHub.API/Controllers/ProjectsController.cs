@@ -173,6 +173,30 @@ public class ProjectsController : ControllerBase
         return Ok(new ProjectResponse(updatedProject!));
     }
 
+    [HttpPut("{id}/transfer-owner")]
+    public async Task<IActionResult> TransferOwnership(string id, [FromBody] TransferOwnershipDto request)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.NewOwnerUserId))
+        {
+            return BadRequest("NewOwnerUserId is required.");
+        }
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var success = await _projectService.TransferOwnershipAsync(id, request.NewOwnerUserId, userId);
+        if (!success)
+        {
+            return BadRequest("Unauthorized or invalid operation. Only the current owner can transfer ownership to an existing member.");
+        }
+
+        var updatedProject = await _projectService.GetProjectByIdAsync(id);
+        return Ok(new ProjectResponse(updatedProject!));
+    }
+
     [HttpGet("{id}/dashboard")]
     public async Task<IActionResult> GetProjectDashboard(string id)
     {

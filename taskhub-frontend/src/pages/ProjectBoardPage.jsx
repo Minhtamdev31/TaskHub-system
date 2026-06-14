@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { taskService, projectService, commentService, invitationService, userService } from '../services/api';
+import { taskService, projectService, commentService, invitationService, userService, authService } from '../services/api';
 import { toast } from '../components/Toast';
-import { Plus, MoreHorizontal, Clock, X, ArrowLeft, Trash2, Send, UserPlus, MessageSquare, Search, Paperclip, Download, FileText } from 'lucide-react';
+import { Plus, MoreHorizontal, Clock, X, ArrowLeft, Trash2, Send, UserPlus, MessageSquare, Search, Paperclip, Download, FileText, Users, Crown, Shield } from 'lucide-react';
 
 const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024; // 3MB
 
@@ -46,6 +46,9 @@ const ProjectBoardPage = () => {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviting, setInviting] = useState(false);
 
+  const [manageOpen, setManageOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
+
   const [selectedTask, setSelectedTask] = useState(null);
 
   const [draggedTaskId, setDraggedTaskId] = useState(null);
@@ -75,13 +78,15 @@ const ProjectBoardPage = () => {
     let cancelled = false;
     (async () => {
       try {
-        const [pRes, tRes] = await Promise.all([
+        const [pRes, tRes, meRes] = await Promise.all([
           projectService.getById(id),
           taskService.getByProject(id),
+          authService.getCurrentUser().catch(() => null),
         ]);
         if (!cancelled) {
           setProject(pRes.data);
           setTasks(tRes.data);
+          if (meRes?.data?.id) setCurrentUserId(meRes.data.id);
           loadUserNames(pRes.data.members, tRes.data);
         }
       } catch {
@@ -187,6 +192,38 @@ const ProjectBoardPage = () => {
     }
   };
 
+  const handleChangeRole = async (targetUserId, newRole) => {
+    try {
+      const res = await projectService.changeMemberRole(id, targetUserId, newRole);
+      setProject(res.data);
+      toast.success('Member role updated.');
+    } catch {
+      toast.error('Failed to update role.');
+    }
+  };
+
+  const handleRemoveMember = async (targetUserId) => {
+    if (!window.confirm('Remove this member from the project?')) return;
+    try {
+      await projectService.removeMember(id, targetUserId);
+      setProject((prev) => ({ ...prev, members: prev.members.filter((m) => m.userId !== targetUserId) }));
+      toast.success('Member removed.');
+    } catch {
+      toast.error('Failed to remove member.');
+    }
+  };
+
+  const handleTransferOwner = async (targetUserId) => {
+    if (!window.confirm('Transfer project ownership to this member? You will become a Leader.')) return;
+    try {
+      const res = await projectService.transferOwnership(id, targetUserId);
+      setProject(res.data);
+      toast.success('Ownership transferred.');
+    } catch {
+      toast.error('Failed to transfer ownership.');
+    }
+  };
+
   if (!project) return <div className="p-8 text-slate-500">Loading board...</div>;
 
   const q = search.trim().toLowerCase();
@@ -218,6 +255,12 @@ const ProjectBoardPage = () => {
               </div>
             ))}
           </div>
+          <button
+            onClick={() => setManageOpen(true)}
+            className="border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2"
+          >
+            <Users size={16} /> Members
+          </button>
           <button
             onClick={() => setInviteOpen(true)}
             className="border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2"
@@ -402,6 +445,19 @@ const ProjectBoardPage = () => {
         </div>
       )}
 
+      {/* Manage Members Modal */}
+      {manageOpen && (
+        <ManageMembersModal
+          project={project}
+          currentUserId={currentUserId}
+          displayName={displayName}
+          onClose={() => setManageOpen(false)}
+          onChangeRole={handleChangeRole}
+          onRemove={handleRemoveMember}
+          onTransferOwner={handleTransferOwner}
+        />
+      )}
+
       {/* Task Detail Modal */}
       {selectedTask && (
         <TaskDetailModal
@@ -565,6 +621,91 @@ const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, 
             </form>
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+const ManageMembersModal = ({ project, currentUserId, displayName, onClose, onChangeRole, onRemove, onTransferOwner }) => {
+  const myRole = project.ownerId === currentUserId
+    ? 'Owner'
+    : project.members?.find((m) => m.userId === currentUserId)?.projectRole || 'Member';
+  const canManage = myRole === 'Owner' || myRole === 'Leader';
+  const isOwner = myRole === 'Owner';
+
+  // Sort: owner first, then leaders, then members.
+  const sorted = [...(project.members || [])].sort((a, b) => {
+    const rank = (m) => (m.userId === project.ownerId ? 0 : m.projectRole === 'Leader' ? 1 : 2);
+    return rank(a) - rank(b);
+  });
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl relative max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2"><Users size={20} /> Members ({sorted.length})</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+          {sorted.map((m) => {
+            const memberIsOwner = m.userId === project.ownerId;
+            const isSelf = m.userId === currentUserId;
+            return (
+              <div key={m.userId} className="flex items-center gap-3 px-6 py-4">
+                <div className="w-9 h-9 bg-indigo-50 rounded-full flex items-center justify-center text-xs font-black text-indigo-600 shrink-0">
+                  {initials(displayName(m.userId))}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-800 truncate">
+                    {displayName(m.userId)} {isSelf && <span className="text-slate-400 font-medium">(you)</span>}
+                  </p>
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider mt-0.5 ${
+                    memberIsOwner ? 'text-amber-600' : m.projectRole === 'Leader' ? 'text-indigo-600' : 'text-slate-400'
+                  }`}>
+                    {memberIsOwner ? <Crown size={11} /> : m.projectRole === 'Leader' ? <Shield size={11} /> : null}
+                    {memberIsOwner ? 'Owner' : m.projectRole}
+                  </span>
+                </div>
+
+                {canManage && !memberIsOwner && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <select
+                      value={m.projectRole}
+                      onChange={(e) => onChangeRole(m.userId, e.target.value)}
+                      className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    >
+                      <option value="Member">Member</option>
+                      <option value="Leader">Leader</option>
+                    </select>
+                    {isOwner && (
+                      <button
+                        onClick={() => onTransferOwner(m.userId)}
+                        title="Transfer ownership"
+                        className="text-slate-400 hover:text-amber-600 p-1.5 hover:bg-amber-50 rounded-lg transition-colors"
+                      >
+                        <Crown size={16} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onRemove(m.userId)}
+                      title="Remove member"
+                      className="text-slate-400 hover:text-rose-600 p-1.5 hover:bg-rose-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {!canManage && (
+          <div className="px-6 py-3 text-xs text-slate-400 border-t border-slate-100">
+            Only the owner or a leader can manage members.
+          </div>
+        )}
       </div>
     </div>
   );
