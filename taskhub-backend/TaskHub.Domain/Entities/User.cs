@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
@@ -16,6 +17,9 @@ public class User
     [BsonElement("email")]
     public string Email { get; set; } = string.Empty;
 
+    // [JsonIgnore]: không bao giờ serialize hash mật khẩu ra JSON response (phòng thủ nhiều lớp,
+    // kể cả nếu sau này có endpoint lỡ trả thẳng entity User). BSON/Mongo không bị ảnh hưởng.
+    [JsonIgnore]
     [BsonElement("passwordHash")]
     public string PasswordHash { get; set; } = string.Empty;
 
@@ -24,6 +28,7 @@ public class User
 
     // Mã PIN riêng (BCrypt hash) để mở khóa Kho mật khẩu — lớp xác thực thứ 2.
     // Rỗng = người dùng chưa thiết lập PIN.
+    [JsonIgnore]
     [BsonElement("vaultPinHash")]
     public string VaultPinHash { get; set; } = string.Empty;
 

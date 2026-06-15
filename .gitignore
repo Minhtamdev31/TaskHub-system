@@ -11,6 +11,9 @@ Taskhub_note.txt
 *_note.txt
 
 # Cấu hình local chứa secret thật (dùng appsettings.Example.json làm mẫu)
+# LƯU Ý: appsettings.json hiện ĐANG bị track và chứa secret thật. Sau khi đã chuyển
+# secret sang biến môi trường (Render), chạy: git rm --cached taskhub-backend/TaskHub.API/appsettings.json
+appsettings.json
 appsettings.Development.json
 appsettings.Local.json
 
