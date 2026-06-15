@@ -6,12 +6,17 @@ import { toast } from '../components/Toast';
 import { setTheme as applyAppTheme } from '../theme';
 
 const TABS = [
-  { id: 'profile', name: 'Profile', icon: User },
-  { id: 'security', name: 'Security', icon: Shield },
-  { id: 'notifications', name: 'Notifications', icon: Bell },
-  { id: 'display', name: 'Display', icon: Moon },
-  { id: 'billing', name: 'Billing', icon: Crown },
+  { id: 'profile', name: 'Hồ sơ', icon: User },
+  { id: 'security', name: 'Bảo mật', icon: Shield },
+  { id: 'notifications', name: 'Thông báo', icon: Bell },
+  { id: 'display', name: 'Giao diện', icon: Moon },
+  { id: 'billing', name: 'Thanh toán', icon: Crown },
 ];
+
+const THEME_LABELS = { Light: 'Sáng', Dark: 'Tối' };
+const ORDER_STATUS_LABELS = { Completed: 'Hoàn tất', Pending: 'Đang xử lý', Failed: 'Thất bại' };
+
+const MAX_AVATAR_BYTES = 1024 * 1024; // 1MB
 
 const formatPrice = (price) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(price || 0);
@@ -22,10 +27,26 @@ const ORDER_STATUS_STYLE = {
   Failed: 'bg-rose-100 text-rose-700',
 };
 
+const initials = (name) =>
+  (name || '?')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('') || '?';
+
+const readFileAsDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [profile, setProfile] = useState({
-    fullName: '', bio: '', jobTitle: '', phoneNumber: '', username: '', email: '',
+    fullName: '', bio: '', jobTitle: '', phoneNumber: '', username: '', email: '', avatarUrl: '',
   });
   const [settings, setSettings] = useState({ theme: 'Light', enableNotifications: true });
   const [passwords, setPasswords] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
@@ -45,23 +66,42 @@ const SettingsPage = () => {
           bio: u.profile?.bio || '',
           jobTitle: u.profile?.jobTitle || '',
           phoneNumber: u.profile?.phoneNumber || '',
+          avatarUrl: u.profile?.avatarUrl || '',
         });
         const accountTheme = u.settings?.theme || 'Light';
         setSettings({
           theme: accountTheme,
           enableNotifications: u.settings?.enableNotifications ?? true,
         });
-        // Sync the saved account theme to the live app theme.
+        // Đồng bộ chủ đề đã lưu với giao diện đang hiển thị.
         applyAppTheme(accountTheme.toLowerCase() === 'dark' ? 'dark' : 'light');
         setSubscription(u.subscription || null);
       })
-      .catch(() => toast.error('Failed to load profile.'))
+      .catch(() => toast.error('Không tải được hồ sơ.'))
       .finally(() => setLoading(false));
 
     paymentService.myOrders()
       .then((res) => setOrders(res.data || []))
       .catch(() => { /* không bắt buộc */ });
   }, []);
+
+  const handlePickAvatar = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // cho phép chọn lại cùng tệp
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      return toast.error('Vui lòng chọn tệp ảnh.');
+    }
+    if (file.size > MAX_AVATAR_BYTES) {
+      return toast.error('Ảnh quá lớn (tối đa 1MB).');
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setProfile((p) => ({ ...p, avatarUrl: dataUrl }));
+    } catch {
+      toast.error('Không đọc được ảnh.');
+    }
+  };
 
   const handleSaveProfile = async () => {
     setSaving(true);
@@ -71,10 +111,11 @@ const SettingsPage = () => {
         bio: profile.bio,
         jobTitle: profile.jobTitle,
         phoneNumber: profile.phoneNumber,
+        avatarUrl: profile.avatarUrl,
       });
-      toast.success('Profile updated successfully!');
+      toast.success('Cập nhật hồ sơ thành công!');
     } catch {
-      toast.error('Update failed.');
+      toast.error('Cập nhật thất bại.');
     } finally {
       setSaving(false);
     }
@@ -82,10 +123,10 @@ const SettingsPage = () => {
 
   const handleChangePassword = async () => {
     if (passwords.newPassword !== passwords.confirmPassword) {
-      return toast.error('New passwords do not match.');
+      return toast.error('Mật khẩu mới không khớp.');
     }
     if (passwords.newPassword.length < 6) {
-      return toast.error('New password must be at least 6 characters.');
+      return toast.error('Mật khẩu mới phải có ít nhất 6 ký tự.');
     }
     setSaving(true);
     try {
@@ -93,10 +134,10 @@ const SettingsPage = () => {
         oldPassword: passwords.oldPassword,
         newPassword: passwords.newPassword,
       });
-      toast.success('Password changed successfully!');
+      toast.success('Đổi mật khẩu thành công!');
       setPasswords({ oldPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
-      const msg = typeof err.response?.data === 'string' ? err.response.data : 'Failed to change password.';
+      const msg = typeof err.response?.data === 'string' ? err.response.data : 'Đổi mật khẩu thất bại.';
       toast.error(msg);
     } finally {
       setSaving(false);
@@ -105,21 +146,21 @@ const SettingsPage = () => {
 
   const handleSaveSettings = async (next) => {
     setSettings(next);
-    // Apply theme live so the change is visible immediately.
+    // Áp dụng chủ đề ngay để thấy thay đổi tức thì.
     applyAppTheme(next.theme?.toLowerCase() === 'dark' ? 'dark' : 'light');
     try {
       await userService.updateProfile({
         theme: next.theme,
         enableNotifications: next.enableNotifications,
       });
-      toast.success('Preferences saved.');
+      toast.success('Đã lưu tùy chọn.');
     } catch {
-      toast.error('Failed to save preferences.');
+      toast.error('Không lưu được tùy chọn.');
     }
   };
 
   if (loading) {
-    return <div className="p-8 text-slate-500">Loading settings...</div>;
+    return <div className="p-8 text-slate-500">Đang tải cài đặt...</div>;
   }
 
   const inputClass = "w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none";
@@ -127,8 +168,8 @@ const SettingsPage = () => {
   return (
     <div className="max-w-4xl space-y-8">
       <div>
-        <h2 className="text-3xl font-bold text-slate-900">Settings</h2>
-        <p className="text-slate-500">Manage your profile and account preferences.</p>
+        <h2 className="text-3xl font-bold text-slate-900">Cài đặt</h2>
+        <p className="text-slate-500">Quản lý hồ sơ và tùy chọn tài khoản của bạn.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -150,33 +191,62 @@ const SettingsPage = () => {
         <div className="md:col-span-3 bg-white border border-slate-200 rounded-xl shadow-sm p-6">
           {activeTab === 'profile' && (
             <div className="space-y-4">
+              {/* Ảnh đại diện */}
+              <div className="flex items-center gap-5 pb-5 border-b border-slate-100">
+                {profile.avatarUrl ? (
+                  <img src={profile.avatarUrl} alt="Ảnh đại diện" className="w-20 h-20 rounded-full object-cover border border-slate-200" />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-2xl font-black text-slate-500">
+                    {initials(profile.fullName || profile.username)}
+                  </div>
+                )}
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm px-4 py-2 rounded-lg transition-colors">
+                      Đổi ảnh
+                      <input type="file" accept="image/*" className="hidden" onChange={handlePickAvatar} />
+                    </label>
+                    {profile.avatarUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setProfile((p) => ({ ...p, avatarUrl: '' }))}
+                        className="text-rose-600 hover:bg-rose-50 font-bold text-sm px-4 py-2 rounded-lg transition-colors"
+                      >
+                        Xóa ảnh
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400">PNG/JPG, tối đa 1MB. Nhớ bấm "Lưu thay đổi" để áp dụng.</p>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Tên đăng nhập</label>
                 <input type="text" readOnly className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 cursor-not-allowed" value={profile.username} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Địa chỉ email</label>
                 <input type="email" readOnly className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 cursor-not-allowed" value={profile.email} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Họ và tên</label>
                 <input type="text" className={inputClass} value={profile.fullName} onChange={(e) => setProfile({ ...profile, fullName: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Job Title</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Chức danh</label>
                 <input type="text" className={inputClass} value={profile.jobTitle} onChange={(e) => setProfile({ ...profile, jobTitle: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Số điện thoại</label>
                 <input type="tel" className={inputClass} value={profile.phoneNumber} onChange={(e) => setProfile({ ...profile, phoneNumber: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Bio</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Giới thiệu</label>
                 <textarea rows={4} className={inputClass} value={profile.bio} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} />
               </div>
               <div className="pt-4 border-t border-slate-100 flex justify-end">
                 <button onClick={handleSaveProfile} disabled={saving} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
-                  {saving ? 'Saving...' : 'Save Changes'}
+                  {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </button>
               </div>
             </div>
@@ -184,22 +254,22 @@ const SettingsPage = () => {
 
           {activeTab === 'security' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-bold text-slate-900">Change Password</h3>
+              <h3 className="text-lg font-bold text-slate-900">Đổi mật khẩu</h3>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Mật khẩu hiện tại</label>
                 <input type="password" className={inputClass} value={passwords.oldPassword} onChange={(e) => setPasswords({ ...passwords, oldPassword: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Mật khẩu mới</label>
                 <input type="password" className={inputClass} value={passwords.newPassword} onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Xác nhận mật khẩu mới</label>
                 <input type="password" className={inputClass} value={passwords.confirmPassword} onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })} />
               </div>
               <div className="pt-4 border-t border-slate-100 flex justify-end">
                 <button onClick={handleChangePassword} disabled={saving} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
-                  {saving ? 'Updating...' : 'Update Password'}
+                  {saving ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
                 </button>
               </div>
             </div>
@@ -207,11 +277,11 @@ const SettingsPage = () => {
 
           {activeTab === 'notifications' && (
             <div className="space-y-6">
-              <h3 className="text-lg font-bold text-slate-900">Notification Preferences</h3>
+              <h3 className="text-lg font-bold text-slate-900">Tùy chọn thông báo</h3>
               <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200">
                 <div>
-                  <p className="font-semibold text-slate-800">Email & in-app notifications</p>
-                  <p className="text-sm text-slate-500">Receive updates about tasks, deadlines and projects.</p>
+                  <p className="font-semibold text-slate-800">Thông báo qua email & trong ứng dụng</p>
+                  <p className="text-sm text-slate-500">Nhận cập nhật về công việc, hạn chót và dự án.</p>
                 </div>
                 <button
                   onClick={() => handleSaveSettings({ ...settings, enableNotifications: !settings.enableNotifications })}
@@ -225,9 +295,9 @@ const SettingsPage = () => {
 
           {activeTab === 'display' && (
             <div className="space-y-6">
-              <h3 className="text-lg font-bold text-slate-900">Display & Theme</h3>
+              <h3 className="text-lg font-bold text-slate-900">Giao diện & Chủ đề</h3>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Theme preference</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Tùy chọn chủ đề</label>
                 <div className="grid grid-cols-2 gap-4">
                   {['Light', 'Dark'].map((theme) => (
                     <button
@@ -237,11 +307,11 @@ const SettingsPage = () => {
                         settings.theme === theme ? 'border-blue-600 bg-blue-50 text-blue-600' : 'border-slate-200 text-slate-600 hover:border-slate-300'
                       }`}
                     >
-                      {theme}
+                      {THEME_LABELS[theme]}
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-slate-400 mt-3">Your theme preference is saved to your account.</p>
+                <p className="text-xs text-slate-400 mt-3">Tùy chọn chủ đề được lưu vào tài khoản của bạn.</p>
               </div>
             </div>
           )}
@@ -258,7 +328,7 @@ const SettingsPage = () => {
                       <Crown size={22} />
                     </div>
                     <div>
-                      <p className="font-black text-slate-900">{subscription?.isPremium ? 'Premium' : 'Free'}</p>
+                      <p className="font-black text-slate-900">{subscription?.isPremium ? 'Premium' : 'Miễn phí'}</p>
                       <p className="text-xs text-slate-500">
                         {subscription?.isPremium
                           ? (subscription?.premiumUntil
@@ -276,7 +346,7 @@ const SettingsPage = () => {
                 </div>
                 {subscription?.isPremium && (
                   <ul className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {['Password Vault', 'Nhắc deadline', 'Phân tích dự án', 'Cộng tác không giới hạn'].map((p) => (
+                    {['Kho mật khẩu', 'Nhắc deadline', 'Phân tích dự án', 'Cộng tác không giới hạn'].map((p) => (
                       <li key={p} className="flex items-center gap-2 text-sm text-slate-600">
                         <Check size={15} className="text-green-600 shrink-0" /> {p}
                       </li>
@@ -301,7 +371,7 @@ const SettingsPage = () => {
                         <div className="flex items-center gap-3">
                           <span className="text-sm font-bold text-slate-700">{formatPrice(o.amount)}</span>
                           <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full ${ORDER_STATUS_STYLE[o.status] || 'bg-slate-100 text-slate-500'}`}>
-                            {o.status}
+                            {ORDER_STATUS_LABELS[o.status] || o.status}
                           </span>
                         </div>
                       </div>
