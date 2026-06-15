@@ -112,6 +112,19 @@ public class UsersController : ControllerBase
         return Ok(new AuthResponse(user));
     }
 
+    [HttpGet("{id}/profile")]
+    [Authorize]
+    public async Task<IActionResult> GetPublicProfile(string id)
+    {
+        var user = await _userService.GetByIdAsync(id);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new PublicProfileResponse(user));
+    }
+
     [HttpPost("lookup")]
     [Authorize]
     public async Task<IActionResult> Lookup([FromBody] UserLookupRequest request)

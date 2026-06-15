@@ -115,6 +115,7 @@ export const invitationService = {
 };
 
 export const userService = {
+  getProfile: (id) => apiClient.get(`/users/${id}/profile`),
   updateProfile: (data) => apiClient.put('/users/me/profile', data),
   changePassword: (data) => apiClient.put('/users/me/change-password', data),
   lookup: (ids) => apiClient.post('/users/lookup', { ids }),

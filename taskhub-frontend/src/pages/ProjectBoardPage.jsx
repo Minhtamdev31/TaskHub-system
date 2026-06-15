@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { taskService, projectService, commentService, invitationService, userService, authService } from '../services/api';
 import { toast } from '../components/Toast';
 import { confirm } from '../components/ConfirmDialog';
+import UserProfileModal from '../components/UserProfileModal';
 import { Plus, MoreHorizontal, Clock, X, ArrowLeft, Trash2, Send, UserPlus, MessageSquare, Search, Paperclip, Download, FileText, Users, Crown, Shield, Sparkles } from 'lucide-react';
 
 const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024; // 3MB
@@ -68,6 +69,8 @@ const ProjectBoardPage = () => {
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const [profileUserId, setProfileUserId] = useState(null);
 
   const handleDeleteProject = async () => {
     setDeleting(true);
@@ -303,9 +306,15 @@ const ProjectBoardPage = () => {
         <div className="flex items-center gap-4">
           <div className="flex -space-x-2 mr-2">
             {(project.members || []).map((m, i) => (
-              <div key={i} title={displayName(m.userId)} className="w-10 h-10 rounded-full border-4 border-slate-50 bg-white flex items-center justify-center text-xs font-bold shadow-sm">
+              <button
+                key={i}
+                type="button"
+                onClick={() => setProfileUserId(m.userId)}
+                title={`Xem hồ sơ: ${displayName(m.userId)}`}
+                className="w-10 h-10 rounded-full border-4 border-slate-50 bg-white flex items-center justify-center text-xs font-bold shadow-sm hover:ring-2 hover:ring-blue-400 hover:z-10 transition-all"
+              >
                 {initials(displayName(m.userId))}
-              </div>
+              </button>
             ))}
           </div>
           {project.ownerId === currentUserId && (
@@ -614,8 +623,12 @@ const ProjectBoardPage = () => {
           onChangeRole={handleChangeRole}
           onRemove={handleRemoveMember}
           onTransferOwner={handleTransferOwner}
+          onViewProfile={setProfileUserId}
         />
       )}
+
+      {/* User Profile Modal */}
+      <UserProfileModal userId={profileUserId} onClose={() => setProfileUserId(null)} />
 
       {/* Task Detail Modal */}
       {selectedTask && (
@@ -785,7 +798,7 @@ const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, 
   );
 };
 
-const ManageMembersModal = ({ project, currentUserId, displayName, onClose, onChangeRole, onRemove, onTransferOwner }) => {
+const ManageMembersModal = ({ project, currentUserId, displayName, onClose, onChangeRole, onRemove, onTransferOwner, onViewProfile }) => {
   const myRole = project.ownerId === currentUserId
     ? 'Owner'
     : project.members?.find((m) => m.userId === currentUserId)?.projectRole || 'Member';
@@ -812,20 +825,27 @@ const ManageMembersModal = ({ project, currentUserId, displayName, onClose, onCh
             const isSelf = m.userId === currentUserId;
             return (
               <div key={m.userId} className="flex items-center gap-3 px-6 py-4">
-                <div className="w-9 h-9 bg-indigo-50 rounded-full flex items-center justify-center text-xs font-black text-indigo-600 shrink-0">
-                  {initials(displayName(m.userId))}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-slate-800 truncate">
-                    {displayName(m.userId)} {isSelf && <span className="text-slate-400 font-medium">(bạn)</span>}
-                  </p>
-                  <span className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider mt-0.5 ${
-                    memberIsOwner ? 'text-amber-600' : m.projectRole === 'Leader' ? 'text-indigo-600' : 'text-slate-400'
-                  }`}>
-                    {memberIsOwner ? <Crown size={11} /> : m.projectRole === 'Leader' ? <Shield size={11} /> : null}
-                    {memberIsOwner ? roleLabels.Owner : (roleLabels[m.projectRole] || m.projectRole)}
-                  </span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => onViewProfile?.(m.userId)}
+                  title="Xem hồ sơ"
+                  className="flex items-center gap-3 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
+                >
+                  <div className="w-9 h-9 bg-indigo-50 rounded-full flex items-center justify-center text-xs font-black text-indigo-600 shrink-0">
+                    {initials(displayName(m.userId))}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-800 truncate">
+                      {displayName(m.userId)} {isSelf && <span className="text-slate-400 font-medium">(bạn)</span>}
+                    </p>
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider mt-0.5 ${
+                      memberIsOwner ? 'text-amber-600' : m.projectRole === 'Leader' ? 'text-indigo-600' : 'text-slate-400'
+                    }`}>
+                      {memberIsOwner ? <Crown size={11} /> : m.projectRole === 'Leader' ? <Shield size={11} /> : null}
+                      {memberIsOwner ? roleLabels.Owner : (roleLabels[m.projectRole] || m.projectRole)}
+                    </span>
+                  </div>
+                </button>
 
                 {canManage && !memberIsOwner && (
                   <div className="flex items-center gap-2 shrink-0">

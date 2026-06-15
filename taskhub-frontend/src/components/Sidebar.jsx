@@ -86,12 +86,12 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="w-64 bg-slate-900 text-white min-h-screen fixed left-0 top-0 flex flex-col border-r border-slate-800 z-50">
+    <aside className="w-64 bg-slate-900 text-white h-screen fixed left-0 top-0 flex flex-col border-r border-slate-800 z-50">
       <NavLink to="/dashboard" className="p-6 flex items-center justify-center hover:opacity-90 transition-opacity">
         <img src="/TaskHubLogo.png" alt="TaskHub" className="h-20 w-auto" />
       </NavLink>
 
-      <nav className="flex-1 px-4 space-y-8 mt-4">
+      <nav className="flex-1 overflow-y-auto px-4 space-y-8 mt-4">
         {menu.map((section) => (
           <div key={section.title}>
             <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em] mb-4 px-3">
