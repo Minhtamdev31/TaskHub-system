@@ -113,6 +113,43 @@ public class PaymentService : IPaymentService
         return false;
     }
 
+    // Xác nhận đơn ngay khi người dùng được redirect về (không phụ thuộc webhook).
+    // Hỏi trực tiếp PayOS trạng thái đơn theo orderCode; nếu PAID thì hoàn tất.
+    public async Task<bool> ConfirmPayOSOrderAsync(string orderCode, string userId)
+    {
+        if (string.IsNullOrWhiteSpace(orderCode) || string.IsNullOrWhiteSpace(userId))
+        {
+            return false;
+        }
+
+        var orders = await _orderRepository.GetAllAsync();
+        var order = orders.FirstOrDefault(o => o.PaymentCode == orderCode && o.UserId == userId);
+        if (order == null) return false;
+        if (order.Status == "Completed") return true; // đã hoàn tất trước đó (vd webhook đã chạy)
+
+        var clientId = _config["PayOS:ClientId"];
+        var apiKey = _config["PayOS:ApiKey"];
+        if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(apiKey))
+        {
+            return false;
+        }
+
+        _httpClient.DefaultRequestHeaders.Clear();
+        _httpClient.DefaultRequestHeaders.Add("x-client-id", clientId);
+        _httpClient.DefaultRequestHeaders.Add("x-api-key", apiKey);
+
+        var response = await _httpClient.GetAsync($"https://api-merchant.payos.vn/v2/payment-requests/{orderCode}");
+        if (!response.IsSuccessStatusCode) return false;
+
+        var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+        if (result.GetProperty("code").GetString() != "00") return false;
+
+        var status = result.GetProperty("data").GetProperty("status").GetString();
+        if (status != "PAID") return false;
+
+        return await CompleteSubscriptionOrder(orderCode);
+    }
+
     public async Task<List<Order>> GetOrdersByUserIdAsync(string userId)
     {
         var all = await _orderRepository.GetAllAsync();

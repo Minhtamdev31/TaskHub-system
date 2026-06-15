@@ -31,39 +31,29 @@ public class PaymentsController : ControllerBase
     [HttpPost("webhook/payos")]
     public async Task<IActionResult> PayOSWebhook()
     {
+        // Service tự bỏ qua webhook không khớp đơn nào (kể cả webhook test/xác minh URL
+        // của PayOS), nên ở đây cứ xử lý rồi luôn trả về error:0 để PayOS chấp nhận.
         try
         {
-            Request.EnableBuffering();
-
-            // Đọc thử nội dung body xem có phải gói tin test không
-            using (var reader = new StreamReader(Request.Body, System.Text.Encoding.UTF8, leaveOpen: true))
-            {
-                var bodyString = await reader.ReadToEndAsync();
-                Request.Body.Position = 0; // Reset lại con trỏ để Service phía dưới đọc tiếp
-
-                // Nếu PayOS gửi test webhook (thường chứa mã kiểm tra hoặc dữ liệu test rỗng)
-                if (string.IsNullOrEmpty(bodyString) || bodyString.Contains("confirm") || bodyString.Contains("0000"))
-                {
-                    return Ok(new { error = 0, message = "Ok" });
-                }
-            }
-
-            // Xử lý dữ liệu thực tế khi có người dùng thanh toán thật
-            var success = await _paymentService.ProcessPayOSWebhookAsync(Request);
-            if (success)
-            {
-                return Ok(new { error = 0, message = "Webhook processed successfully" });
-            }
-
-            // Nếu lưu URL vẫn kẹt lỗi 400, ép trả về Ok(0) ở đây để qua cổng kiểm duyệt của PayOS trước
-            return Ok(new { error = 0, message = "Bypassed verification for setup" });
+            await _paymentService.ProcessPayOSWebhookAsync(Request);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[PayOS Webhook Error]: {ex.Message}");
-            // Khi đang trong giai đoạn Setup cấu hình URL, luôn ưu tiên trả về Ok để PayOS lưu được link
-            return Ok(new { error = 0, message = "Setup mode success" });
         }
+
+        return Ok(new { error = 0, message = "Ok" });
+    }
+
+    [HttpGet("payos/confirm/{orderCode}")]
+    [Authorize]
+    public async Task<IActionResult> ConfirmPayOS(string orderCode)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userId == null) return Unauthorized();
+
+        var completed = await _paymentService.ConfirmPayOSOrderAsync(orderCode, userId);
+        return Ok(new { completed });
     }
 
     [HttpGet("my-orders")]

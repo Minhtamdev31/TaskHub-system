@@ -42,9 +42,24 @@ const PricingPage = () => {
   // Xử lý kết quả redirect từ PayOS
   useEffect(() => {
     const status = searchParams.get('status');
+    const orderCode = searchParams.get('orderCode');
     if (status === 'success') {
-      toast.success('Thanh toán thành công! Premium sẽ được kích hoạt trong giây lát.');
+      if (orderCode) {
+        // Xác nhận trực tiếp với backend (hỏi PayOS), không chờ webhook.
+        paymentService.confirmPayOS(orderCode)
+          .then((res) => {
+            if (res.data?.completed) {
+              toast.success('Thanh toán thành công! Premium đã được kích hoạt.');
+            } else {
+              toast.info('Đã ghi nhận thanh toán. Premium sẽ kích hoạt trong giây lát.');
+            }
+          })
+          .catch(() => toast.info('Đã ghi nhận thanh toán. Premium sẽ kích hoạt trong giây lát.'));
+      } else {
+        toast.success('Thanh toán thành công! Premium sẽ được kích hoạt trong giây lát.');
+      }
       searchParams.delete('status');
+      searchParams.delete('orderCode');
       setSearchParams(searchParams, { replace: true });
     } else if (status === 'cancel') {
       toast.info('Bạn đã hủy thanh toán.');

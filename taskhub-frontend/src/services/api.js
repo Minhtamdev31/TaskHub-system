@@ -129,6 +129,7 @@ export const subscriptionService = {
 
 export const paymentService = {
   checkoutPayOS: (data) => apiClient.post('/payments/checkout/payos', data),
+  confirmPayOS: (orderCode) => apiClient.get(`/payments/payos/confirm/${orderCode}`),
   myOrders: () => apiClient.get('/payments/my-orders'),
 };
 
