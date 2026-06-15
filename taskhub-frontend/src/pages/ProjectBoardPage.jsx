@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { taskService, projectService, commentService, invitationService, userService, authService } from '../services/api';
 import { toast } from '../components/Toast';
@@ -654,6 +654,68 @@ const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, 
   const [posting, setPosting] = useState(false);
   const [attachment, setAttachment] = useState(null); // { name, type, dataUrl }
 
+  // @-mention: gợi ý thành viên khi gõ @ trong comment
+  const commentInputRef = useRef(null);
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionIndex, setMentionIndex] = useState(0);
+
+  const mentionResults = mentionOpen
+    ? members
+        .map((m) => ({ userId: m.userId, name: displayName(m.userId) }))
+        .filter((m) => m.name.toLowerCase().includes(mentionQuery.toLowerCase()))
+        .slice(0, 6)
+    : [];
+
+  const handleCommentChange = (e) => {
+    const value = e.target.value;
+    setNewComment(value);
+    const caret = e.target.selectionStart ?? value.length;
+    const textBefore = value.slice(0, caret);
+    const m = /(^|\s)@([^\s@]*)$/.exec(textBefore);
+    if (m) {
+      setMentionQuery(m[2]);
+      setMentionOpen(true);
+      setMentionIndex(0);
+    } else {
+      setMentionOpen(false);
+    }
+  };
+
+  const selectMention = (member) => {
+    if (!member) return;
+    const el = commentInputRef.current;
+    const caret = el ? el.selectionStart : newComment.length;
+    const textBefore = newComment.slice(0, caret);
+    const at = textBefore.lastIndexOf('@');
+    if (at === -1) return;
+    const inserted = `@${member.name} `;
+    const before = newComment.slice(0, at);
+    const after = newComment.slice(caret);
+    setNewComment(before + inserted + after);
+    setMentionOpen(false);
+    const pos = (before + inserted).length;
+    requestAnimationFrame(() => {
+      if (el) { el.focus(); el.setSelectionRange(pos, pos); }
+    });
+  };
+
+  const handleCommentKeyDown = (e) => {
+    if (!mentionOpen || mentionResults.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setMentionIndex((i) => (i + 1) % mentionResults.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setMentionIndex((i) => (i - 1 + mentionResults.length) % mentionResults.length);
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      selectMention(mentionResults[Math.min(mentionIndex, mentionResults.length - 1)]);
+    } else if (e.key === 'Escape') {
+      setMentionOpen(false);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
     setLoadingComments(true);
@@ -786,7 +848,38 @@ const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, 
                 <Paperclip size={18} />
                 <input type="file" className="hidden" onChange={handlePickFile} />
               </label>
-              <input type="text" placeholder="Viết bình luận..." className="flex-1 px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={newComment} onChange={(e) => setNewComment(e.target.value)} />
+              <div className="relative flex-1">
+                {mentionOpen && mentionResults.length > 0 && (
+                  <div className="absolute bottom-full mb-2 left-0 w-64 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden z-10">
+                    <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                      Gắn thẻ thành viên
+                    </div>
+                    {mentionResults.map((m, i) => (
+                      <button
+                        key={m.userId}
+                        type="button"
+                        onMouseDown={(e) => { e.preventDefault(); selectMention(m); }}
+                        onMouseEnter={() => setMentionIndex(i)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors ${i === mentionIndex ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}
+                      >
+                        <span className="w-7 h-7 rounded-full bg-indigo-50 flex items-center justify-center text-[10px] font-black text-indigo-600 shrink-0">
+                          {initials(m.name)}
+                        </span>
+                        <span className="text-sm font-medium text-slate-700 truncate">{m.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <input
+                  ref={commentInputRef}
+                  type="text"
+                  placeholder="Viết bình luận... (gõ @ để gắn thẻ)"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                  value={newComment}
+                  onChange={handleCommentChange}
+                  onKeyDown={handleCommentKeyDown}
+                />
+              </div>
               <button type="submit" disabled={posting || (!newComment.trim() && !attachment)} className="bg-indigo-600 text-white px-4 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2">
                 <Send size={16} />
               </button>
