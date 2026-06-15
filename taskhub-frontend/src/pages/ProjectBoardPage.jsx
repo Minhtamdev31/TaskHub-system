@@ -42,6 +42,44 @@ const priorityBadge = (p) => priorityConfig[p] || priorityConfig.Medium;
 
 const initials = (name) => (name || 'NA').substring(0, 2).toUpperCase();
 
+// Render markdown rút gọn cho tóm tắt AI: in đậm **...** và giữ xuống dòng (container đã pre-wrap).
+const renderMarkdownLite = (text) => {
+  if (!text) return null;
+  // Tách theo cặp **...**; phần lẻ là chữ đậm.
+  return text.split(/\*\*(.+?)\*\*/g).map((part, i) =>
+    i % 2 === 1 ? <strong key={i} className="font-bold text-slate-900">{part}</strong> : part
+  );
+};
+
+// Escape ký tự đặc biệt để dùng tên thành viên trong regex.
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Hiển thị nội dung bình luận, tô nổi bật các @mention khớp tên thành viên thật.
+const CommentText = ({ content, members, displayName }) => {
+  if (!content) return null;
+  const names = (members || [])
+    .map((m) => displayName(m.userId))
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length); // khớp tên dài trước
+  if (names.length === 0) return <>{content}</>;
+
+  const re = new RegExp(`@(${names.map(escapeRegExp).join('|')})`, 'g');
+  const parts = [];
+  let last = 0;
+  let match;
+  while ((match = re.exec(content)) !== null) {
+    if (match.index > last) parts.push(content.slice(last, match.index));
+    parts.push(
+      <span key={match.index} className="text-indigo-600 font-semibold bg-indigo-50 rounded px-1">
+        {match[0]}
+      </span>
+    );
+    last = match.index + match[0].length;
+  }
+  if (last < content.length) parts.push(content.slice(last));
+  return <>{parts}</>;
+};
+
 const ProjectBoardPage = () => {
   const { id } = useParams();
   const [project, setProject] = useState(null);
@@ -581,7 +619,7 @@ const ProjectBoardPage = () => {
 
               {!aiLoading && !aiError && !aiRequiresUpgrade && aiSummary && (
                 <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-                  {aiSummary}
+                  {renderMarkdownLite(aiSummary)}
                 </div>
               )}
             </div>
@@ -898,7 +936,11 @@ const TaskDetailModal = ({ task, realtimeTick, members, displayName, onClose, on
                       <span className="text-sm font-bold text-slate-800">{displayName(c.userId)}</span>
                       <span className="text-[10px] text-slate-400">{new Date(c.createdAt).toLocaleString('vi-VN')}</span>
                     </div>
-                    {c.content && <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">{c.content}</p>}
+                    {c.content && (
+                      <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">
+                        <CommentText content={c.content} members={members} displayName={displayName} />
+                      </p>
+                    )}
                     {c.attachmentData && <CommentAttachment attachment={c} />}
                   </div>
                 </div>

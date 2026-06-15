@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { projectService } from '../services/api';
+import { projectService, userService } from '../services/api';
 import { Link } from 'react-router-dom';
 import { Plus, Folder, Users, Calendar, ArrowRight, X, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from '../components/Toast';
 
 const PAGE_SIZE = 6;
 
+const initials = (name) => (name || 'NA').substring(0, 2).toUpperCase();
+
 const ProjectListPage = () => {
   const [projects, setProjects] = useState([]);
+  const [userMap, setUserMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -37,7 +40,21 @@ const ProjectListPage = () => {
     (async () => {
       try {
         const res = await projectService.getAll();
-        if (!cancelled) setProjects(res.data);
+        if (cancelled) return;
+        setProjects(res.data);
+
+        // Lấy tên hiển thị của các thành viên để hiện đúng chữ cái đầu (thay vì 2 ký tự đầu của ObjectId).
+        const ids = new Set();
+        (res.data || []).forEach((p) => (p.members || []).forEach((m) => ids.add(m.userId)));
+        if (ids.size > 0) {
+          try {
+            const usersRes = await userService.lookup([...ids]);
+            if (cancelled) return;
+            const map = {};
+            usersRes.data.forEach((u) => { map[u.id] = u; });
+            setUserMap(map);
+          } catch { /* không nghiêm trọng */ }
+        }
       } catch (err) {
         console.error('Failed to fetch projects', err);
       } finally {
@@ -144,11 +161,14 @@ const ProjectListPage = () => {
 
               <div className="mt-6 pt-6 border-t border-slate-50 flex items-center justify-between">
                 <div className="flex -space-x-2">
-                  {project.members?.slice(0, 3).map((m, i) => (
-                    <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
-                      {m.userId.substring(0, 2).toUpperCase()}
-                    </div>
-                  ))}
+                  {project.members?.slice(0, 3).map((m, i) => {
+                    const name = userMap[m.userId]?.username || userMap[m.userId]?.fullName || m.userId;
+                    return (
+                      <div key={i} title={name} className="w-8 h-8 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                        {initials(name)}
+                      </div>
+                    );
+                  })}
                   {project.members?.length > 3 && (
                     <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400">
                       +{project.members.length - 3}

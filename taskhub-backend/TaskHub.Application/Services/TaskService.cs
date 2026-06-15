@@ -28,6 +28,16 @@ public class TaskService : ITaskService
     private static readonly string[] ValidStatuses = { "Todo", "InProgress", "Review", "Done" };
     private static readonly string[] ValidPriorities = { "Low", "Medium", "High", "Critical" };
 
+    // Nhãn trạng thái tiếng Việt cho thông báo (mã nội bộ giữ nguyên trong DB).
+    private static string StatusLabel(string status) => status switch
+    {
+        "Todo" => "Cần làm",
+        "InProgress" => "Đang làm",
+        "Review" => "Xem xét",
+        "Done" => "Hoàn thành",
+        _ => status
+    };
+
     public TaskService(
         IMongoRepository<TaskItem> taskRepository,
         IMongoRepository<Project> projectRepository,
@@ -141,7 +151,7 @@ public class TaskService : ITaskService
             {
                 await _notificationService.CreateAndSendNotificationAsync(
                     project.OwnerId,
-                    $"Task \"{existingTask.Title}\" changed from {oldStatus} to {normalizedStatus}",
+                    $"Công việc \"{existingTask.Title}\" chuyển từ {StatusLabel(oldStatus)} sang {StatusLabel(normalizedStatus)}",
                     "Task",
                     taskId);
             }
