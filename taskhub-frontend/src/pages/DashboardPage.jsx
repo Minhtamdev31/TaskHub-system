@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Search,
@@ -10,6 +10,7 @@ import {
   TrendingUp,
   ShieldCheck,
   ChevronRight,
+  Sparkles,
 } from 'lucide-react';
 import { authService, projectService, taskService } from '../services/api';
 import NotificationBell from '../components/NotificationBell';
@@ -23,6 +24,14 @@ const PRIORITY_BADGE = {
   Low: 'bg-emerald-100 text-emerald-700',
 };
 const PRIORITY_LABEL = { Critical: 'Khẩn cấp', High: 'Cao', Medium: 'Trung bình', Low: 'Thấp' };
+
+const STATUS_BADGE = {
+  Todo: 'bg-slate-100 text-slate-600',
+  InProgress: 'bg-blue-100 text-blue-700',
+  Review: 'bg-amber-100 text-amber-700',
+  Done: 'bg-emerald-100 text-emerald-700',
+};
+const STATUS_LABEL = { Todo: 'Cần làm', InProgress: 'Đang làm', Review: 'Xem xét', Done: 'Hoàn thành' };
 
 const WEEKDAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
@@ -85,7 +94,10 @@ const DashboardPage = () => {
   const [projects, setProjects] = useState([]);
   const [projectName, setProjectName] = useState({}); // taskId -> project name
   const [search, setSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
   const [serverStats, setServerStats] = useState(null); // số liệu thống kê từ backend
+  const searchRef = useRef(null);
   // Mốc thời gian chụp một lần khi mount — giữ render thuần (pure).
   const [now] = useState(() => Date.now());
 
@@ -119,7 +131,8 @@ const DashboardPage = () => {
           });
         });
 
-        setUserName((meRes.data?.fullName || meRes.data?.name || meRes.data?.email || 'bạn').split('@')[0]);
+        setUserName((meRes.data?.profile?.fullName || meRes.data?.username || meRes.data?.email || 'bạn').split('@')[0]);
+        setIsPremium(!!meRes.data?.subscription?.isPremium);
         setProjects(projectList);
         setTasks(allTasks);
         setProjectName(nameMap);
@@ -153,13 +166,30 @@ const DashboardPage = () => {
   const weekly = useMemo(() => serverStats?.weeklyCompleted ?? new Array(7).fill(0), [serverStats]);
   const weeklyMax = Math.max(1, ...weekly);
 
+  // Đóng dropdown kết quả tìm kiếm khi bấm ra ngoài.
+  useEffect(() => {
+    if (!searchOpen) return undefined;
+    const onClick = (e) => { if (searchRef.current && !searchRef.current.contains(e.target)) setSearchOpen(false); };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [searchOpen]);
+
+  const searchResults = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return [];
+    return tasks
+      .filter((t) =>
+        t.title.toLowerCase().includes(q) ||
+        (t.description || '').toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [tasks, search]);
+
   const upcoming = useMemo(() => {
     return tasks
       .filter((t) => t.status !== 'Done' && t.dueDate && new Date(t.dueDate).getTime() >= now)
-      .filter((t) => !search || t.title.toLowerCase().includes(search.toLowerCase()))
       .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
       .slice(0, 4);
-  }, [tasks, search, now]);
+  }, [tasks, now]);
 
   const recent = useMemo(() => {
     return [...tasks]
@@ -189,21 +219,61 @@ const DashboardPage = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="relative">
+          <div className="relative" ref={searchRef}>
             <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setSearchOpen(true); }}
+              onFocus={() => setSearchOpen(true)}
               placeholder="Tìm công việc..."
               className="w-56 md:w-64 pl-10 pr-4 py-2.5 rounded-full bg-slate-100 border border-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-slate-300 transition-colors"
             />
+
+            {searchOpen && search.trim() && (
+              <div className="absolute left-0 right-0 mt-2 w-full min-w-[280px] bg-white rounded-2xl border border-slate-200 shadow-2xl shadow-slate-900/10 z-50 overflow-hidden">
+                {searchResults.length === 0 ? (
+                  <p className="px-4 py-6 text-sm text-slate-400 text-center">
+                    Không tìm thấy công việc nào khớp “{search.trim()}”.
+                  </p>
+                ) : (
+                  <div className="max-h-[360px] overflow-y-auto divide-y divide-slate-100">
+                    {searchResults.map((t) => (
+                      <Link
+                        key={t.id}
+                        to={`/projects/${t.projectId}`}
+                        onClick={() => setSearchOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-slate-800 truncate">{t.title}</p>
+                          <p className="text-xs text-slate-400 truncate">{projectName[t.id] || 'Dự án'}</p>
+                        </div>
+                        <span className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full ${STATUS_BADGE[t.status] || STATUS_BADGE.Todo}`}>
+                          {STATUS_LABEL[t.status] || t.status}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <NotificationBell />
 
-          <Link to="/pricing" className="bg-brand-gradient text-white font-bold text-sm px-5 py-2.5 rounded-full flex items-center gap-2 shadow-sm hover:opacity-90 transition-opacity">
-            <Crown size={16} /> Nâng cấp
-          </Link>
+          {isPremium ? (
+            <Link
+              to="/settings"
+              className="bg-amber-50 text-amber-700 border border-amber-200 font-bold text-sm px-5 py-2.5 rounded-full flex items-center gap-2 hover:bg-amber-100 transition-colors"
+              title="Bạn đang dùng gói Premium"
+            >
+              <Crown size={16} className="fill-amber-400 text-amber-500" /> Premium
+            </Link>
+          ) : (
+            <Link to="/pricing" className="bg-brand-gradient text-white font-bold text-sm px-5 py-2.5 rounded-full flex items-center gap-2 shadow-sm hover:opacity-90 transition-opacity">
+              <Sparkles size={16} /> Nâng cấp
+            </Link>
+          )}
           <Link to="/projects" className="bg-blue-600 text-white font-bold text-sm px-5 py-2.5 rounded-full flex items-center gap-2 shadow-sm shadow-blue-600/20 hover:bg-blue-700 transition-colors">
             <Plus size={16} /> Thêm việc
           </Link>
