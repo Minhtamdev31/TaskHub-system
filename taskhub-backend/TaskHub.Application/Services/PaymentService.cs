@@ -248,7 +248,9 @@ public class PaymentService : IPaymentService
         
         user.Subscription.PremiumUntil = currentExp.AddDays(plan.DurationDays);
         user.Subscription.EndDate = user.Subscription.PremiumUntil;
-        user.Role = "PremiumMember"; // Optional Role upgrade
+        // KHÔNG đổi user.Role ở đây: Role dùng cho phân quyền (Admin/Member), còn trạng thái
+        // Premium đã được theo dõi qua Subscription.IsPremium. Ghi đè Role làm Admin mất quyền
+        // khi mua gói, và khiến Role kẹt "PremiumMember" mãi cả khi gói đã hết hạn.
 
         await _userRepository.UpdateAsync(user.Id, user);
         return true;
