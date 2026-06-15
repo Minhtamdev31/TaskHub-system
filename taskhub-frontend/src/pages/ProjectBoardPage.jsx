@@ -4,6 +4,10 @@ import { taskService, projectService, commentService, invitationService, userSer
 import { toast } from '../components/Toast';
 import { confirm } from '../components/ConfirmDialog';
 import UserProfileModal from '../components/UserProfileModal';
+import { HubConnectionBuilder } from '@microsoft/signalr';
+
+// Backend (SignalR hub) luôn chạy trên Render. Kết nối thẳng, không qua proxy /api của Vercel.
+const HUB_URL = 'https://taskhub-system.onrender.com/hubs/project';
 import { Plus, MoreHorizontal, Clock, X, ArrowLeft, Trash2, Send, UserPlus, MessageSquare, Search, Paperclip, Download, FileText, Users, Crown, Shield, Sparkles } from 'lucide-react';
 
 const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024; // 3MB
@@ -151,6 +155,43 @@ const ProjectBoardPage = () => {
     })();
     return () => { cancelled = true; };
   }, [id, loadUserNames]);
+
+  // Tải lại danh sách task (dùng cho cập nhật real-time).
+  const reloadTasks = useCallback(async () => {
+    try {
+      const tRes = await taskService.getByProject(id);
+      setTasks(tRes.data);
+    } catch { /* bỏ qua */ }
+  }, [id]);
+
+  // Tăng mỗi khi có sự kiện real-time → để TaskDetailModal tải lại bình luận.
+  const [realtimeTick, setRealtimeTick] = useState(0);
+
+  // Kết nối SignalR: nhận sự kiện comment/task thay đổi của dự án theo thời gian thực.
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const connection = new HubConnectionBuilder()
+      .withUrl(HUB_URL, { accessTokenFactory: () => localStorage.getItem('token') })
+      .withAutomaticReconnect()
+      .build();
+
+    connection.on('projectChanged', () => {
+      reloadTasks();
+      setRealtimeTick((t) => t + 1);
+    });
+
+    connection.start()
+      .then(() => connection.invoke('JoinProject', id))
+      .catch(() => { /* im lặng nếu hub chưa sẵn sàng (vd server đang khởi động) */ });
+
+    connection.onreconnected(() => {
+      connection.invoke('JoinProject', id).catch(() => {});
+    });
+
+    return () => { connection.stop(); };
+  }, [id, reloadTasks]);
 
   const handleUpdateStatus = async (taskId, newStatus) => {
     try {
@@ -634,6 +675,7 @@ const ProjectBoardPage = () => {
       {selectedTask && (
         <TaskDetailModal
           task={selectedTask}
+          realtimeTick={realtimeTick}
           members={project.members || []}
           displayName={displayName}
           onClose={() => setSelectedTask(null)}
@@ -647,7 +689,7 @@ const ProjectBoardPage = () => {
   );
 };
 
-const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, onPriorityChange, onAssign, onDelete }) => {
+const TaskDetailModal = ({ task, realtimeTick, members, displayName, onClose, onStatusChange, onPriorityChange, onAssign, onDelete }) => {
   const [comments, setComments] = useState([]);
   const [loadingComments, setLoadingComments] = useState(true);
   const [newComment, setNewComment] = useState('');
@@ -716,6 +758,7 @@ const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, 
     }
   };
 
+  // Tải bình luận lần đầu khi mở công việc (có hiện trạng thái "đang tải").
   useEffect(() => {
     let cancelled = false;
     setLoadingComments(true);
@@ -725,6 +768,16 @@ const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, 
       .finally(() => { if (!cancelled) setLoadingComments(false); });
     return () => { cancelled = true; };
   }, [task.id]);
+
+  // Làm mới bình luận âm thầm khi có sự kiện real-time (vd người khác vừa bình luận).
+  useEffect(() => {
+    if (realtimeTick === 0) return;
+    let cancelled = false;
+    commentService.getByTask(task.id)
+      .then((res) => { if (!cancelled) setComments(res.data); })
+      .catch(() => { /* bỏ qua lỗi làm mới nền */ });
+    return () => { cancelled = true; };
+  }, [realtimeTick, task.id]);
 
   const handlePickFile = async (e) => {
     const file = e.target.files?.[0];
@@ -747,7 +800,20 @@ const TaskDetailModal = ({ task, members, displayName, onClose, onStatusChange, 
     if (!newComment.trim() && !attachment) return;
     setPosting(true);
     try {
-      const payload = { content: newComment.trim(), taskId: task.id };
+      // Suy ra danh sách thành viên được @mention từ nội dung để backend tạo thông báo.
+      // Khớp tên dài trước rồi loại khỏi chuỗi tạm, tránh tên ngắn là tiền tố của tên dài
+      // bị nhận nhầm (vd "@Minh Tam" không được tính là nhắc tới thành viên tên "Minh").
+      let scratch = newComment;
+      const mentionedUserIds = [...members]
+        .sort((a, b) => displayName(b.userId).length - displayName(a.userId).length)
+        .filter((m) => {
+          const tag = `@${displayName(m.userId)}`;
+          if (!scratch.includes(tag)) return false;
+          scratch = scratch.split(tag).join(' ');
+          return true;
+        })
+        .map((m) => m.userId);
+      const payload = { content: newComment.trim(), taskId: task.id, mentionedUserIds };
       if (attachment) {
         payload.attachmentName = attachment.name;
         payload.attachmentType = attachment.type;

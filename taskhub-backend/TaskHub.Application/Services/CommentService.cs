@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TaskHub.Application.DTOs;
 using TaskHub.Application.Interfaces;
@@ -16,19 +15,22 @@ public class CommentService : ICommentService
     private readonly IMongoRepository<Project> _projectRepository;
     private readonly IUserService _userService;
     private readonly INotificationService _notificationService;
+    private readonly IRealtimeNotifier _realtime;
 
     public CommentService(
         IMongoRepository<Comment> commentRepository,
         IMongoRepository<TaskItem> taskRepository,
         IMongoRepository<Project> projectRepository,
         IUserService userService,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IRealtimeNotifier realtime)
     {
         _commentRepository = commentRepository;
         _taskRepository = taskRepository;
         _projectRepository = projectRepository;
         _userService = userService;
         _notificationService = notificationService;
+        _realtime = realtime;
     }
 
     // Giới hạn dung lượng đính kèm: ~4MB base64 (~3MB nhị phân) để không vượt giới hạn document MongoDB.
@@ -90,45 +92,37 @@ public class CommentService : ICommentService
         await _commentRepository.CreateAsync(comment);
 
         // Xử lý @mention sau khi lưu bình luận thành công
-        await ProcessMentionsAsync(comment, project, userId, task.Title);
+        await ProcessMentionsAsync(comment, project, userId, task.Title, dto.MentionedUserIds);
+
+        // Báo real-time cho các client đang mở dự án này
+        await _realtime.ProjectChangedAsync(project.Id, "commentAdded", new { taskId = comment.TaskId });
 
         return comment;
     }
 
-    private async Task ProcessMentionsAsync(Comment comment, Project project, string senderId, string taskTitle)
+    private async Task ProcessMentionsAsync(Comment comment, Project project, string senderId, string taskTitle, List<string>? mentionedUserIds)
     {
-        // Regex tìm các từ bắt đầu bằng @ (Ví dụ: @huy, @admin)
-        var mentionRegex = new Regex(@"@(\w+)", RegexOptions.Compiled);
-        var matches = mentionRegex.Matches(comment.Content);
-        var mentionedUsernames = matches.Cast<Match>().Select(m => m.Groups[1].Value).Distinct();
+        if (mentionedUserIds is null || mentionedUserIds.Count == 0) return;
 
-        if (!mentionedUsernames.Any()) return;
+        // Chỉ thông báo cho thành viên thật của dự án và không phải người gửi.
+        var projectMemberIds = project.Members.Select(m => m.UserId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        projectMemberIds.Add(project.OwnerId);
 
-        // Lấy danh sách user và thành viên dự án để kiểm tra quyền
-        var allUsers = await _userService.GetAllAsync();
-        var projectMemberIds = project.Members.Select(m => m.UserId).ToList();
-        if (!projectMemberIds.Contains(project.OwnerId)) projectMemberIds.Add(project.OwnerId);
+        var sender = await _userService.GetByIdAsync(senderId);
+        var senderName = sender?.Username ?? "Ai đó";
 
-        var sender = allUsers.FirstOrDefault(u => u.Id == senderId);
-        var senderName = sender?.Username ?? "Someone";
+        var targetIds = mentionedUserIds
+            .Where(id => !string.IsNullOrWhiteSpace(id) && projectMemberIds.Contains(id) && id != senderId)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var username in mentionedUsernames)
+        foreach (var targetId in targetIds)
         {
-            // Tìm tất cả user khớp username trong dự án và không phải người gửi
-            var targetUsers = allUsers.Where(u => 
-                u.Username.Equals(username, StringComparison.OrdinalIgnoreCase) && 
-                projectMemberIds.Contains(u.Id) &&
-                u.Id != senderId).ToList();
-
-            foreach (var targetUser in targetUsers)
-            {
-                await _notificationService.CreateAndSendNotificationAsync(
-                    targetUser.Id,
-                    $"{senderName} mentioned you in a comment on task \"{taskTitle}\"",
-                    "Mention",
-                    comment.TaskId,
-                    true); // Gửi cả Email để người dùng nhận được ngay
-            }
+            await _notificationService.CreateAndSendNotificationAsync(
+                targetId,
+                $"{senderName} đã nhắc đến bạn trong bình luận ở công việc \"{taskTitle}\"",
+                "Mention",
+                comment.TaskId,
+                true); // Gửi cả Email để người dùng nhận được ngay
         }
     }
 

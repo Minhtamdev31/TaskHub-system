@@ -23,20 +23,23 @@ public class TaskService : ITaskService
     private readonly IMongoRepository<Project> _projectRepository;
     private readonly IMongoRepository<Comment> _commentRepository;
     private readonly INotificationService _notificationService;
+    private readonly IRealtimeNotifier _realtime;
 
     private static readonly string[] ValidStatuses = { "Todo", "InProgress", "Review", "Done" };
     private static readonly string[] ValidPriorities = { "Low", "Medium", "High", "Critical" };
 
     public TaskService(
-        IMongoRepository<TaskItem> taskRepository, 
+        IMongoRepository<TaskItem> taskRepository,
         IMongoRepository<Project> projectRepository,
         IMongoRepository<Comment> commentRepository,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IRealtimeNotifier realtime)
     {
         _taskRepository = taskRepository;
         _projectRepository = projectRepository;
         _commentRepository = commentRepository;
         _notificationService = notificationService;
+        _realtime = realtime;
     }
 
     public async Task<List<TaskItem>> GetTasksByUserIdAsync(string userId)
@@ -80,6 +83,7 @@ public class TaskService : ITaskService
         };
 
         await _taskRepository.CreateAsync(task);
+        await _realtime.ProjectChangedAsync(task.ProjectId, "taskCreated", new { taskId = task.Id });
         return task;
     }
 
@@ -161,6 +165,7 @@ public class TaskService : ITaskService
 
         existingTask.UpdatedAt = DateTime.UtcNow;
         await _taskRepository.UpdateAsync(taskId, existingTask);
+        await _realtime.ProjectChangedAsync(existingTask.ProjectId, "taskUpdated", new { taskId });
         return true;
     }
 
@@ -231,9 +236,11 @@ public class TaskService : ITaskService
         // Trigger Notification
         await _notificationService.CreateAndSendNotificationAsync(
             targetUserId, 
-            $"You have been assigned to task: {existingTask.Title}", 
-            "Task", 
+            $"Bạn được giao công việc: {existingTask.Title}",
+            "Task",
             taskId);
+
+        await _realtime.ProjectChangedAsync(existingTask.ProjectId, "taskAssigned", new { taskId });
 
         return true;
     }
@@ -273,6 +280,7 @@ public class TaskService : ITaskService
         }
 
         await _taskRepository.DeleteAsync(taskId);
+        await _realtime.ProjectChangedAsync(existingTask.ProjectId, "taskDeleted", new { taskId });
         return true;
     }
 }

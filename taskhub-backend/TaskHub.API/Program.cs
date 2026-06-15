@@ -5,6 +5,8 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using TaskHub.Application.Interfaces;
 using TaskHub.Application.Services;
+using TaskHub.API.Hubs;
+using TaskHub.API.Realtime;
 using TaskHub.Persistence.Context;
 using TaskHub.Persistence.Repositories;
 
@@ -55,9 +57,26 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
+
+    // WebSocket không gửi được header Authorization → SignalR truyền token qua query string.
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 builder.Services.AddAuthorization();
+builder.Services.AddSignalR();
+builder.Services.AddScoped<IRealtimeNotifier, SignalRRealtimeNotifier>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
@@ -205,5 +224,6 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<ProjectHub>("/hubs/project");
 
 app.Run();

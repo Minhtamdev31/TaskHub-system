@@ -70,7 +70,7 @@ public class TaskDeadlineWorker : BackgroundService
             {
                 await notificationService.CreateAndSendNotificationAsync(
                     task.UserId,
-                    $"[Urgent] Your task \"{task.Title}\" is expiring soon!",
+                    $"[Khẩn] Công việc \"{task.Title}\" của bạn sắp đến hạn!",
                     "Deadline",
                     task.Id);
             }

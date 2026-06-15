@@ -9,4 +9,7 @@ public sealed class CreateCommentDto
     public string? AttachmentName { get; set; }
     public string? AttachmentType { get; set; }
     public string? AttachmentData { get; set; }
+
+    // Danh sách userId được nhắc (@mention) — frontend gửi trực tiếp để tạo thông báo chính xác.
+    public List<string> MentionedUserIds { get; set; } = new();
 }

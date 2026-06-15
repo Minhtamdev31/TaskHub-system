@@ -57,7 +57,7 @@ public class ProjectInvitationService : IProjectInvitationService
         var targetUser = (await _userRepository.GetAllAsync())
             .FirstOrDefault(u => u.Email.Equals(invitedEmail, StringComparison.OrdinalIgnoreCase));
 
-        string message = $"{inviter.Username} invited you to join project: {project.Name}";
+        string message = $"{inviter.Username} đã mời bạn tham gia dự án: {project.Name}";
 
         if (targetUser != null)
         {
@@ -67,7 +67,7 @@ public class ProjectInvitationService : IProjectInvitationService
         else
         {
             // Gmail only for non-registered users
-            await _emailService.SendEmailAsync(invitedEmail, "Project Invitation - TaskHub", $"<h3>Project Invitation</h3><p>{message}</p><p>Sign up to TaskHub to accept!</p>");
+            await _emailService.SendEmailAsync(invitedEmail, "Lời mời tham gia dự án - TaskHub", $"<h3>Lời mời tham gia dự án</h3><p>{message}</p><p>Đăng ký TaskHub để chấp nhận lời mời!</p>");
         }
 
         return true;
@@ -125,8 +125,8 @@ public class ProjectInvitationService : IProjectInvitationService
         // Notify the project owner (Inviter) about the response
         var respondent = await _userRepository.GetByIdAsync(userId);
         string respondentName = respondent?.Username ?? userEmail;
-        string action = accept ? "accepted" : "rejected";
-        string notificationMessage = $"{respondentName} has {action} your invitation to project: {invitation.ProjectName}";
+        string action = accept ? "chấp nhận" : "từ chối";
+        string notificationMessage = $"{respondentName} đã {action} lời mời tham gia dự án: {invitation.ProjectName}";
 
         await _notificationService.CreateAndSendNotificationAsync(
             invitation.InviterId, 
