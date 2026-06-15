@@ -1,9 +1,88 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { passwordVaultService } from '../services/api';
-import { Eye, EyeOff, Plus, Trash2, ShieldCheck, KeyRound } from 'lucide-react';
+import { Eye, EyeOff, Plus, Trash2, ShieldCheck, KeyRound, Lock } from 'lucide-react';
 import { toast } from '../components/Toast';
 import { confirm } from '../components/ConfirmDialog';
 import UpgradePanel from '../components/UpgradePanel';
+
+// --- Quản lý token mở khóa vault (lớp xác thực 2) trong sessionStorage ---
+const VAULT_TOKEN_KEY = 'vaultToken';
+const VAULT_TOKEN_EXP_KEY = 'vaultTokenExp';
+
+const storeVaultToken = (token, expiresInMinutes) => {
+  sessionStorage.setItem(VAULT_TOKEN_KEY, token);
+  sessionStorage.setItem(VAULT_TOKEN_EXP_KEY, String(Date.now() + (expiresInMinutes || 15) * 60_000));
+};
+const clearVaultToken = () => {
+  sessionStorage.removeItem(VAULT_TOKEN_KEY);
+  sessionStorage.removeItem(VAULT_TOKEN_EXP_KEY);
+};
+const hasLiveVaultToken = () =>
+  !!sessionStorage.getItem(VAULT_TOKEN_KEY) && Date.now() < Number(sessionStorage.getItem(VAULT_TOKEN_EXP_KEY) || 0);
+
+// Màn thiết lập / mở khóa bằng PIN.
+const VaultGate = ({ mode, onUnlocked }) => {
+  const isSetup = mode === 'setup';
+  const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!/^\d{4,12}$/.test(pin)) { toast.error('PIN cần 4–12 chữ số.'); return; }
+    if (isSetup && pin !== confirmPin) { toast.error('PIN nhập lại không khớp.'); return; }
+    setSubmitting(true);
+    try {
+      const res = isSetup
+        ? await passwordVaultService.setupPin(pin)
+        : await passwordVaultService.unlock(pin);
+      if (isSetup) toast.success('Đã thiết lập mã PIN cho kho mật khẩu.');
+      onUnlocked(res.data?.vaultToken, res.data?.expiresInMinutes);
+    } catch (err) {
+      toast.error(err.response?.data?.message || (isSetup ? 'Thiết lập PIN thất bại.' : 'Mã PIN không đúng.'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-3xl p-10 max-w-md mx-auto text-center shadow-sm">
+      <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30">
+        <Lock size={30} />
+      </div>
+      <h3 className="text-2xl font-black text-slate-900">
+        {isSetup ? 'Thiết lập mã PIN' : 'Mở khóa kho mật khẩu'}
+      </h3>
+      <p className="text-slate-500 mt-2 mb-6 text-sm">
+        {isSetup
+          ? 'Đặt một mã PIN (4–12 chữ số) làm lớp bảo vệ thứ 2 cho kho mật khẩu của bạn.'
+          : 'Nhập mã PIN để mở khóa. Phiên mở khóa kéo dài 15 phút.'}
+      </p>
+      <form onSubmit={submit} className="space-y-3">
+        <input
+          type="password" inputMode="numeric" autoFocus maxLength={12}
+          placeholder="Mã PIN"
+          className="w-full px-4 py-3 border border-slate-300 rounded-xl text-center tracking-[0.3em] font-mono text-lg outline-none focus:ring-2 focus:ring-indigo-500"
+          value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+        />
+        {isSetup && (
+          <input
+            type="password" inputMode="numeric" maxLength={12}
+            placeholder="Nhập lại PIN"
+            className="w-full px-4 py-3 border border-slate-300 rounded-xl text-center tracking-[0.3em] font-mono text-lg outline-none focus:ring-2 focus:ring-indigo-500"
+            value={confirmPin} onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
+          />
+        )}
+        <button
+          type="submit" disabled={submitting}
+          className="w-full py-3 rounded-2xl font-bold text-sm bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+        >
+          {submitting ? 'Đang xử lý...' : isSetup ? 'Tạo PIN & mở khóa' : 'Mở khóa'}
+        </button>
+      </form>
+    </div>
+  );
+};
 
 // Đánh giá độ mạnh mật khẩu theo độ dài và sự đa dạng ký tự. Trả về score 0–4.
 const evaluatePasswordStrength = (pw) => {
@@ -54,23 +133,34 @@ const PasswordVaultPage = () => {
   const [visibleIds, setVisibleIds] = useState(new Set());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newCred, setNewCred] = useState({ title: '', username: '', password: '', url: '' });
-  const [locked, setLocked] = useState(false);
-  const [loading, setLoading] = useState(true);
+  // loading | upgrade (chưa Premium) | setup (chưa có PIN) | locked (cần nhập PIN) | unlocked
+  const [status, setStatus] = useState('loading');
 
-  const fetchVault = () => {
-    setLoading(true);
+  const fetchVault = useCallback(() => {
     passwordVaultService.getAll()
-      .then((res) => { setCredentials(res.data); setLocked(false); })
+      .then((res) => { setCredentials(res.data); setStatus('unlocked'); })
       .catch((err) => {
-        if (err.response?.status === 403) setLocked(true);
+        if (err.response?.status === 403) setStatus('upgrade');
+        else if (err.response?.status === 423) { clearVaultToken(); setStatus('locked'); }
         else toast.error('Không tải được kho mật khẩu.');
-      })
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    fetchVault();
+      });
   }, []);
+
+  // Khởi tạo: nếu còn token mở khóa thì vào thẳng; nếu không thì xác định setup/locked/upgrade.
+  useEffect(() => {
+    if (hasLiveVaultToken()) { fetchVault(); return; }
+    passwordVaultService.pinStatus()
+      .then((res) => setStatus(res.data?.hasPin ? 'locked' : 'setup'))
+      .catch((err) => {
+        if (err.response?.status === 403) setStatus('upgrade');
+        else toast.error('Không kiểm tra được trạng thái kho mật khẩu.');
+      });
+  }, [fetchVault]);
+
+  const handleUnlocked = (token, expiresInMinutes) => {
+    storeVaultToken(token, expiresInMinutes);
+    fetchVault();
+  };
 
   const handleAddCredential = async (e) => {
     e.preventDefault();
@@ -83,8 +173,13 @@ const PasswordVaultPage = () => {
     } catch (err) {
       if (err.response?.status === 403) {
         setIsModalOpen(false);
-        setLocked(true);
+        setStatus('upgrade');
         toast.error(err.response?.data?.message || 'Kho mật khẩu là tính năng Premium.');
+      } else if (err.response?.status === 423) {
+        setIsModalOpen(false);
+        clearVaultToken();
+        setStatus('locked');
+        toast.error('Phiên mở khóa đã hết hạn. Vui lòng nhập lại PIN.');
       } else {
         toast.error('Lưu thông tin thất bại.');
       }
@@ -97,8 +192,14 @@ const PasswordVaultPage = () => {
       await passwordVaultService.delete(id);
       fetchVault();
       toast.success('Đã xóa thông tin.');
-    } catch {
-      toast.error('Xóa thất bại.');
+    } catch (err) {
+      if (err.response?.status === 423) {
+        clearVaultToken();
+        setStatus('locked');
+        toast.error('Phiên mở khóa đã hết hạn. Vui lòng nhập lại PIN.');
+      } else {
+        toast.error('Xóa thất bại.');
+      }
     }
   };
 
@@ -118,7 +219,7 @@ const PasswordVaultPage = () => {
           </h2>
           <p className="text-slate-500 mt-2 text-lg">Quản lý thông tin đăng nhập dự án trong môi trường bảo mật.</p>
         </div>
-        {!locked && (
+        {status === 'unlocked' && (
           <button
             onClick={() => setIsModalOpen(true)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-2xl text-sm shadow-lg shadow-indigo-600/20 flex items-center gap-2 transition-all active:scale-95"
@@ -128,13 +229,15 @@ const PasswordVaultPage = () => {
         )}
       </div>
 
-      {loading ? (
+      {status === 'loading' ? (
         <div className="p-8 text-slate-500">Đang tải kho mật khẩu...</div>
-      ) : locked ? (
+      ) : status === 'upgrade' ? (
         <UpgradePanel
           title="Password Vault là tính năng Premium"
           message="Lưu trữ và quản lý thông tin đăng nhập của bạn một cách an toàn. Nâng cấp Premium để mở khóa."
         />
+      ) : status === 'setup' || status === 'locked' ? (
+        <VaultGate mode={status} onUnlocked={handleUnlocked} />
       ) : (
       <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
         <table className="min-w-full divide-y divide-slate-100">

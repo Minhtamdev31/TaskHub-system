@@ -86,10 +86,21 @@ export const taskService = {
 /**
  * Password Vault Service: Encrypted credentials
  */
+// Token mở khóa vault (lớp 2) được giữ trong sessionStorage, gắn vào mỗi request dữ liệu.
+const vaultAuth = () => {
+  const token = sessionStorage.getItem('vaultToken');
+  return token ? { headers: { 'X-Vault-Token': token } } : {};
+};
+
 export const passwordVaultService = {
-  getAll: () => apiClient.get('/passwordvault'),
-  create: (data) => apiClient.post('/passwordvault', data),
-  delete: (id) => apiClient.delete(`/passwordvault/${id}`),
+  getAll: () => apiClient.get('/passwordvault', vaultAuth()),
+  create: (data) => apiClient.post('/passwordvault', data, vaultAuth()),
+  delete: (id) => apiClient.delete(`/passwordvault/${id}`, vaultAuth()),
+  // Xác thực 2 lớp (PIN)
+  pinStatus: () => apiClient.get('/passwordvault/pin/status'),
+  setupPin: (pin) => apiClient.post('/passwordvault/pin/setup', { pin }),
+  unlock: (pin) => apiClient.post('/passwordvault/unlock', { pin }),
+  changePin: (oldPin, newPin) => apiClient.put('/passwordvault/pin/change', { oldPin, newPin }),
 };
 
 /**

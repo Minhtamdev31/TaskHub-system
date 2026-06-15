@@ -22,6 +22,11 @@ public class User
     [BsonElement("role")]
     public string Role { get; set; } = "Member";
 
+    // Mã PIN riêng (BCrypt hash) để mở khóa Kho mật khẩu — lớp xác thực thứ 2.
+    // Rỗng = người dùng chưa thiết lập PIN.
+    [BsonElement("vaultPinHash")]
+    public string VaultPinHash { get; set; } = string.Empty;
+
     [BsonElement("isActive")]
     public bool IsActive { get; set; } = true;
 

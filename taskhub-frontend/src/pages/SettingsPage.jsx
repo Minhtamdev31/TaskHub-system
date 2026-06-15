@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { User, Shield, Bell, Moon, Crown, Check } from 'lucide-react';
-import { userService, authService, paymentService } from '../services/api';
+import { userService, authService, paymentService, passwordVaultService } from '../services/api';
 import { toast } from '../components/Toast';
 import { setTheme as applyAppTheme } from '../theme';
 
@@ -50,6 +50,8 @@ const SettingsPage = () => {
   });
   const [settings, setSettings] = useState({ theme: 'Light', enableNotifications: true });
   const [passwords, setPasswords] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+  const [vaultPins, setVaultPins] = useState({ oldPin: '', newPin: '', confirmPin: '' });
+  const [hasVaultPin, setHasVaultPin] = useState(null); // null = chưa biết, true/false sau khi kiểm tra
   const [subscription, setSubscription] = useState(null);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -139,6 +141,33 @@ const SettingsPage = () => {
     } catch (err) {
       const msg = typeof err.response?.data === 'string' ? err.response.data : 'Đổi mật khẩu thất bại.';
       toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Kiểm tra trạng thái PIN khi mở tab Bảo mật (chỉ gọi 1 lần).
+  useEffect(() => {
+    if (activeTab !== 'security' || hasVaultPin !== null) return;
+    passwordVaultService.pinStatus()
+      .then((res) => setHasVaultPin(!!res.data?.hasPin))
+      .catch(() => setHasVaultPin(false)); // 403 (chưa Premium) → coi như chưa có PIN
+  }, [activeTab, hasVaultPin]);
+
+  const handleChangePin = async () => {
+    if (!/^\d{4,12}$/.test(vaultPins.newPin)) {
+      return toast.error('PIN mới cần 4–12 chữ số.');
+    }
+    if (vaultPins.newPin !== vaultPins.confirmPin) {
+      return toast.error('PIN mới nhập lại không khớp.');
+    }
+    setSaving(true);
+    try {
+      await passwordVaultService.changePin(vaultPins.oldPin, vaultPins.newPin);
+      toast.success('Đã đổi mã PIN kho mật khẩu.');
+      setVaultPins({ oldPin: '', newPin: '', confirmPin: '' });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Đổi PIN thất bại.');
     } finally {
       setSaving(false);
     }
@@ -271,6 +300,44 @@ const SettingsPage = () => {
                 <button onClick={handleChangePassword} disabled={saving} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
                   {saving ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
                 </button>
+              </div>
+
+              <div className="pt-6 mt-2 border-t border-slate-100">
+                <h3 className="text-lg font-bold text-slate-900">Mã PIN kho mật khẩu</h3>
+                <p className="text-sm text-slate-500 mt-1 mb-4">Lớp xác thực thứ 2 để mở khóa Kho mật khẩu.</p>
+
+                {hasVaultPin === null ? (
+                  <p className="text-sm text-slate-400">Đang kiểm tra...</p>
+                ) : !hasVaultPin ? (
+                  <p className="text-sm text-slate-500">
+                    Bạn chưa thiết lập mã PIN. Hãy vào{' '}
+                    <Link to="/vault" className="text-indigo-600 font-semibold hover:underline">Kho mật khẩu</Link>{' '}
+                    để tạo PIN lần đầu.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">PIN hiện tại</label>
+                      <input type="password" inputMode="numeric" maxLength={12} className={inputClass}
+                        value={vaultPins.oldPin} onChange={(e) => setVaultPins({ ...vaultPins, oldPin: e.target.value.replace(/\D/g, '') })} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">PIN mới (4–12 chữ số)</label>
+                      <input type="password" inputMode="numeric" maxLength={12} className={inputClass}
+                        value={vaultPins.newPin} onChange={(e) => setVaultPins({ ...vaultPins, newPin: e.target.value.replace(/\D/g, '') })} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Xác nhận PIN mới</label>
+                      <input type="password" inputMode="numeric" maxLength={12} className={inputClass}
+                        value={vaultPins.confirmPin} onChange={(e) => setVaultPins({ ...vaultPins, confirmPin: e.target.value.replace(/\D/g, '') })} />
+                    </div>
+                    <div className="pt-4 border-t border-slate-100 flex justify-end">
+                      <button onClick={handleChangePin} disabled={saving} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                        {saving ? 'Đang cập nhật...' : 'Đổi mã PIN'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

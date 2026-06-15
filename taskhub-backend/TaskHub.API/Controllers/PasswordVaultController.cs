@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using TaskHub.Application.DTOs;
+using TaskHub.Application.Helpers;
 using TaskHub.Application.Interfaces;
 
 namespace TaskHub.API.Controllers;
@@ -14,11 +16,19 @@ public class PasswordVaultController : ControllerBase
 {
     private readonly IPasswordVaultService _vaultService;
     private readonly IUserService _userService;
+    private readonly string _vaultTokenKey;
 
-    public PasswordVaultController(IPasswordVaultService vaultService, IUserService userService)
+    private const string VaultTokenHeader = "X-Vault-Token";
+
+    public PasswordVaultController(
+        IPasswordVaultService vaultService,
+        IUserService userService,
+        IConfiguration configuration)
     {
         _vaultService = vaultService;
         _userService = userService;
+        _vaultTokenKey = configuration["Security:VaultEncryptionKey"]
+                         ?? throw new InvalidOperationException("Vault encryption key is not configured.");
     }
 
     private async Task<bool> IsPremiumAsync(string userId)
@@ -34,13 +44,84 @@ public class PasswordVaultController : ControllerBase
             requiresUpgrade = true
         });
 
+    // 423 Locked: chưa mở khóa bằng PIN (không dùng 401 để tránh tự đăng xuất ở frontend).
+    private IActionResult VaultLocked() =>
+        StatusCode(423, new
+        {
+            message = "Kho mật khẩu đang khóa. Vui lòng nhập mã PIN để mở khóa.",
+            requiresVaultUnlock = true
+        });
+
+    private bool HasValidVaultToken(string userId)
+    {
+        var token = Request.Headers[VaultTokenHeader].ToString();
+        return VaultTokenHelper.Validate(token, userId, _vaultTokenKey);
+    }
+
+    // ---------- PIN / Unlock ----------
+
+    [HttpGet("pin/status")]
+    public async Task<IActionResult> GetPinStatus()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+        if (!await IsPremiumAsync(userId)) return UpgradeRequired();
+
+        return Ok(new { hasPin = await _vaultService.HasPinAsync(userId) });
+    }
+
+    [HttpPost("pin/setup")]
+    public async Task<IActionResult> SetupPin([FromBody] VaultPinDto request)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+        if (!await IsPremiumAsync(userId)) return UpgradeRequired();
+
+        if (await _vaultService.HasPinAsync(userId))
+            return BadRequest(new { message = "PIN đã được thiết lập. Hãy dùng chức năng đổi PIN." });
+
+        if (!await _vaultService.SetPinAsync(userId, request?.Pin ?? string.Empty))
+            return BadRequest(new { message = "PIN không hợp lệ (cần 4–12 chữ số)." });
+
+        // Thiết lập xong thì mở khóa luôn cho mượt.
+        return Ok(new { vaultToken = VaultTokenHelper.Create(userId, _vaultTokenKey), expiresInMinutes = VaultTokenHelper.LifetimeMinutes });
+    }
+
+    [HttpPost("unlock")]
+    public async Task<IActionResult> Unlock([FromBody] VaultPinDto request)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+        if (!await IsPremiumAsync(userId)) return UpgradeRequired();
+
+        if (!await _vaultService.VerifyPinAsync(userId, request?.Pin ?? string.Empty))
+            return BadRequest(new { message = "Mã PIN không đúng." });
+
+        return Ok(new { vaultToken = VaultTokenHelper.Create(userId, _vaultTokenKey), expiresInMinutes = VaultTokenHelper.LifetimeMinutes });
+    }
+
+    [HttpPut("pin/change")]
+    public async Task<IActionResult> ChangePin([FromBody] ChangeVaultPinDto request)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+        if (!await IsPremiumAsync(userId)) return UpgradeRequired();
+
+        if (!await _vaultService.ChangePinAsync(userId, request?.OldPin ?? string.Empty, request?.NewPin ?? string.Empty))
+            return BadRequest(new { message = "Đổi PIN thất bại. Kiểm tra PIN cũ và PIN mới (4–12 chữ số)." });
+
+        return Ok(new { message = "Đã đổi mã PIN." });
+    }
+
+    // ---------- Dữ liệu (yêu cầu Premium + đã mở khóa PIN) ----------
+
     [HttpPost]
     public async Task<IActionResult> AddCredential([FromBody] AddCredentialDto request)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId)) return Unauthorized();
-
         if (!await IsPremiumAsync(userId)) return UpgradeRequired();
+        if (!HasValidVaultToken(userId)) return VaultLocked();
 
         if (request is null || string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.Password))
         {
@@ -58,8 +139,8 @@ public class PasswordVaultController : ControllerBase
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId)) return Unauthorized();
-
         if (!await IsPremiumAsync(userId)) return UpgradeRequired();
+        if (!HasValidVaultToken(userId)) return VaultLocked();
 
         var credentials = await _vaultService.GetMyCredentialsAsync(userId);
         return Ok(credentials);
@@ -72,6 +153,8 @@ public class PasswordVaultController : ControllerBase
 
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId)) return Unauthorized();
+        if (!await IsPremiumAsync(userId)) return UpgradeRequired();
+        if (!HasValidVaultToken(userId)) return VaultLocked();
 
         var success = await _vaultService.DeleteCredentialAsync(id, userId);
         if (!success)
