@@ -38,8 +38,9 @@ public class PaymentService : IPaymentService
         var plan = await _planRepository.GetByIdAsync(planId);
         if (plan == null) throw new Exception("Plan not found");
 
-        // Generates a unique 9-digit int based on daily time ticks
-        int orderCode = int.Parse(DateTime.UtcNow.ToString("HHmmssfff"));
+        // Mốc thời gian Unix theo mili-giây: duy nhất xuyên ngày nên không bị PayOS từ chối
+        // vì trùng orderCode (lỗi cũ chỉ mã hóa giờ-phút-giây nên trùng giữa các ngày).
+        long orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
         int amount = (int)plan.Price;
         // Ensure description contains only standard alphanumeric characters and spaces
@@ -101,8 +102,31 @@ public class PaymentService : IPaymentService
         using var reader = new StreamReader(request.Body);
         var body = await reader.ReadToEndAsync();
         var json = JsonSerializer.Deserialize<JsonElement>(body);
-        
-        var data = json.GetProperty("data");
+
+        if (!json.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object)
+        {
+            // Webhook xác minh URL của PayOS không có "data" → bỏ qua, không lỗi.
+            return false;
+        }
+
+        // BẮT BUỘC xác minh chữ ký: nếu không, bất kỳ ai cũng có thể giả webhook để
+        // tự nâng cấp Premium miễn phí. PayOS ký HMAC-SHA256 trên các trường của "data"
+        // sắp xếp theo tên khóa, dùng ChecksumKey.
+        var checksumKey = _config["PayOS:ChecksumKey"];
+        if (string.IsNullOrEmpty(checksumKey))
+        {
+            return false;
+        }
+
+        var receivedSignature = json.TryGetProperty("signature", out var sigEl) ? sigEl.GetString() : null;
+        var expectedSignature = HmacSha256(BuildWebhookSignatureData(data), checksumKey);
+        if (string.IsNullOrEmpty(receivedSignature) ||
+            !string.Equals(receivedSignature, expectedSignature, StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine("[PayOS Webhook] Chữ ký không hợp lệ — bỏ qua đơn giả mạo.");
+            return false;
+        }
+
         var orderCode = data.GetProperty("orderCode").GetInt64().ToString();
         var code = json.GetProperty("code").GetString();
 
@@ -111,6 +135,23 @@ public class PaymentService : IPaymentService
             return await CompleteSubscriptionOrder(orderCode);
         }
         return false;
+    }
+
+    // Ghép chuỗi ký theo chuẩn PayOS: các trường của "data" sắp xếp tăng dần theo tên khóa,
+    // nối thành "key=value&key2=value2..." (giá trị null → rỗng).
+    private static string BuildWebhookSignatureData(JsonElement data)
+    {
+        var pairs = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        foreach (var prop in data.EnumerateObject())
+        {
+            pairs[prop.Name] = prop.Value.ValueKind switch
+            {
+                JsonValueKind.Null or JsonValueKind.Undefined => string.Empty,
+                JsonValueKind.String => prop.Value.GetString() ?? string.Empty,
+                _ => prop.Value.GetRawText()
+            };
+        }
+        return string.Join("&", pairs.Select(p => $"{p.Key}={p.Value}"));
     }
 
     // Xác nhận đơn ngay khi người dùng được redirect về (không phụ thuộc webhook).
