@@ -12,4 +12,5 @@ public interface ITaskService
     Task<bool> UpdateTaskAsync(string taskId, UpdateTaskDto dto, string userId);
     Task<bool> AssignTaskAsync(string taskId, AssignTaskDto dto, string currentUserId);
     Task<bool> DeleteTaskAsync(string taskId, string userId);
+    Task<DashboardStatsDto> GetDashboardStatsAsync(string userId);
 }

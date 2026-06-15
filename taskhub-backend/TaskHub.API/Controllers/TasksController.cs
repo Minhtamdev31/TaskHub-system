@@ -32,6 +32,19 @@ public class TasksController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetDashboardStats()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var stats = await _taskService.GetDashboardStatsAsync(userId);
+        return Ok(stats);
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetTaskById(string id)
     {

@@ -76,6 +76,7 @@ export const projectService = {
  */
 export const taskService = {
   getAll: () => apiClient.get('/tasks'),
+  getDashboardStats: () => apiClient.get('/tasks/stats'),
   getByProject: (projectId) => apiClient.get(`/tasks/project/${projectId}`),
   create: (data) => apiClient.post('/tasks', data),
   update: (id, data) => apiClient.put(`/tasks/${id}`, data),

@@ -38,4 +38,21 @@ public class TaskItem
 
     [BsonElement("updatedAt")]
     public DateTime? UpdatedAt { get; set; }
+
+    /// <summary>
+    /// Nhật ký thay đổi trạng thái, dùng để tái dựng trạng thái task tại bất kỳ
+    /// thời điểm nào (phục vụ thống kê tuần này / tuần trước chính xác).
+    /// </summary>
+    [BsonElement("statusHistory")]
+    public List<StatusChange> StatusHistory { get; set; } = new();
+}
+
+[BsonIgnoreExtraElements]
+public class StatusChange
+{
+    [BsonElement("status")]
+    public string Status { get; set; } = string.Empty;
+
+    [BsonElement("changedAt")]
+    public DateTime ChangedAt { get; set; }
 }

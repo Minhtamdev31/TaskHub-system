@@ -80,6 +80,7 @@ public class TaskService : ITaskService
             return null;
         }
 
+        var createdAt = DateTime.UtcNow;
         var task = new TaskItem
         {
             Title = dto.Title.Trim(),
@@ -89,7 +90,8 @@ public class TaskService : ITaskService
             DueDate = dto.DueDate,
             UserId = userId,
             ProjectId = dto.ProjectId.Trim(),
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = createdAt,
+            StatusHistory = new List<StatusChange> { new() { Status = "Todo", ChangedAt = createdAt } }
         };
 
         await _taskRepository.CreateAsync(task);
@@ -149,6 +151,9 @@ public class TaskService : ITaskService
             // Thông báo cho chủ dự án khi trạng thái công việc thay đổi (Feature 6)
             if (!oldStatus.Equals(normalizedStatus, StringComparison.OrdinalIgnoreCase))
             {
+                existingTask.StatusHistory ??= new List<StatusChange>();
+                existingTask.StatusHistory.Add(new StatusChange { Status = normalizedStatus, ChangedAt = DateTime.UtcNow });
+
                 await _notificationService.CreateAndSendNotificationAsync(
                     project.OwnerId,
                     $"Công việc \"{existingTask.Title}\" chuyển từ {StatusLabel(oldStatus)} sang {StatusLabel(normalizedStatus)}",
@@ -292,5 +297,119 @@ public class TaskService : ITaskService
         await _taskRepository.DeleteAsync(taskId);
         await _realtime.ProjectChangedAsync(existingTask.ProjectId, "taskDeleted", new { taskId });
         return true;
+    }
+
+    public async Task<DashboardStatsDto> GetDashboardStatsAsync(string userId)
+    {
+        var stats = new DashboardStatsDto();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return stats;
+        }
+
+        // Phạm vi: mọi task trong các dự án người dùng sở hữu hoặc là thành viên.
+        var projects = await _projectRepository.GetAllAsync();
+        var projectIds = projects
+            .Where(p => p.OwnerId.Equals(userId, StringComparison.OrdinalIgnoreCase)
+                || p.Members.Any(m => m.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase)))
+            .Select(p => p.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var allTasks = await _taskRepository.GetAllAsync();
+        var tasks = allTasks.Where(t => projectIds.Contains(t.ProjectId)).ToList();
+
+        var now = DateTime.UtcNow;
+        var weekAgo = now.AddDays(-7);
+
+        // --- Ảnh chụp hiện tại ---
+        int totalNow = tasks.Count;
+        int doneNow = tasks.Count(t => StatusAt(t, now) == "Done");
+        int wipNow = tasks.Count(t => StatusAt(t, now) is "InProgress" or "Review");
+        int prodNow = totalNow > 0 ? (int)Math.Round(doneNow * 100.0 / totalNow) : 0;
+
+        // --- Ảnh chụp cùng thời điểm tuần trước (tái dựng từ lịch sử) ---
+        var existedLastWeek = tasks.Where(t => t.CreatedAt <= weekAgo).ToList();
+        int totalLast = existedLastWeek.Count;
+        int doneLast = existedLastWeek.Count(t => StatusAt(t, weekAgo) == "Done");
+        int wipLast = existedLastWeek.Count(t => StatusAt(t, weekAgo) is "InProgress" or "Review");
+        int prodLast = totalLast > 0 ? (int)Math.Round(doneLast * 100.0 / totalLast) : 0;
+
+        stats.TotalTasks = totalNow;
+        stats.CompletedTasks = doneNow;
+        stats.InProgressTasks = wipNow;
+        stats.Productivity = prodNow;
+        stats.TotalChangePct = PctChange(totalNow, totalLast);
+        stats.CompletedChangePct = PctChange(doneNow, doneLast);
+        stats.InProgressChangePct = PctChange(wipNow, wipLast);
+        stats.ProductivityChangePoints = prodNow - prodLast;
+
+        // --- Công việc hoàn thành theo ngày trong tuần (T2..CN) ---
+        var weekStart = StartOfWeek(now);
+        foreach (var t in tasks)
+        {
+            var doneAt = LastTransitionTo(t, "Done");
+            if (doneAt is null) continue;
+            var idx = (int)Math.Floor((doneAt.Value - weekStart).TotalDays);
+            if (idx >= 0 && idx < 7) stats.WeeklyCompleted[idx]++;
+        }
+
+        return stats;
+    }
+
+    // Đưa về đầu tuần (Thứ 2, 00:00 UTC).
+    private static DateTime StartOfWeek(DateTime d)
+    {
+        var date = d.Date;
+        int diff = ((int)date.DayOfWeek + 6) % 7; // Monday = 0
+        return date.AddDays(-diff);
+    }
+
+    // % thay đổi tương đối; prev = 0 và cur > 0 → +100%.
+    private static int PctChange(int cur, int prev)
+    {
+        if (prev == 0) return cur > 0 ? 100 : 0;
+        return (int)Math.Round((cur - prev) * 100.0 / prev);
+    }
+
+    // Lịch sử trạng thái hiệu dụng — tự suy ra cho task cũ chưa có StatusHistory.
+    private static IEnumerable<StatusChange> EffectiveHistory(TaskItem t)
+    {
+        if (t.StatusHistory is { Count: > 0 })
+        {
+            return t.StatusHistory.OrderBy(h => h.ChangedAt);
+        }
+
+        // Task cũ: giả định khởi tạo là Todo lúc CreatedAt, và nếu hiện không phải Todo
+        // thì đã chuyển sang trạng thái hiện tại tại thời điểm UpdatedAt (xấp xỉ).
+        var history = new List<StatusChange> { new() { Status = "Todo", ChangedAt = t.CreatedAt } };
+        if (!string.Equals(t.Status, "Todo", StringComparison.OrdinalIgnoreCase))
+        {
+            history.Add(new StatusChange { Status = t.Status, ChangedAt = t.UpdatedAt ?? t.CreatedAt });
+        }
+        return history;
+    }
+
+    // Trạng thái của task tại thời điểm T (null nếu chưa tồn tại).
+    private static string? StatusAt(TaskItem t, DateTime at)
+    {
+        if (t.CreatedAt > at) return null;
+        string? status = null;
+        foreach (var h in EffectiveHistory(t))
+        {
+            if (h.ChangedAt <= at) status = h.Status;
+            else break;
+        }
+        return status;
+    }
+
+    // Thời điểm gần nhất task chuyển sang trạng thái cho trước (null nếu chưa từng).
+    private static DateTime? LastTransitionTo(TaskItem t, string status)
+    {
+        DateTime? when = null;
+        foreach (var h in EffectiveHistory(t))
+        {
+            if (string.Equals(h.Status, status, StringComparison.OrdinalIgnoreCase)) when = h.ChangedAt;
+        }
+        return when;
     }
 }

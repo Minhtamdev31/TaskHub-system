@@ -1,106 +1,129 @@
-import { useEffect, useState } from 'react';
-import { BarChart3, CheckCircle2, Activity, FolderKanban, AlertTriangle } from 'lucide-react';
-import { projectService, taskService } from '../services/api';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  Search,
+  Crown,
+  Plus,
+  ListChecks,
+  CheckCircle2,
+  Clock,
+  TrendingUp,
+  ShieldCheck,
+  ChevronRight,
+} from 'lucide-react';
+import { authService, projectService, taskService } from '../services/api';
+import NotificationBell from '../components/NotificationBell';
 
-const STATUS_META = [
-  { key: 'Todo', label: 'Cần làm', color: '#94a3b8' },
-  { key: 'InProgress', label: 'Đang làm', color: '#6366f1' },
-  { key: 'Review', label: 'Xem xét', color: '#f59e0b' },
-  { key: 'Done', label: 'Hoàn thành', color: '#22c55e' },
-];
+// --- Helpers ---------------------------------------------------------------
 
-const PRIORITY_META = [
-  { key: 'Critical', label: 'Khẩn cấp', color: '#f43f5e' },
-  { key: 'High', label: 'Cao', color: '#f59e0b' },
-  { key: 'Medium', label: 'Trung bình', color: '#0ea5e9' },
-  { key: 'Low', label: 'Thấp', color: '#94a3b8' },
-];
+const PRIORITY_BADGE = {
+  Critical: 'bg-rose-100 text-rose-700',
+  High: 'bg-rose-100 text-rose-700',
+  Medium: 'bg-amber-100 text-amber-700',
+  Low: 'bg-emerald-100 text-emerald-700',
+};
+const PRIORITY_LABEL = { Critical: 'Khẩn cấp', High: 'Cao', Medium: 'Trung bình', Low: 'Thấp' };
 
-// Lightweight SVG donut chart — no external chart library.
-const DonutChart = ({ segments, total, size = 180, stroke = 22 }) => {
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  let offset = 0;
+const WEEKDAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
-  return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--donut-track, #e2e8f0)" strokeWidth={stroke} />
-        {total > 0 && segments.map((s) => {
-          if (s.value === 0) return null;
-          const len = (s.value / total) * circumference;
-          const seg = (
-            <circle
-              key={s.key}
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              fill="none"
-              stroke={s.color}
-              strokeWidth={stroke}
-              strokeDasharray={`${len} ${circumference - len}`}
-              strokeDashoffset={-offset}
-            />
-          );
-          offset += len;
-          return seg;
-        })}
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-black text-slate-900">{total}</span>
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Công việc</span>
-      </div>
-    </div>
-  );
+// Định dạng % thay đổi (do backend tính sẵn) thành text + chiều tăng/giảm.
+const fmtPct = (pct) => {
+  if (!pct) return { text: 'Không đổi so với tuần trước', up: true };
+  const up = pct >= 0;
+  return { text: `${up ? '+' : '−'}${Math.abs(pct)}% so với tuần trước`, up };
 };
 
-const BarRow = ({ label, value, total, color }) => {
-  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
-  return (
-    <div>
-      <div className="flex justify-between items-center text-sm mb-1">
-        <span className="font-medium text-slate-600">{label}</span>
-        <span className="font-bold text-slate-900">{value} <span className="text-slate-400 font-medium">({pct}%)</span></span>
-      </div>
-      <div className="w-full bg-slate-100 rounded-full h-2.5">
-        <div className="h-2.5 rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+// Định dạng chênh lệch điểm phần trăm (cho năng suất).
+const fmtPoints = (diff) => {
+  if (!diff) return { text: 'Không đổi so với tuần trước', up: true };
+  const up = diff >= 0;
+  return { text: `${up ? '+' : '−'}${Math.abs(diff)}đ so với tuần trước`, up };
+};
+
+const formatDue = (date) => {
+  const d = new Date(date);
+  const day = `${d.getDate()} thg ${d.getMonth() + 1}`;
+  const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  return { day, time };
+};
+
+const timeAgo = (date, now) => {
+  const diff = now - new Date(date).getTime();
+  const mins = Math.round(diff / 60000);
+  if (mins < 1) return 'vừa xong';
+  if (mins < 60) return `${mins} phút trước`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours} giờ trước`;
+  return `${Math.round(hours / 24)} ngày trước`;
+};
+
+// --- Small presentational pieces ------------------------------------------
+
+const StatCard = ({ label, value, trend, icon: Icon, tint }) => (
+  <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-sm transition-all hover:shadow-md">
+    <div className="flex items-start justify-between">
+      <p className="text-sm font-semibold text-slate-500">{label}</p>
+      <div className={`w-9 h-9 rounded-full flex items-center justify-center ${tint}`}>
+        <Icon size={18} />
       </div>
     </div>
-  );
-};
+    <p className="text-4xl font-black text-slate-900 mt-3 tracking-tight">{value}</p>
+    {trend && (
+      <p className={`text-sm font-medium mt-2 ${trend.up ? 'text-emerald-600' : 'text-rose-600'}`}>
+        {trend.text}
+      </p>
+    )}
+  </div>
+);
+
+// --- Page ------------------------------------------------------------------
 
 const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
+  const [userName, setUserName] = useState('bạn');
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [projectStats, setProjectStats] = useState([]); // { id, name, total, done, pct }
+  const [projectName, setProjectName] = useState({}); // taskId -> project name
+  const [search, setSearch] = useState('');
+  const [serverStats, setServerStats] = useState(null); // số liệu thống kê từ backend
+  // Mốc thời gian chụp một lần khi mount — giữ render thuần (pure).
+  const [now] = useState(() => Date.now());
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const projectsRes = await projectService.getAll();
+        const [meRes, projectsRes, statsRes] = await Promise.all([
+          authService.getCurrentUser().catch(() => ({ data: null })),
+          projectService.getAll().catch(() => ({ data: [] })),
+          taskService.getDashboardStats().catch(() => ({ data: null })),
+        ]);
         const projectList = projectsRes.data || [];
 
-        // Lấy task của từng dự án (toàn bộ thành viên), gộp lại để có bức tranh đầy đủ.
         const taskResults = await Promise.all(
           projectList.map((p) =>
-            taskService.getByProject(p.id).then((r) => ({ project: p, tasks: r.data || [] })).catch(() => ({ project: p, tasks: [] }))
+            taskService
+              .getByProject(p.id)
+              .then((r) => ({ project: p, tasks: r.data || [] }))
+              .catch(() => ({ project: p, tasks: [] }))
           )
         );
-
         if (cancelled) return;
 
-        const allTasks = taskResults.flatMap((r) => r.tasks);
-        const pStats = taskResults.map(({ project, tasks: ts }) => {
-          const done = ts.filter((t) => t.status === 'Done').length;
-          return { id: project.id, name: project.name, total: ts.length, done, pct: ts.length ? Math.round((done / ts.length) * 100) : 0 };
+        const allTasks = [];
+        const nameMap = {};
+        taskResults.forEach(({ project, tasks: ts }) => {
+          ts.forEach((t) => {
+            allTasks.push(t);
+            nameMap[t.id] = project.name;
+          });
         });
 
+        setUserName((meRes.data?.fullName || meRes.data?.name || meRes.data?.email || 'bạn').split('@')[0]);
         setProjects(projectList);
         setTasks(allTasks);
-        setProjectStats(pStats);
+        setProjectName(nameMap);
+        setServerStats(statsRes.data);
       } catch (err) {
         console.error('Failed to load dashboard', err);
       } finally {
@@ -110,107 +133,179 @@ const DashboardPage = () => {
     return () => { cancelled = true; };
   }, []);
 
+  // 4 thẻ chỉ số + xu hướng tuần — lấy từ backend (đã tái dựng từ lịch sử trạng thái).
+  const stats = useMemo(() => {
+    const s = serverStats || {};
+    return {
+      total: s.totalTasks ?? 0,
+      done: s.completedTasks ?? 0,
+      inProgress: s.inProgressTasks ?? 0,
+      productivity: s.productivity ?? 0,
+      trends: {
+        total: fmtPct(s.totalChangePct ?? 0),
+        done: fmtPct(s.completedChangePct ?? 0),
+        inProgress: fmtPct(s.inProgressChangePct ?? 0),
+        productivity: fmtPoints(s.productivityChangePoints ?? 0),
+      },
+    };
+  }, [serverStats]);
+
+  const weekly = useMemo(() => serverStats?.weeklyCompleted ?? new Array(7).fill(0), [serverStats]);
+  const weeklyMax = Math.max(1, ...weekly);
+
+  const upcoming = useMemo(() => {
+    return tasks
+      .filter((t) => t.status !== 'Done' && t.dueDate && new Date(t.dueDate).getTime() >= now)
+      .filter((t) => !search || t.title.toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+      .slice(0, 4);
+  }, [tasks, search, now]);
+
+  const recent = useMemo(() => {
+    return [...tasks]
+      .filter((t) => t.updatedAt || t.createdAt)
+      .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+      .slice(0, 4)
+      .map((t) => ({
+        id: t.id,
+        text: t.status === 'Done' ? `Hoàn thành: ${t.title}` : `Cập nhật: ${t.title}`,
+        when: t.updatedAt || t.createdAt,
+      }));
+  }, [tasks]);
+
   if (loading) {
     return <div className="p-8 text-slate-500">Đang tải tổng quan...</div>;
   }
 
-  const total = tasks.length;
-  const statusCounts = STATUS_META.map((s) => ({ ...s, value: tasks.filter((t) => t.status === s.key).length }));
-  const priorityCounts = PRIORITY_META.map((p) => ({ ...p, value: tasks.filter((t) => (t.priority || 'Medium') === p.key).length }));
-  const doneCount = tasks.filter((t) => t.status === 'Done').length;
-  const inProgressCount = tasks.filter((t) => t.status === 'InProgress' || t.status === 'Review').length;
-  const overdueCount = tasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'Done').length;
-  const completionRate = total ? Math.round((doneCount / total) * 100) : 0;
-
-  const cards = [
-    { label: 'Tổng dự án', value: projects.length, icon: FolderKanban, color: 'text-blue-600' },
-    { label: 'Đang làm', value: inProgressCount, icon: Activity, color: 'text-indigo-600' },
-    { label: 'Tỷ lệ hoàn thành', value: `${completionRate}%`, icon: CheckCircle2, color: 'text-green-600' },
-    { label: 'Quá hạn', value: overdueCount, icon: AlertTriangle, color: 'text-rose-600' },
-  ];
-
   return (
-    <div className="space-y-10">
-      <div>
-        <h2 className="text-4xl font-black text-slate-900 tracking-tight">Tổng quan</h2>
-        <p className="text-slate-500 mt-1">Tổng quan thời gian thực về hiệu suất và đóng góp của nhóm.</p>
-      </div>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+            Chào mừng trở lại, {userName}! <span className="inline-block">👋</span>
+          </h1>
+          <p className="text-slate-500 mt-1">Đây là tổng quan công việc của bạn hôm nay</p>
+        </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-        {cards.map((stat) => (
-          <div key={stat.label} className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-sm transition-all hover:shadow-md group">
-            <div className={`w-11 h-11 rounded-2xl bg-slate-50 flex items-center justify-center mb-4 ${stat.color}`}>
-              <stat.icon size={24} />
-            </div>
-            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{stat.label}</p>
-            <p className="text-3xl font-black text-slate-900 mt-1 tracking-tighter">{stat.value}</p>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Tìm công việc..."
+              className="w-56 md:w-64 pl-10 pr-4 py-2.5 rounded-full bg-slate-100 border border-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-slate-300 transition-colors"
+            />
           </div>
-        ))}
+
+          <NotificationBell />
+
+          <Link to="/pricing" className="bg-brand-gradient text-white font-bold text-sm px-5 py-2.5 rounded-full flex items-center gap-2 shadow-sm hover:opacity-90 transition-opacity">
+            <Crown size={16} /> Nâng cấp
+          </Link>
+          <Link to="/projects" className="bg-blue-600 text-white font-bold text-sm px-5 py-2.5 rounded-full flex items-center gap-2 shadow-sm shadow-blue-600/20 hover:bg-blue-700 transition-colors">
+            <Plus size={16} /> Thêm việc
+          </Link>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Tasks by status — donut */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-          <h3 className="text-xl font-extrabold text-slate-900 mb-6 flex items-center gap-3">
-            <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><BarChart3 size={20} /></div>
-            Công việc theo trạng thái
-          </h3>
-          {total === 0 ? (
-            <p className="text-slate-400 text-sm">Chưa có công việc.</p>
-          ) : (
-            <div className="flex items-center gap-8">
-              <DonutChart segments={statusCounts} total={total} />
-              <div className="flex-1 space-y-3">
-                {statusCounts.map((s) => (
-                  <div key={s.key} className="flex items-center gap-3">
-                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-                    <span className="text-sm text-slate-600 flex-1">{s.label}</span>
-                    <span className="text-sm font-bold text-slate-900">{s.value}</span>
-                  </div>
-                ))}
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+        <StatCard label="Tổng công việc" value={stats.total} trend={stats.trends.total} icon={ListChecks} tint="bg-blue-50 text-blue-600" />
+        <StatCard label="Hoàn thành" value={stats.done} trend={stats.trends.done} icon={CheckCircle2} tint="bg-emerald-50 text-emerald-600" />
+        <StatCard label="Đang làm" value={stats.inProgress} trend={stats.trends.inProgress} icon={Clock} tint="bg-amber-50 text-amber-600" />
+        <StatCard label="Năng suất" value={`${stats.productivity}%`} trend={stats.trends.productivity} icon={TrendingUp} tint="bg-violet-50 text-violet-600" />
+      </div>
+
+      {/* Main grid: weekly chart + side column */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Weekly progress */}
+        <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+          <h3 className="text-xl font-extrabold text-slate-900">Tiến độ tuần này</h3>
+          <p className="text-slate-500 text-sm mt-0.5">Công việc hoàn thành trong tuần</p>
+
+          <div className="flex items-end justify-between gap-3 h-64 mt-8">
+            {weekly.map((count, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center justify-end h-full gap-3">
+                <div className="w-full flex items-end justify-center h-full">
+                  <div
+                    className="w-full max-w-[52px] bg-blue-600 rounded-t-xl transition-all hover:bg-blue-700"
+                    style={{ height: `${(count / weeklyMax) * 100}%`, minHeight: count > 0 ? 8 : 2 }}
+                    title={`${count} công việc`}
+                  />
+                </div>
+                <span className="text-sm font-medium text-slate-500">{WEEKDAYS[i]}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Side column */}
+        <div className="space-y-6">
+          {/* Upcoming deadlines */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-lg font-extrabold text-slate-900">Sắp đến hạn</h3>
+              <Link to="/projects" className="text-sm font-semibold text-blue-600 hover:underline">Xem tất cả</Link>
+            </div>
+            <p className="text-slate-400 text-xs mb-4">7 ngày tới</p>
+
+            {upcoming.length === 0 ? (
+              <p className="text-slate-400 text-sm py-4">Không có công việc nào sắp đến hạn.</p>
+            ) : (
+              <div className="space-y-3">
+                {upcoming.map((t) => {
+                  const { day, time } = formatDue(t.dueDate);
+                  return (
+                    <div key={t.id} className="border border-slate-200 rounded-2xl p-4 hover:border-slate-300 transition-colors">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-bold text-slate-900 text-sm leading-snug">{t.title}</p>
+                        <span className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full ${PRIORITY_BADGE[t.priority] || PRIORITY_BADGE.Medium}`}>
+                          {PRIORITY_LABEL[t.priority] || 'Trung bình'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">{projectName[t.id] || 'Dự án'}</p>
+                      <div className="flex items-center gap-4 mt-3 text-xs text-slate-500 font-medium">
+                        <span>{day}</span>
+                        <span className="flex items-center gap-1"><Clock size={13} /> {time}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Secure vault */}
+          <Link to="/vault" className="flex items-center justify-between bg-white p-5 rounded-3xl border border-slate-200 shadow-sm hover:border-slate-300 transition-colors group">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                <ShieldCheck size={20} />
+              </div>
+              <div>
+                <p className="font-bold text-slate-900 text-sm">Kho mật khẩu</p>
+                <p className="text-xs text-slate-400">{projects.length} dự án đang hoạt động</p>
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Tasks by priority — bars */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-          <h3 className="text-xl font-extrabold text-slate-900 mb-6 flex items-center gap-3">
-            <div className="p-2 bg-rose-50 rounded-lg text-rose-600"><Activity size={20} /></div>
-            Công việc theo độ ưu tiên
-          </h3>
-          {total === 0 ? (
-            <p className="text-slate-400 text-sm">Chưa có công việc.</p>
-          ) : (
-            <div className="space-y-4">
-              {priorityCounts.map((p) => (
-                <BarRow key={p.key} label={p.label} value={p.value} total={total} color={p.color} />
-              ))}
-            </div>
-          )}
+            <ChevronRight size={18} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
+          </Link>
         </div>
       </div>
 
-      {/* Project progress */}
+      {/* Recent activity */}
       <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-        <h3 className="text-xl font-extrabold text-slate-900 mb-6 flex items-center gap-3">
-          <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600"><FolderKanban size={20} /></div>
-          Tiến độ dự án
-        </h3>
-        {projectStats.length === 0 ? (
-          <p className="text-slate-400 text-sm">Chưa có dự án. Tạo dự án ở trang Dự án.</p>
+        <h3 className="text-xl font-extrabold text-slate-900 mb-6">Hoạt động gần đây</h3>
+        {recent.length === 0 ? (
+          <p className="text-slate-400 text-sm">Chưa có hoạt động nào.</p>
         ) : (
           <div className="space-y-5">
-            {projectStats.map((p) => (
-              <Link key={p.id} to={`/projects/${p.id}`} className="block group">
-                <div className="flex justify-between items-center text-sm mb-1.5">
-                  <span className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{p.name}</span>
-                  <span className="text-slate-400 font-medium">{p.done}/{p.total} xong · <span className="font-bold text-slate-700">{p.pct}%</span></span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-3">
-                  <div className="bg-indigo-600 h-3 rounded-full transition-all" style={{ width: `${p.pct}%` }} />
-                </div>
-              </Link>
+            {recent.map((r) => (
+              <div key={r.id} className="flex items-center gap-4">
+                <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                <p className="text-sm text-slate-700 flex-1">{r.text}</p>
+                <span className="text-xs text-slate-400 font-medium shrink-0">{timeAgo(r.when, now)}</span>
+              </div>
             ))}
           </div>
         )}
