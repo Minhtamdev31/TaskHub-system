@@ -4,6 +4,7 @@ import { taskService, projectService, commentService, invitationService, userSer
 import { toast } from '../components/Toast';
 import { confirm } from '../components/ConfirmDialog';
 import UserProfileModal from '../components/UserProfileModal';
+import UpgradePanel from '../components/UpgradePanel';
 import { HubConnectionBuilder } from '@microsoft/signalr';
 
 // Backend (SignalR hub) luôn chạy trên Render. Kết nối thẳng, không qua proxy /api của Vercel.
@@ -70,6 +71,7 @@ const ProjectBoardPage = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState('');
   const [aiError, setAiError] = useState('');
+  const [aiRequiresUpgrade, setAiRequiresUpgrade] = useState(false);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -97,12 +99,14 @@ const ProjectBoardPage = () => {
     setAiLoading(true);
     setAiError('');
     setAiSummary('');
+    setAiRequiresUpgrade(false);
     try {
       const res = await projectService.aiSummary(id);
       setAiSummary(res.data?.summary || '');
     } catch (err) {
       if (err.response?.data?.requiresUpgrade) {
-        setAiError(err.response.data.message || 'Tóm tắt AI là tính năng Premium.');
+        // Tính năng Premium → hiện panel mời nâng cấp (giống Kho mật khẩu) thay vì lỗi mộc.
+        setAiRequiresUpgrade(true);
       } else {
         const msg = typeof err.response?.data === 'string'
           ? err.response.data
@@ -561,13 +565,21 @@ const ProjectBoardPage = () => {
                 </div>
               )}
 
-              {!aiLoading && aiError && (
+              {!aiLoading && aiRequiresUpgrade && (
+                <UpgradePanel
+                  title="Phân tích AI là tính năng Premium"
+                  message="Để AI tự đọc toàn bộ task & bình luận và tóm tắt tiến độ dự án, hãy nâng cấp Premium."
+                  perks={['Tóm tắt & phân tích dự án bằng AI', 'Password Vault bảo mật', 'Nhắc deadline qua email']}
+                />
+              )}
+
+              {!aiLoading && !aiRequiresUpgrade && aiError && (
                 <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm">
                   {aiError}
                 </div>
               )}
 
-              {!aiLoading && !aiError && aiSummary && (
+              {!aiLoading && !aiError && !aiRequiresUpgrade && aiSummary && (
                 <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                   {aiSummary}
                 </div>
