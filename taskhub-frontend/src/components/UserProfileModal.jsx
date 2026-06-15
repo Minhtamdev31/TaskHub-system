@@ -10,6 +10,10 @@ const initials = (name) =>
     .map((w) => w[0]?.toUpperCase())
     .join('') || '?';
 
+// Tránh render <img> vỡ với dữ liệu rác (vd chuỗi "string").
+const isValidImageSrc = (s) =>
+  typeof s === 'string' && /^(data:image\/|https?:\/\/|\/)/i.test(s.trim());
+
 const UserProfileModal = ({ userId, onClose }) => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -60,7 +64,7 @@ const UserProfileModal = ({ userId, onClose }) => {
             <>
               {/* Avatar */}
               <div className="flex justify-center">
-                {profile.avatarUrl ? (
+                {isValidImageSrc(profile.avatarUrl) ? (
                   <img
                     src={profile.avatarUrl}
                     alt={name}

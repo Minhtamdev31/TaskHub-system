@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { User, Shield, Bell, Moon, Crown, Check } from 'lucide-react';
 import { userService, authService, paymentService, passwordVaultService } from '../services/api';
 import { toast } from '../components/Toast';
-import { setTheme as applyAppTheme } from '../theme';
+import { setTheme as applyAppTheme, getStoredTheme } from '../theme';
 
 const TABS = [
   { id: 'profile', name: 'Hồ sơ', icon: User },
@@ -43,6 +43,11 @@ const readFileAsDataUrl = (file) =>
     reader.readAsDataURL(file);
   });
 
+// Chỉ coi là ảnh hợp lệ khi là data URL ảnh, http(s) hoặc đường dẫn tương đối —
+// tránh render <img> vỡ với dữ liệu rác (vd chuỗi "string").
+const isValidImageSrc = (s) =>
+  typeof s === 'string' && /^(data:image\/|https?:\/\/|\/)/i.test(s.trim());
+
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [profile, setProfile] = useState({
@@ -70,13 +75,13 @@ const SettingsPage = () => {
           phoneNumber: u.profile?.phoneNumber || '',
           avatarUrl: u.profile?.avatarUrl || '',
         });
-        const accountTheme = u.settings?.theme || 'Light';
+        // Phản ánh theme ĐANG dùng (localStorage) vào tab Giao diện — KHÔNG ép theme
+        // lưu trong tài khoản đè lên giao diện hiện tại (trước đây gây nhảy về Light khi mở Cài đặt).
+        const currentTheme = getStoredTheme() === 'dark' ? 'Dark' : 'Light';
         setSettings({
-          theme: accountTheme,
+          theme: currentTheme,
           enableNotifications: u.settings?.enableNotifications ?? true,
         });
-        // Đồng bộ chủ đề đã lưu với giao diện đang hiển thị.
-        applyAppTheme(accountTheme.toLowerCase() === 'dark' ? 'dark' : 'light');
         setSubscription(u.subscription || null);
       })
       .catch(() => toast.error('Không tải được hồ sơ.'))
@@ -222,7 +227,7 @@ const SettingsPage = () => {
             <div className="space-y-4">
               {/* Ảnh đại diện */}
               <div className="flex items-center gap-5 pb-5 border-b border-slate-100">
-                {profile.avatarUrl ? (
+                {isValidImageSrc(profile.avatarUrl) ? (
                   <img src={profile.avatarUrl} alt="Ảnh đại diện" className="w-20 h-20 rounded-full object-cover border border-slate-200" />
                 ) : (
                   <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-2xl font-black text-slate-500">
