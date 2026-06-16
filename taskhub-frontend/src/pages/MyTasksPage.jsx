@@ -47,7 +47,10 @@ const MyTasksPage = () => {
         if (cancelled) return;
         const nameMap = {};
         (projectsRes.data || []).forEach((p) => { nameMap[p.id] = p.name; });
-        setTasks(tasksRes.data || []);
+        // Bỏ qua task "mồ côi" — projectId trỏ tới dự án đã xóa / không truy cập được,
+        // tránh hiện task hỏng và link dẫn tới bảng lỗi.
+        const visible = (tasksRes.data || []).filter((t) => nameMap[t.projectId]);
+        setTasks(visible);
         setProjectName(nameMap);
       } catch (err) {
         console.error('Failed to load my tasks', err);
