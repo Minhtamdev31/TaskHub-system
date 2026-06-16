@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { User, Shield, Bell, Moon, Crown, Check } from 'lucide-react';
+import { User, Shield, Bell, Moon, Crown, Check, Lock, KeyRound } from 'lucide-react';
 import { userService, authService, paymentService, passwordVaultService } from '../services/api';
 import { toast } from '../components/Toast';
 import { setTheme as applyAppTheme, getStoredTheme } from '../theme';
+import OtpChangeModal from '../components/OtpChangeModal';
 
 const TABS = [
   { id: 'profile', name: 'Hồ sơ', icon: User },
@@ -54,9 +55,8 @@ const SettingsPage = () => {
     fullName: '', bio: '', jobTitle: '', phoneNumber: '', username: '', email: '', avatarUrl: '',
   });
   const [settings, setSettings] = useState({ theme: 'Light', enableNotifications: true });
-  const [passwords, setPasswords] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
-  const [vaultPins, setVaultPins] = useState({ oldPin: '', newPin: '', confirmPin: '' });
   const [hasVaultPin, setHasVaultPin] = useState(null); // null = chưa biết, true/false sau khi kiểm tra
+  const [securityModal, setSecurityModal] = useState(null); // null | 'password' | 'pin'
   const [subscription, setSubscription] = useState(null);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -128,29 +128,6 @@ const SettingsPage = () => {
     }
   };
 
-  const handleChangePassword = async () => {
-    if (passwords.newPassword !== passwords.confirmPassword) {
-      return toast.error('Mật khẩu mới không khớp.');
-    }
-    if (passwords.newPassword.length < 6) {
-      return toast.error('Mật khẩu mới phải có ít nhất 6 ký tự.');
-    }
-    setSaving(true);
-    try {
-      await userService.changePassword({
-        oldPassword: passwords.oldPassword,
-        newPassword: passwords.newPassword,
-      });
-      toast.success('Đổi mật khẩu thành công!');
-      setPasswords({ oldPassword: '', newPassword: '', confirmPassword: '' });
-    } catch (err) {
-      const msg = typeof err.response?.data === 'string' ? err.response.data : 'Đổi mật khẩu thất bại.';
-      toast.error(msg);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   // Kiểm tra trạng thái PIN khi mở tab Bảo mật (chỉ gọi 1 lần).
   useEffect(() => {
     if (activeTab !== 'security' || hasVaultPin !== null) return;
@@ -158,25 +135,6 @@ const SettingsPage = () => {
       .then((res) => setHasVaultPin(!!res.data?.hasPin))
       .catch(() => setHasVaultPin(false)); // 403 (chưa Premium) → coi như chưa có PIN
   }, [activeTab, hasVaultPin]);
-
-  const handleChangePin = async () => {
-    if (!/^\d{4,12}$/.test(vaultPins.newPin)) {
-      return toast.error('PIN mới cần 4–12 chữ số.');
-    }
-    if (vaultPins.newPin !== vaultPins.confirmPin) {
-      return toast.error('PIN mới nhập lại không khớp.');
-    }
-    setSaving(true);
-    try {
-      await passwordVaultService.changePin(vaultPins.oldPin, vaultPins.newPin);
-      toast.success('Đã đổi mã PIN kho mật khẩu.');
-      setVaultPins({ oldPin: '', newPin: '', confirmPin: '' });
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Đổi PIN thất bại.');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleSaveSettings = async (next) => {
     setSettings(next);
@@ -288,61 +246,65 @@ const SettingsPage = () => {
 
           {activeTab === 'security' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-bold text-slate-900">Đổi mật khẩu</h3>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Mật khẩu hiện tại</label>
-                <input type="password" className={inputClass} value={passwords.oldPassword} onChange={(e) => setPasswords({ ...passwords, oldPassword: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Mật khẩu mới</label>
-                <input type="password" className={inputClass} value={passwords.newPassword} onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Xác nhận mật khẩu mới</label>
-                <input type="password" className={inputClass} value={passwords.confirmPassword} onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })} />
-              </div>
-              <div className="pt-4 border-t border-slate-100 flex justify-end">
-                <button onClick={handleChangePassword} disabled={saving} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
-                  {saving ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
-                </button>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><Shield size={22} /></div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-slate-900">Bảo mật</h3>
+                  <p className="text-sm text-slate-500">Quản lý bảo mật tài khoản của bạn</p>
+                </div>
               </div>
 
-              <div className="pt-6 mt-2 border-t border-slate-100">
-                <h3 className="text-lg font-bold text-slate-900">Mã PIN kho mật khẩu</h3>
-                <p className="text-sm text-slate-500 mt-1 mb-4">Lớp xác thực thứ 2 để mở khóa Kho mật khẩu.</p>
-
-                {hasVaultPin === null ? (
-                  <p className="text-sm text-slate-400">Đang kiểm tra...</p>
-                ) : !hasVaultPin ? (
-                  <p className="text-sm text-slate-500">
-                    Bạn chưa thiết lập mã PIN. Hãy vào{' '}
-                    <Link to="/vault" className="text-indigo-600 font-semibold hover:underline">Kho mật khẩu</Link>{' '}
-                    để tạo PIN lần đầu.
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">PIN hiện tại</label>
-                      <input type="password" inputMode="numeric" maxLength={12} className={inputClass}
-                        value={vaultPins.oldPin} onChange={(e) => setVaultPins({ ...vaultPins, oldPin: e.target.value.replace(/\D/g, '') })} />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">PIN mới (4–12 chữ số)</label>
-                      <input type="password" inputMode="numeric" maxLength={12} className={inputClass}
-                        value={vaultPins.newPin} onChange={(e) => setVaultPins({ ...vaultPins, newPin: e.target.value.replace(/\D/g, '') })} />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Xác nhận PIN mới</label>
-                      <input type="password" inputMode="numeric" maxLength={12} className={inputClass}
-                        value={vaultPins.confirmPin} onChange={(e) => setVaultPins({ ...vaultPins, confirmPin: e.target.value.replace(/\D/g, '') })} />
-                    </div>
-                    <div className="pt-4 border-t border-slate-100 flex justify-end">
-                      <button onClick={handleChangePin} disabled={saving} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50">
-                        {saving ? 'Đang cập nhật...' : 'Đổi mã PIN'}
-                      </button>
-                    </div>
+              {/* Đổi mật khẩu */}
+              <div className="flex items-center justify-between gap-4 p-5 rounded-2xl border border-slate-200">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center"><Lock size={20} /></div>
+                  <div>
+                    <p className="font-bold text-slate-900">Đổi mật khẩu</p>
+                    <p className="text-sm text-slate-500">Cập nhật mật khẩu đăng nhập qua mã OTP gửi về email</p>
                   </div>
+                </div>
+                <button onClick={() => setSecurityModal('password')} className="text-blue-600 font-bold hover:text-blue-700 px-2 shrink-0">Đổi</button>
+              </div>
+
+              {/* Đổi PIN */}
+              <div className="flex items-center justify-between gap-4 p-5 rounded-2xl border border-slate-200">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center"><KeyRound size={20} /></div>
+                  <div>
+                    <p className="font-bold text-slate-900">Đổi mã PIN kho mật khẩu</p>
+                    <p className="text-sm text-slate-500">Cập nhật mã PIN 4–12 chữ số qua mã OTP gửi về email</p>
+                  </div>
+                </div>
+                {hasVaultPin === null ? (
+                  <span className="text-sm text-slate-400 shrink-0">Đang kiểm tra...</span>
+                ) : hasVaultPin ? (
+                  <button onClick={() => setSecurityModal('pin')} className="text-blue-600 font-bold hover:text-blue-700 px-2 shrink-0">Đổi</button>
+                ) : (
+                  <Link to="/vault" className="text-blue-600 font-bold hover:text-blue-700 px-2 shrink-0">Thiết lập</Link>
                 )}
+              </div>
+
+              {/* 2FA (placeholder) */}
+              <div className="flex items-center justify-between gap-4 p-5 rounded-2xl border border-slate-200 opacity-75">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center"><Shield size={20} /></div>
+                  <div>
+                    <p className="font-bold text-slate-900">Xác thực hai lớp (2FA)</p>
+                    <p className="text-sm text-slate-500">Thêm một lớp bảo mật cho tài khoản — sắp ra mắt</p>
+                  </div>
+                </div>
+                <span className="shrink-0 w-11 h-6 rounded-full bg-slate-200 relative">
+                  <span className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow" />
+                </span>
+              </div>
+
+              {/* Trạng thái bảo mật */}
+              <div className="flex items-center gap-3 p-5 rounded-2xl bg-emerald-50 border border-emerald-200">
+                <Check size={20} className="text-emerald-600 shrink-0" />
+                <div>
+                  <p className="font-bold text-emerald-700">Tài khoản đang được bảo vệ</p>
+                  <p className="text-sm text-emerald-600/80">Xác thực bằng OTP qua email khi đổi mật khẩu và mã PIN.</p>
+                </div>
               </div>
             </div>
           )}
@@ -455,6 +417,14 @@ const SettingsPage = () => {
           )}
         </div>
       </div>
+
+      {securityModal && (
+        <OtpChangeModal
+          mode={securityModal}
+          onClose={() => setSecurityModal(null)}
+          onSuccess={() => setSecurityModal(null)}
+        />
+      )}
     </div>
   );
 };

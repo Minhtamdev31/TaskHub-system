@@ -42,6 +42,15 @@ const priorityBadge = (p) => priorityConfig[p] || priorityConfig.Medium;
 
 const initials = (name) => (name || 'NA').substring(0, 2).toUpperCase();
 
+// Chuyển ISO/UTC sang chuỗi giờ địa phương "YYYY-MM-DDTHH:mm" cho input datetime-local.
+const toDateTimeLocal = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 // Render markdown rút gọn cho tóm tắt AI: in đậm **...** và giữ xuống dòng (container đã pre-wrap).
 const renderMarkdownLite = (text) => {
   if (!text) return null;
@@ -255,6 +264,19 @@ const ProjectBoardPage = () => {
     }
   };
 
+  // localValue là chuỗi từ input datetime-local (giờ địa phương); rỗng = xóa hạn chót.
+  const handleUpdateDueDate = async (taskId, localValue) => {
+    try {
+      const newDue = localValue ? new Date(localValue).toISOString() : null;
+      await taskService.update(taskId, newDue ? { dueDate: newDue } : { clearDueDate: true });
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, dueDate: newDue } : t)));
+      setSelectedTask((prev) => (prev && prev.id === taskId ? { ...prev, dueDate: newDue } : prev));
+      toast.success(newDue ? 'Đã cập nhật hạn chót.' : 'Đã xóa hạn chót.');
+    } catch {
+      toast.error('Không cập nhật được hạn chót.');
+    }
+  };
+
   // --- Drag & drop ---
   const handleDragStart = (taskId) => setDraggedTaskId(taskId);
   const handleDragEnd = () => { setDraggedTaskId(null); setDragOverColumn(null); };
@@ -278,7 +300,7 @@ const ProjectBoardPage = () => {
         title: newTask.title,
         description: newTask.description,
         projectId: id,
-        dueDate: newTask.dueDate || null,
+        dueDate: newTask.dueDate ? new Date(newTask.dueDate).toISOString() : null,
         priority: newTask.priority,
       });
       setTasks((prev) => [...prev, res.data]);
@@ -518,7 +540,7 @@ const ProjectBoardPage = () => {
                     <div className="flex items-center gap-3 text-slate-400">
                       {task.dueDate && (
                         <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
-                          <Clock size={12} /> {new Date(task.dueDate).toLocaleDateString('vi-VN')}
+                          <Clock size={12} /> {new Date(task.dueDate).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </div>
                       )}
                     </div>
@@ -670,7 +692,7 @@ const ProjectBoardPage = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Hạn chót</label>
-                  <input type="date" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={newTask.dueDate} onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })} />
+                  <input type="datetime-local" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={newTask.dueDate} onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -731,6 +753,7 @@ const ProjectBoardPage = () => {
           onClose={() => setSelectedTask(null)}
           onStatusChange={handleUpdateStatus}
           onPriorityChange={handleUpdatePriority}
+          onDueDateChange={handleUpdateDueDate}
           onAssign={handleAssign}
           onDelete={handleDeleteTask}
         />
@@ -739,7 +762,7 @@ const ProjectBoardPage = () => {
   );
 };
 
-const TaskDetailModal = ({ task, realtimeTick, members, displayName, onClose, onStatusChange, onPriorityChange, onAssign, onDelete }) => {
+const TaskDetailModal = ({ task, realtimeTick, members, displayName, onClose, onStatusChange, onPriorityChange, onDueDateChange, onAssign, onDelete }) => {
   const [comments, setComments] = useState([]);
   const [loadingComments, setLoadingComments] = useState(true);
   const [newComment, setNewComment] = useState('');
@@ -811,11 +834,17 @@ const TaskDetailModal = ({ task, realtimeTick, members, displayName, onClose, on
   // Tải bình luận lần đầu khi mở công việc (có hiện trạng thái "đang tải").
   useEffect(() => {
     let cancelled = false;
-    setLoadingComments(true);
-    commentService.getByTask(task.id)
-      .then((res) => { if (!cancelled) setComments(res.data); })
-      .catch(() => { if (!cancelled) toast.error('Không tải được bình luận.'); })
-      .finally(() => { if (!cancelled) setLoadingComments(false); });
+    (async () => {
+      setLoadingComments(true);
+      try {
+        const res = await commentService.getByTask(task.id);
+        if (!cancelled) setComments(res.data);
+      } catch {
+        if (!cancelled) toast.error('Không tải được bình luận.');
+      } finally {
+        if (!cancelled) setLoadingComments(false);
+      }
+    })();
     return () => { cancelled = true; };
   }, [task.id]);
 
@@ -909,11 +938,26 @@ const TaskDetailModal = ({ task, realtimeTick, members, displayName, onClose, on
               </select>
             </div>
           </div>
-          {task.dueDate && (
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 mt-4 uppercase tracking-wider">
-              <Clock size={14} /> Hạn {new Date(task.dueDate).toLocaleDateString('vi-VN')}
+          <div className="mt-4">
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Hạn chót</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="datetime-local"
+                value={toDateTimeLocal(task.dueDate)}
+                onChange={(e) => onDueDateChange(task.id, e.target.value)}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+              {task.dueDate && (
+                <button
+                  type="button"
+                  onClick={() => onDueDateChange(task.id, '')}
+                  className="text-xs font-semibold text-rose-500 hover:text-rose-600 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 transition-colors"
+                >
+                  Xóa hạn
+                </button>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-8 pt-5">

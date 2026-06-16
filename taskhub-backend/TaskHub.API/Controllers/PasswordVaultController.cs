@@ -16,6 +16,7 @@ public class PasswordVaultController : ControllerBase
 {
     private readonly IPasswordVaultService _vaultService;
     private readonly IUserService _userService;
+    private readonly IOtpService _otpService;
     private readonly string _vaultTokenKey;
 
     private const string VaultTokenHeader = "X-Vault-Token";
@@ -23,12 +24,23 @@ public class PasswordVaultController : ControllerBase
     public PasswordVaultController(
         IPasswordVaultService vaultService,
         IUserService userService,
+        IOtpService otpService,
         IConfiguration configuration)
     {
         _vaultService = vaultService;
         _userService = userService;
+        _otpService = otpService;
         _vaultTokenKey = configuration["Security:VaultEncryptionKey"]
                          ?? throw new InvalidOperationException("Vault encryption key is not configured.");
+    }
+
+    private static string MaskEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@')) return email;
+        var parts = email.Split('@');
+        var name = parts[0];
+        var masked = name.Length <= 2 ? $"{name[0]}***" : $"{name[0]}***{name[^1]}";
+        return $"{masked}@{parts[1]}";
     }
 
     private async Task<bool> IsPremiumAsync(string userId)
@@ -109,6 +121,46 @@ public class PasswordVaultController : ControllerBase
 
         if (!await _vaultService.ChangePinAsync(userId, request?.OldPin ?? string.Empty, request?.NewPin ?? string.Empty))
             return BadRequest(new { message = "Đổi PIN thất bại. Kiểm tra PIN cũ và PIN mới (4–12 chữ số)." });
+
+        return Ok(new { message = "Đã đổi mã PIN." });
+    }
+
+    // --- Đổi PIN bằng OTP (không cần PIN cũ) ---
+
+    [HttpPost("pin/change/request-otp")]
+    public async Task<IActionResult> RequestChangePinOtp()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+        if (!await IsPremiumAsync(userId)) return UpgradeRequired();
+
+        var user = await _userService.GetByIdAsync(userId);
+        if (user is null || string.IsNullOrWhiteSpace(user.Email))
+            return BadRequest(new { message = "Không tìm thấy email tài khoản." });
+
+        await _otpService.GenerateAndSendOtpAsync(user.Email, "ChangePin");
+        return Ok(new { message = "Đã gửi mã OTP tới email.", email = MaskEmail(user.Email) });
+    }
+
+    [HttpPost("pin/change/confirm")]
+    public async Task<IActionResult> ConfirmChangePinOtp([FromBody] ChangePinOtpRequest request)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+        if (!await IsPremiumAsync(userId)) return UpgradeRequired();
+
+        if (request is null || string.IsNullOrWhiteSpace(request.Otp) || string.IsNullOrWhiteSpace(request.NewPin))
+            return BadRequest(new { message = "Cần mã OTP và PIN mới." });
+
+        var user = await _userService.GetByIdAsync(userId);
+        if (user is null || string.IsNullOrWhiteSpace(user.Email))
+            return BadRequest(new { message = "Không tìm thấy email tài khoản." });
+
+        if (!await _otpService.VerifyOtpAsync(user.Email, request.Otp, "ChangePin"))
+            return BadRequest(new { message = "Mã OTP không đúng hoặc đã hết hạn." });
+
+        if (!await _vaultService.ResetPinAsync(userId, request.NewPin))
+            return BadRequest(new { message = "PIN mới không hợp lệ (cần 4–12 chữ số)." });
 
         return Ok(new { message = "Đã đổi mã PIN." });
     }

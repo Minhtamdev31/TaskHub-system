@@ -15,6 +15,9 @@ import ProjectBoardPage from './pages/ProjectBoardPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
 import AdminDashboardPage from './pages/AdminDashboardPage.jsx';
+import CalendarPage from './pages/CalendarPage.jsx';
+import ProfilePage from './pages/ProfilePage.jsx';
+import MyTasksPage from './pages/MyTasksPage.jsx';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -34,6 +37,9 @@ function App() {
 
         <Route path="/" element={<LandingPage />} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/my-tasks" element={<ProtectedRoute><MyTasksPage /></ProtectedRoute>} />
+        <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/projects" element={<ProtectedRoute><ProjectListPage /></ProtectedRoute>} />
         <Route path="/projects/:id" element={<ProtectedRoute><ProjectBoardPage /></ProtectedRoute>} />
         <Route path="/vault" element={<ProtectedRoute><PasswordVaultPage /></ProtectedRoute>} />

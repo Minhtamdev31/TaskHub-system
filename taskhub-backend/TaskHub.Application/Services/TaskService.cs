@@ -173,7 +173,11 @@ public class TaskService : ITaskService
             existingTask.Priority = normalizedPriority;
         }
 
-        if (dto.DueDate.HasValue)
+        if (dto.ClearDueDate)
+        {
+            existingTask.DueDate = null;
+        }
+        else if (dto.DueDate.HasValue)
         {
             existingTask.DueDate = dto.DueDate.Value;
         }

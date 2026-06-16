@@ -13,6 +13,7 @@ public interface IUserService
     Task<User?> UpdateAsync(string id, UpdateUserRequest request);
     Task<bool> DeleteAsync(string id);
     Task<User?> ChangePasswordAsync(string userId, string oldPassword, string newPassword);
+    Task<User?> SetPasswordAsync(string userId, string newPassword); // đổi mật khẩu sau khi đã xác thực OTP
     Task<User?> ResetPasswordAsync(string email, string newPassword);
     Task<User?> SetSubscriptionAsync(string userId, bool isPremium, int durationDays);
     Task<User?> CreateAsync(User user);

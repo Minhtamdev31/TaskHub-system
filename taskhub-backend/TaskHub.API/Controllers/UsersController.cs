@@ -12,10 +12,22 @@ namespace TaskHub.API.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IOtpService _otpService;
 
-    public UsersController(IUserService userService)
+    public UsersController(IUserService userService, IOtpService otpService)
     {
         _userService = userService;
+        _otpService = otpService;
+    }
+
+    // Che bớt email: "john@university.edu" -> "j***n@university.edu".
+    private static string MaskEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@')) return email;
+        var parts = email.Split('@');
+        var name = parts[0];
+        var masked = name.Length <= 2 ? $"{name[0]}***" : $"{name[0]}***{name[^1]}";
+        return $"{masked}@{parts[1]}";
     }
 
     [HttpGet]
@@ -214,5 +226,55 @@ public class UsersController : ControllerBase
         }
 
         return Ok(new { message = "Password changed successfully." });
+    }
+
+    // --- Đổi mật khẩu bằng OTP (không cần mật khẩu cũ) ---
+
+    [HttpPost("me/change-password/request-otp")]
+    [Authorize]
+    public async Task<IActionResult> RequestChangePasswordOtp()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return Unauthorized("User ID not found in token.");
+
+        var user = await _userService.GetByIdAsync(userId);
+        if (user is null || string.IsNullOrWhiteSpace(user.Email))
+        {
+            return BadRequest(new { message = "Không tìm thấy email tài khoản." });
+        }
+
+        await _otpService.GenerateAndSendOtpAsync(user.Email, "ChangePassword");
+        return Ok(new { message = "Đã gửi mã OTP tới email.", email = MaskEmail(user.Email) });
+    }
+
+    [HttpPost("me/change-password/confirm")]
+    [Authorize]
+    public async Task<IActionResult> ConfirmChangePasswordOtp([FromBody] ChangePasswordOtpRequest request)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.Otp) || string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            return BadRequest(new { message = "Cần mã OTP và mật khẩu mới." });
+        }
+        if (request.NewPassword.Length < 6)
+        {
+            return BadRequest(new { message = "Mật khẩu mới cần tối thiểu 6 ký tự." });
+        }
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return Unauthorized("User ID not found in token.");
+
+        var user = await _userService.GetByIdAsync(userId);
+        if (user is null || string.IsNullOrWhiteSpace(user.Email))
+        {
+            return BadRequest(new { message = "Không tìm thấy email tài khoản." });
+        }
+
+        if (!await _otpService.VerifyOtpAsync(user.Email, request.Otp, "ChangePassword"))
+        {
+            return BadRequest(new { message = "Mã OTP không đúng hoặc đã hết hạn." });
+        }
+
+        await _userService.SetPasswordAsync(userId, request.NewPassword);
+        return Ok(new { message = "Đã đổi mật khẩu." });
     }
 }

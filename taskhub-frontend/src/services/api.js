@@ -102,6 +102,9 @@ export const passwordVaultService = {
   setupPin: (pin) => apiClient.post('/passwordvault/pin/setup', { pin }),
   unlock: (pin) => apiClient.post('/passwordvault/unlock', { pin }),
   changePin: (oldPin, newPin) => apiClient.put('/passwordvault/pin/change', { oldPin, newPin }),
+  // Đổi PIN bằng OTP (gửi về email, không cần PIN cũ)
+  requestChangePinOtp: () => apiClient.post('/passwordvault/pin/change/request-otp'),
+  confirmChangePin: (otp, newPin) => apiClient.post('/passwordvault/pin/change/confirm', { otp, newPin }),
 };
 
 /**
@@ -130,6 +133,9 @@ export const userService = {
   getProfile: (id) => apiClient.get(`/users/${id}/profile`),
   updateProfile: (data) => apiClient.put('/users/me/profile', data),
   changePassword: (data) => apiClient.put('/users/me/change-password', data),
+  // Đổi mật khẩu bằng OTP (gửi về email, không cần mật khẩu cũ)
+  requestChangePasswordOtp: () => apiClient.post('/users/me/change-password/request-otp'),
+  confirmChangePassword: (data) => apiClient.post('/users/me/change-password/confirm', data),
   lookup: (ids) => apiClient.post('/users/lookup', { ids }),
 };
 

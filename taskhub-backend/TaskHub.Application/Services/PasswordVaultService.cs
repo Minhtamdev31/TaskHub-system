@@ -131,6 +131,18 @@ public class PasswordVaultService : IPasswordVaultService
         return true;
     }
 
+    public async Task<bool> ResetPinAsync(string userId, string newPin)
+    {
+        if (!IsValidPin(newPin)) return false;
+
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user is null) return false;
+
+        user.VaultPinHash = BCrypt.Net.BCrypt.HashPassword(newPin);
+        await _userRepository.UpdateAsync(user.Id, user);
+        return true;
+    }
+
     // PIN gồm 4–12 ký tự số.
     private static bool IsValidPin(string pin) =>
         !string.IsNullOrWhiteSpace(pin) && pin.Length is >= 4 and <= 12 && pin.All(char.IsDigit);
