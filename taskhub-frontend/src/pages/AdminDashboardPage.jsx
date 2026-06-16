@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   LayoutDashboard, Users, CreditCard, Package,
-  TrendingUp, ShoppingCart, Crown, Trash2, Plus, X, ShieldCheck, Shield,
+  TrendingUp, ShoppingCart, Crown, Trash2, Plus, X, ShieldCheck, Shield, Server, Zap,
 } from 'lucide-react';
 import { adminService } from '../services/api';
 import { toast } from '../components/Toast';
@@ -12,6 +12,7 @@ const TABS = [
   { id: 'users', name: 'Người dùng', icon: Users },
   { id: 'plans', name: 'Gói dịch vụ', icon: Package },
   { id: 'orders', name: 'Đơn hàng', icon: CreditCard },
+  { id: 'system', name: 'Hệ thống', icon: Server },
 ];
 
 const formatPrice = (p) =>
@@ -53,6 +54,76 @@ const AdminDashboardPage = () => {
       {activeTab === 'users' && <UsersTab />}
       {activeTab === 'plans' && <PlansTab />}
       {activeTab === 'orders' && <OrdersTab />}
+      {activeTab === 'system' && <SystemTab />}
+    </div>
+  );
+};
+
+/* ---------------- System (chống ngủ đông) ---------------- */
+const SystemTab = () => {
+  const [enabled, setEnabled] = useState(null); // null = đang tải
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    adminService.getKeepAlive()
+      .then((res) => setEnabled(!!res.data?.enabled))
+      .catch(() => toast.error('Không tải được trạng thái keep-alive.'));
+  }, []);
+
+  const toggle = async () => {
+    const next = !enabled;
+    setSaving(true);
+    try {
+      const res = await adminService.setKeepAlive(next);
+      setEnabled(!!res.data?.enabled);
+      toast.success(next ? 'Đã bật chống ngủ đông.' : 'Đã tắt chống ngủ đông.');
+    } catch {
+      toast.error('Cập nhật thất bại.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <Zap size={24} />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-extrabold text-slate-900">Chống ngủ đông (Keep-alive)</h3>
+            <p className="text-sm text-slate-500 mt-1">
+              Khi bật, server sẽ tự ping <code className="text-xs bg-slate-100 px-1.5 py-0.5 rounded">/api/health</code> mỗi 10 phút
+              để Render không đưa dịch vụ vào trạng thái ngủ sau ~15 phút không hoạt động. Giúp lần truy cập đầu không bị chờ khởi động lại.
+            </p>
+          </div>
+          {enabled === null ? (
+            <span className="text-sm text-slate-400 shrink-0">Đang tải...</span>
+          ) : (
+            <button
+              onClick={toggle}
+              disabled={saving}
+              className={`shrink-0 w-14 h-8 rounded-full relative transition-colors disabled:opacity-50 ${enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+              title={enabled ? 'Đang bật' : 'Đang tắt'}
+            >
+              <span className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow transition-all ${enabled ? 'left-7' : 'left-1'}`} />
+            </button>
+          )}
+        </div>
+
+        {enabled !== null && (
+          <div className={`mt-5 flex items-center gap-2 text-sm font-semibold ${enabled ? 'text-emerald-600' : 'text-slate-400'}`}>
+            <span className={`w-2 h-2 rounded-full ${enabled ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+            {enabled ? 'Đang bật — dịch vụ được giữ thức.' : 'Đang tắt — dịch vụ có thể ngủ đông.'}
+          </div>
+        )}
+      </div>
+
+      <p className="text-xs text-slate-400 leading-relaxed">
+        Lưu ý: self-ping chỉ giữ thức khi dịch vụ đang chạy. Nếu dịch vụ đã ngủ (vd sau khi deploy), nó không tự thức được.
+        Để chắc chắn hơn, nên kết hợp một dịch vụ giám sát bên ngoài (UptimeRobot, cron-job.org) ping cùng endpoint.
+      </p>
     </div>
   );
 };

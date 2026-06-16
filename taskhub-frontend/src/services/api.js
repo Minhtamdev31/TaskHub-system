@@ -168,6 +168,9 @@ export const adminService = {
   createPlan: (data) => apiClient.post('/subscriptionplans', data),
   updatePlan: (id, data) => apiClient.put(`/subscriptionplans/${id}`, data),
   deletePlan: (id) => apiClient.delete(`/subscriptionplans/${id}`),
+  // Hệ thống: chống ngủ đông (Render keep-alive)
+  getKeepAlive: () => apiClient.get('/system/keep-alive'),
+  setKeepAlive: (enabled) => apiClient.put('/system/keep-alive', { enabled }),
 };
 
 export default apiClient;

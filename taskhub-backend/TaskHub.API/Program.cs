@@ -128,6 +128,8 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddHostedService<TaskDeadlineWorker>();
+builder.Services.AddSingleton<TaskHub.Application.Services.KeepAliveState>();
+builder.Services.AddHostedService<TaskHub.API.Workers.KeepAliveWorker>();
 builder.Services.AddScoped<IProjectInvitationService, ProjectInvitationService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
@@ -172,6 +174,25 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         Console.WriteLine($"[SEED ERROR] Không seed được subscription plans: {ex.Message}");
+    }
+}
+
+// ==========================================
+// NẠP CẤU HÌNH KEEP-ALIVE (chống ngủ đông) TỪ DB
+// ==========================================
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var settingsRepo = scope.ServiceProvider.GetRequiredService<TaskHub.Application.Interfaces.IMongoRepository<TaskHub.Domain.Entities.AppSetting>>();
+        var keepAliveState = app.Services.GetRequiredService<TaskHub.Application.Services.KeepAliveState>();
+        var allSettings = await settingsRepo.GetAllAsync();
+        var ka = allSettings.FirstOrDefault(s => s.Key == "KeepAlive");
+        keepAliveState.Enabled = ka == null || ka.Value != "false"; // mặc định bật
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[KEEPALIVE] Không nạp được cấu hình: {ex.Message}");
     }
 }
 
