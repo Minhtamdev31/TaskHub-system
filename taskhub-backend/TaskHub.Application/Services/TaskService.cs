@@ -59,8 +59,8 @@ public class TaskService : ITaskService
             return new List<TaskItem>();
         }
 
-        var allTasks = await _taskRepository.GetAllAsync();
-        return allTasks.Where(t => t.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase)).ToList();
+        // DB lọc theo index userId thay vì kéo toàn bộ tasks về app.
+        return await _taskRepository.FindAsync(t => t.UserId == userId);
     }
 
     public async Task<TaskItem?> GetTaskByIdAsync(string taskId)
@@ -208,10 +208,8 @@ public class TaskService : ITaskService
             return new List<TaskItem>();
         }
 
-        var allTasks = await _taskRepository.GetAllAsync();
-        return allTasks
-            .Where(t => t.ProjectId.Equals(projectId, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        // DB lọc theo index projectId.
+        return await _taskRepository.FindAsync(t => t.ProjectId == projectId);
     }
 
     public async Task<bool> AssignTaskAsync(string taskId, AssignTaskDto dto, string currentUserId)
@@ -312,15 +310,15 @@ public class TaskService : ITaskService
         }
 
         // Phạm vi: mọi task trong các dự án người dùng sở hữu hoặc là thành viên.
-        var projects = await _projectRepository.GetAllAsync();
-        var projectIds = projects
-            .Where(p => p.OwnerId.Equals(userId, StringComparison.OrdinalIgnoreCase)
-                || p.Members.Any(m => m.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase)))
-            .Select(p => p.Id)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // Dùng index ownerId / members.userId thay vì quét toàn bộ projects.
+        var projects = await _projectRepository.FindAsync(p =>
+            p.OwnerId == userId || p.Members.Any(m => m.UserId == userId));
+        var projectIds = projects.Select(p => p.Id).ToList();
 
-        var allTasks = await _taskRepository.GetAllAsync();
-        var tasks = allTasks.Where(t => projectIds.Contains(t.ProjectId)).ToList();
+        // Lấy task theo $in danh sách projectId (index projectId), tránh tải toàn bộ tasks.
+        var tasks = projectIds.Count == 0
+            ? new List<TaskItem>()
+            : await _taskRepository.FindAsync(t => projectIds.Contains(t.ProjectId));
 
         var now = DateTime.UtcNow;
         var weekAgo = now.AddDays(-7);

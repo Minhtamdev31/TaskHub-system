@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using TaskHub.Application.Interfaces;
@@ -46,6 +47,29 @@ namespace TaskHub.Persistence.Repositories
         {
             var filter = Builders<T>.Filter.Eq("Id", id);
             await _collection.DeleteOneAsync(filter);
+        }
+
+        // Driver dịch Expression sang truy vấn Mongo, tôn trọng [BsonElement]/[BsonRepresentation]
+        // (vd string -> ObjectId) và dùng index nếu có.
+        public async Task<List<T>> FindAsync(Expression<Func<T, bool>> predicate)
+        {
+            return await _collection.Find(predicate).ToListAsync();
+        }
+
+        public async Task<T?> FindOneAsync(Expression<Func<T, bool>> predicate)
+        {
+            return await _collection.Find(predicate).FirstOrDefaultAsync();
+        }
+
+        public async Task<long> CountAsync(Expression<Func<T, bool>> predicate)
+        {
+            return await _collection.CountDocumentsAsync(predicate);
+        }
+
+        public async Task<long> DeleteManyAsync(Expression<Func<T, bool>> predicate)
+        {
+            var result = await _collection.DeleteManyAsync(predicate);
+            return result.DeletedCount;
         }
     }
 }

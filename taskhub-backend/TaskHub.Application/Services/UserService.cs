@@ -19,9 +19,10 @@ public class UserService : IUserService
         var normalizedEmail = email.Trim().ToLowerInvariant();
         var trimmedUsername = username.Trim();
 
-        var allUsers = await _userRepository.GetAllAsync();
-        if (allUsers.Any(u => u.Email.Equals(normalizedEmail, StringComparison.OrdinalIgnoreCase)) ||
-            allUsers.Any(u => u.Username.Equals(trimmedUsername, StringComparison.OrdinalIgnoreCase)))
+        // Kiểm tra trùng email/username bằng truy vấn có điều kiện (dùng index unique),
+        // không tải toàn bộ users.
+        if (await _userRepository.FindOneAsync(u => u.Email == normalizedEmail) is not null ||
+            await _userRepository.FindOneAsync(u => u.Username == trimmedUsername) is not null)
         {
             return null;
         }
@@ -85,8 +86,7 @@ public class UserService : IUserService
             var trimmedUsername = request.Username.Trim();
             if (!trimmedUsername.Equals(existingUser.Username, StringComparison.OrdinalIgnoreCase))
             {
-                var allUsers = await _userRepository.GetAllAsync();
-                if (allUsers.Any(u => u.Username.Equals(trimmedUsername, StringComparison.OrdinalIgnoreCase))) return null;
+                if (await _userRepository.FindOneAsync(u => u.Username == trimmedUsername) is not null) return null;
             }
             existingUser.Username = trimmedUsername;
         }
@@ -250,8 +250,10 @@ public class UserService : IUserService
 
     public async Task<User?> GetByEmailAsync(string email)
     {
-        var allUsers = await _userRepository.GetAllAsync();
-        return allUsers.FirstOrDefault(u => u.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+        // Email luôn được lưu ở dạng lowercase (xem RegisterAsync/UpdateAsync) nên so khớp
+        // chính xác trên field đã đánh index thay vì kéo toàn bộ users về lọc.
+        var normalized = (email ?? string.Empty).Trim().ToLowerInvariant();
+        return await _userRepository.FindOneAsync(u => u.Email == normalized);
     }
 
     public async Task<User?> CreateAsync(User user)

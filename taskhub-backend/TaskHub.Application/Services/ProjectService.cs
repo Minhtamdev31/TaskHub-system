@@ -451,25 +451,15 @@ public class ProjectService : IProjectService
             return false;
         }
 
-        // Delete all tasks associated with this project (Cascade Delete)
-        var allTasks = await _taskRepository.GetAllAsync();
-        var tasksToDelete = allTasks
-            .Where(t => !string.IsNullOrEmpty(t.ProjectId) && 
-                       t.ProjectId.Equals(projectId, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        // Cascade delete: lấy task của dự án (index projectId), xóa comment của các task đó,
+        // rồi xóa hàng loạt bằng DeleteMany thay vì xóa từng cái (giảm số round-trip tới DB).
+        var tasksToDelete = await _taskRepository.FindAsync(t => t.ProjectId == projectId);
+        var taskIds = tasksToDelete.Select(t => t.Id).ToList();
 
-        var allComments = await _commentRepository.GetAllAsync();
-
-        foreach (var task in tasksToDelete)
+        if (taskIds.Count > 0)
         {
-            // Xóa comments của từng task
-            var taskComments = allComments.Where(c => c.TaskId == task.Id).ToList();
-            foreach (var comment in taskComments)
-            {
-                await _commentRepository.DeleteAsync(comment.Id);
-            }
-
-            await _taskRepository.DeleteAsync(task.Id);
+            await _commentRepository.DeleteManyAsync(c => taskIds.Contains(c.TaskId));
+            await _taskRepository.DeleteManyAsync(t => t.ProjectId == projectId);
         }
 
         // Delete the project itself

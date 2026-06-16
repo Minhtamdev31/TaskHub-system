@@ -178,6 +178,23 @@ using (var scope = app.Services.CreateScope())
 }
 
 // ==========================================
+// TẠO INDEX MONGODB (chạy 1 lần, idempotent)
+// ==========================================
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var ctx = scope.ServiceProvider.GetRequiredService<TaskHub.Persistence.Context.MongoDbContext>();
+        await ctx.EnsureIndexesAsync();
+        Console.WriteLine("[INDEX] Đã đảm bảo index MongoDB.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[INDEX ERROR] {ex.Message}");
+    }
+}
+
+// ==========================================
 // NẠP CẤU HÌNH KEEP-ALIVE (chống ngủ đông) TỪ DB
 // ==========================================
 using (var scope = app.Services.CreateScope())

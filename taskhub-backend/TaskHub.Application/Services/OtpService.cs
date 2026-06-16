@@ -19,7 +19,7 @@ public class OtpService : IOtpService
         var otpCode = new Random().Next(100000, 999999).ToString();
         var record = new OtpRecord
         {
-            Email = email,
+            Email = (email ?? string.Empty).Trim().ToLowerInvariant(),
             OtpCode = otpCode,
             Type = type,
             ExpiryTime = DateTime.UtcNow.AddMinutes(5)
@@ -36,9 +36,10 @@ public class OtpService : IOtpService
 
     public async Task<bool> VerifyOtpAsync(string email, string otpCode, string type)
     {
-        var allOtps = await _otpRepository.GetAllAsync();
-        var latest = allOtps
-            .Where(x => x.Email.Equals(email, StringComparison.OrdinalIgnoreCase) && x.Type == type)
+        // Chỉ lấy OTP của đúng email + type (index Email+Type) thay vì quét toàn bộ.
+        var normalized = (email ?? string.Empty).Trim().ToLowerInvariant();
+        var candidates = await _otpRepository.FindAsync(x => x.Email == normalized && x.Type == type);
+        var latest = candidates
             .OrderByDescending(x => x.ExpiryTime)
             .FirstOrDefault();
 
