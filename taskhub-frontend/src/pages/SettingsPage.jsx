@@ -284,20 +284,6 @@ const SettingsPage = () => {
                 )}
               </div>
 
-              {/* 2FA (placeholder) */}
-              <div className="flex items-center justify-between gap-4 p-5 rounded-2xl border border-slate-200 opacity-75">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center"><Shield size={20} /></div>
-                  <div>
-                    <p className="font-bold text-slate-900">Xác thực hai lớp (2FA)</p>
-                    <p className="text-sm text-slate-500">Thêm một lớp bảo mật cho tài khoản — sắp ra mắt</p>
-                  </div>
-                </div>
-                <span className="shrink-0 w-11 h-6 rounded-full bg-slate-200 relative">
-                  <span className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow" />
-                </span>
-              </div>
-
               {/* Trạng thái bảo mật */}
               <div className="flex items-center gap-3 p-5 rounded-2xl bg-emerald-50 border border-emerald-200">
                 <Check size={20} className="text-emerald-600 shrink-0" />
