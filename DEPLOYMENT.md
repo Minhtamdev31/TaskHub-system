@@ -31,6 +31,20 @@ openssl rand -base64 48
 
 > Các giá trị **không nhạy cảm** (`Jwt__Issuer`, `MongoDbSettings__DatabaseName`, `Google__ClientId`, `App__PublicUrl`…) đã nằm sẵn trong `appsettings.json` nên **không cần** đặt lại trên Render, trừ khi muốn override.
 
+## Seed tài khoản Admin
+Đặt 3 biến sau → app tự tạo (hoặc nâng quyền) 1 tài khoản `Admin` **lúc khởi động**, idempotent (chạy lại nhiều lần không tạo trùng):
+
+| Env var | Bí mật? | Ghi chú |
+|---------|:------:|---------|
+| `Admin__Email` | ⬜ | Email đăng nhập admin |
+| `Admin__Username` | ⬜ | Tên hiển thị |
+| `Admin__Password` | ✅ | Mật khẩu (được hash BCrypt khi tạo) |
+
+- Nếu email đó **chưa có** → tạo user mới `Role="Admin"`, đã verify email.
+- Nếu **đã có** user với email đó nhưng chưa phải Admin → **nâng lên Admin** (giữ nguyên mật khẩu cũ, bỏ qua `Admin__Password`).
+- Không đặt đủ 3 biến → bỏ qua, log `Bỏ qua seed Admin`.
+- **Sau khi tạo xong**, nên **xoá `Admin__Password`** khỏi Render để không lưu mật khẩu thô trong env (tài khoản vẫn còn trong DB).
+
 ## App sẽ fail-fast nếu thiếu cấu hình
 `Program.cs` kiểm tra lúc khởi động và **dừng ngay với thông báo rõ ràng** nếu:
 - Thiếu `MongoDbSettings__ConnectionString` hoặc `Security__VaultEncryptionKey`.

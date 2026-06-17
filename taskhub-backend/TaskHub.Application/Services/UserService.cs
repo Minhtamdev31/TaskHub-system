@@ -266,4 +266,37 @@ public class UserService : IUserService
         await _userRepository.CreateAsync(user);
         return user;
     }
+
+    public async Task<bool> EnsureAdminAsync(string username, string email, string password)
+    {
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var existing = await _userRepository.FindOneAsync(u => u.Email == normalizedEmail);
+
+        if (existing is null)
+        {
+            var admin = new User
+            {
+                Username = username.Trim(),
+                Email = normalizedEmail,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+                Role = "Admin",
+                IsActive = true,
+                IsEmailVerified = true,
+                Subscription = SubscriptionInfo.FreeActive
+            };
+            await _userRepository.CreateAsync(admin);
+            return true;
+        }
+
+        // Đã tồn tại nhưng chưa phải Admin → nâng quyền (không đụng tới mật khẩu hiện có).
+        if (existing.Role != "Admin")
+        {
+            existing.Role = "Admin";
+            existing.UpdatedAt = DateTime.UtcNow;
+            await _userRepository.UpdateAsync(existing.Id, existing);
+            return true;
+        }
+
+        return false;
+    }
 }

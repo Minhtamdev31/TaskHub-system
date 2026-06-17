@@ -17,4 +17,10 @@ public interface IUserService
     Task<User?> ResetPasswordAsync(string email, string newPassword);
     Task<User?> SetSubscriptionAsync(string userId, bool isPremium, int durationDays);
     Task<User?> CreateAsync(User user);
+
+    /// <summary>
+    /// Đảm bảo tồn tại 1 tài khoản Admin với email cho trước (idempotent).
+    /// Chưa có → tạo mới role "Admin"; đã có nhưng chưa phải Admin → nâng quyền. Trả về true nếu có thay đổi.
+    /// </summary>
+    Task<bool> EnsureAdminAsync(string username, string email, string password);
 }

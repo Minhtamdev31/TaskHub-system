@@ -209,6 +209,40 @@ using (var scope = app.Services.CreateScope())
 }
 
 // ==========================================
+// SEED TÀI KHOẢN ADMIN (idempotent) — đọc từ cấu hình Admin:Email/Username/Password
+// (env Admin__Email / Admin__Username / Admin__Password trên Render, hoặc appsettings.Development.json khi dev).
+// Không cấu hình → bỏ qua. Đã có user email đó → nâng lên Admin nếu cần.
+// ==========================================
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var adminEmail = app.Configuration["Admin:Email"];
+        var adminUsername = app.Configuration["Admin:Username"];
+        var adminPassword = app.Configuration["Admin:Password"];
+
+        if (!string.IsNullOrWhiteSpace(adminEmail) &&
+            !string.IsNullOrWhiteSpace(adminUsername) &&
+            !string.IsNullOrWhiteSpace(adminPassword))
+        {
+            var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+            var changed = await userService.EnsureAdminAsync(adminUsername, adminEmail, adminPassword);
+            Console.WriteLine(changed
+                ? $"[SEED] Đã tạo/nâng quyền tài khoản Admin: {adminEmail}"
+                : $"[SEED] Tài khoản Admin đã sẵn sàng: {adminEmail}");
+        }
+        else
+        {
+            Console.WriteLine("[SEED] Bỏ qua seed Admin (chưa cấu hình Admin__Email/Username/Password).");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[SEED ERROR] Không seed được Admin: {ex.Message}");
+    }
+}
+
+// ==========================================
 // TẠO INDEX MONGODB (chạy 1 lần, idempotent)
 // ==========================================
 using (var scope = app.Services.CreateScope())
