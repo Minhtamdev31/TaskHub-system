@@ -26,7 +26,38 @@ var audience = jwtSettings["Audience"];
 
 if (string.IsNullOrEmpty(secret) || string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(audience))
 {
-    throw new InvalidOperationException("JWT settings (Secret, Issuer, Audience) are not configured.");
+    throw new InvalidOperationException(
+        "JWT settings (Secret, Issuer, Audience) chưa được cấu hình. " +
+        "Đặt biến môi trường Jwt__Secret / Jwt__Issuer / Jwt__Audience (xem DEPLOYMENT.md).");
+}
+
+// ==========================================
+// FAIL-FAST: kiểm tra các secret bắt buộc đã được nạp (từ env trên Render / appsettings.Development.json khi dev).
+// Bắt lỗi cấu hình ngay lúc khởi động thay vì để app chạy rồi crash mơ hồ về sau.
+// ==========================================
+var requiredSecrets = new (string Key, string EnvVar)[]
+{
+    ("MongoDbSettings:ConnectionString", "MongoDbSettings__ConnectionString"),
+    ("Security:VaultEncryptionKey",      "Security__VaultEncryptionKey"),
+};
+var missing = requiredSecrets
+    .Where(s => string.IsNullOrWhiteSpace(builder.Configuration[s.Key]))
+    .Select(s => s.EnvVar)
+    .ToList();
+if (missing.Count > 0)
+{
+    throw new InvalidOperationException(
+        "Thiếu cấu hình bắt buộc: " + string.Join(", ", missing) +
+        ". Đặt các biến môi trường này trên Render (hoặc appsettings.Development.json khi chạy local). Xem DEPLOYMENT.md.");
+}
+
+// Trong Production không cho dùng các giá trị placeholder/mặc định nguy hiểm.
+if (!builder.Environment.IsDevelopment())
+{
+    if (secret.Length < 32 || secret.Contains("your-super-secret-key"))
+        throw new InvalidOperationException("Jwt__Secret đang là giá trị placeholder/quá ngắn. Đặt một secret ngẫu nhiên >= 32 ký tự trên Render.");
+    if (builder.Configuration["Security:VaultEncryptionKey"]!.Contains("Default-Key-Change-In-Production"))
+        throw new InvalidOperationException("Security__VaultEncryptionKey vẫn là giá trị mặc định. Đặt một khoá ngẫu nhiên trên Render.");
 }
 
 var key = Encoding.ASCII.GetBytes(secret);
