@@ -13,5 +13,6 @@ public interface IPaymentService
     Task<bool> ConfirmPayOSOrderAsync(string orderCode, string userId);
     Task<List<Order>> GetOrdersByUserIdAsync(string userId);
     Task<List<Order>> GetAllOrdersForAdminAsync();
+    Task<(List<Order> Items, long Total)> GetAllOrdersForAdminPagedAsync(int page, int pageSize);
     Task<AdminDashboardDto> GetAdminDashboardAnalyticsAsync();
 }

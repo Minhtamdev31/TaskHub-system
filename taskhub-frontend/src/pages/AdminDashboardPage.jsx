@@ -2,10 +2,33 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   LayoutDashboard, Users, CreditCard, Package,
   TrendingUp, ShoppingCart, Crown, Trash2, Plus, X, ShieldCheck, Shield, Server, Zap,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { adminService } from '../services/api';
 import { toast } from '../components/Toast';
 import { confirm } from '../components/ConfirmDialog';
+
+// Thanh phân trang dùng chung — hiện tổng số + nút trước/sau. Ẩn nếu chỉ có 1 trang.
+const Pager = ({ page, totalPages, total, onChange }) => {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 text-sm">
+      <span className="text-slate-500">Tổng <b className="text-slate-700">{total}</b> · trang {page}/{totalPages}</span>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onChange(page - 1)} disabled={page <= 1}
+          className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          aria-label="Trang trước"
+        ><ChevronLeft size={18} /></button>
+        <button
+          onClick={() => onChange(page + 1)} disabled={page >= totalPages}
+          className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          aria-label="Trang sau"
+        ><ChevronRight size={18} /></button>
+      </div>
+    </div>
+  );
+};
 
 const TABS = [
   { id: 'overview', name: 'Tổng quan', icon: LayoutDashboard },
@@ -202,15 +225,20 @@ const OverviewTab = () => {
 /* ---------------- Users ---------------- */
 const UsersTab = () => {
   const [users, setUsers] = useState([]);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(() => {
     setLoading(true);
-    adminService.getUsers()
-      .then((res) => setUsers(res.data))
+    adminService.getUsers(page)
+      .then((res) => {
+        setUsers(res.data.items || []);
+        setMeta({ total: res.data.total || 0, totalPages: res.data.totalPages || 1 });
+      })
       .catch(() => toast.error('Không tải được danh sách người dùng.'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [page]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -283,6 +311,7 @@ const UsersTab = () => {
           })}
         </tbody>
       </table>
+      <Pager page={page} totalPages={meta.totalPages} total={meta.total} onChange={setPage} />
     </div>
   );
 };
@@ -413,14 +442,20 @@ const PlansTab = () => {
 /* ---------------- Orders ---------------- */
 const OrdersTab = () => {
   const [orders, setOrders] = useState([]);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    adminService.getAllOrders()
-      .then((res) => setOrders(res.data))
+    setLoading(true);
+    adminService.getAllOrders(page)
+      .then((res) => {
+        setOrders(res.data.items || []);
+        setMeta({ total: res.data.total || 0, totalPages: res.data.totalPages || 1 });
+      })
       .catch(() => toast.error('Không tải được đơn hàng.'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [page]);
 
   if (loading) return <div className="text-slate-500">Đang tải...</div>;
 
@@ -452,6 +487,7 @@ const OrdersTab = () => {
           )}
         </tbody>
       </table>
+      <Pager page={page} totalPages={meta.totalPages} total={meta.total} onChange={setPage} />
     </div>
   );
 };

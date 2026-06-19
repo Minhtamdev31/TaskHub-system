@@ -33,7 +33,13 @@ const LoginPage = () => {
     try {
       const response = await authService.login({ email, password, captchaToken });
       localStorage.setItem('token', response.data.token);
-      window.location.href = '/dashboard';
+      // Admin vào thẳng Bảng quản trị; người dùng thường vào Dashboard cá nhân.
+      let target = '/dashboard';
+      try {
+        const me = await authService.getCurrentUser();
+        if ((me.data?.role || '').toLowerCase() === 'admin') target = '/admin';
+      } catch { /* lỗi đọc role → mặc định /dashboard */ }
+      window.location.href = target;
     } catch (err) {
       const errorMessage = typeof err.response?.data === 'string'
         ? err.response.data

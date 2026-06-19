@@ -1,5 +1,6 @@
 ﻿﻿﻿﻿﻿﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using TaskHub.Application.DTOs;
 using TaskHub.Application.Interfaces;
 
@@ -7,6 +8,7 @@ namespace TaskHub.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [EnableRateLimiting("auth")]
     public class AuthController : ControllerBase
     {
         private readonly IUserService _userService;

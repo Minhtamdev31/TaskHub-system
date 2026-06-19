@@ -265,12 +265,30 @@ const DashboardPage = () => {
         </div>
       </div>
 
+      {/* Onboarding — tài khoản chưa có công việc nào */}
+      {tasks.length === 0 && (
+        <div className="bg-gradient-to-r from-blue-50 to-violet-50 border border-blue-100 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="w-11 h-11 rounded-2xl bg-white text-blue-600 flex items-center justify-center shrink-0 shadow-sm">
+              <Sparkles size={20} />
+            </div>
+            <div>
+              <p className="font-extrabold text-slate-900">Bắt đầu nào!</p>
+              <p className="text-sm text-slate-500 mt-0.5">Tạo dự án đầu tiên và thêm công việc — số liệu tổng quan sẽ tự xuất hiện ở đây.</p>
+            </div>
+          </div>
+          <Link to="/projects" className="shrink-0 bg-blue-600 text-white font-bold text-sm px-5 py-2.5 rounded-full flex items-center gap-2 hover:bg-blue-700 transition-colors">
+            <Plus size={16} /> Tạo dự án đầu tiên
+          </Link>
+        </div>
+      )}
+
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatCard label="Tổng công việc" value={stats.total} trend={stats.trends.total} icon={ListChecks} tint="bg-blue-50 text-blue-600" />
-        <StatCard label="Hoàn thành" value={stats.done} trend={stats.trends.done} icon={CheckCircle2} tint="bg-emerald-50 text-emerald-600" />
-        <StatCard label="Đang làm" value={stats.inProgress} trend={stats.trends.inProgress} icon={Clock} tint="bg-amber-50 text-amber-600" />
-        <StatCard label="Năng suất" value={`${stats.productivity}%`} trend={stats.trends.productivity} icon={TrendingUp} tint="bg-violet-50 text-violet-600" />
+        <StatCard label="Tổng công việc" value={stats.total} trend={tasks.length ? stats.trends.total : null} icon={ListChecks} tint="bg-blue-50 text-blue-600" />
+        <StatCard label="Hoàn thành" value={stats.done} trend={tasks.length ? stats.trends.done : null} icon={CheckCircle2} tint="bg-emerald-50 text-emerald-600" />
+        <StatCard label="Đang làm" value={stats.inProgress} trend={tasks.length ? stats.trends.inProgress : null} icon={Clock} tint="bg-amber-50 text-amber-600" />
+        <StatCard label="Năng suất" value={`${stats.productivity}%`} trend={tasks.length ? stats.trends.productivity : null} icon={TrendingUp} tint="bg-violet-50 text-violet-600" />
       </div>
 
       {/* Main grid: weekly chart + side column */}

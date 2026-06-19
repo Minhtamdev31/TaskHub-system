@@ -8,6 +8,7 @@ public interface IUserService
     Task<User?> RegisterAsync(string username, string email, string password);
     Task<User?> LoginAsync(string email, string password);
     Task<List<User>> GetAllAsync();
+    Task<(List<User> Items, long Total)> GetPagedAsync(int page, int pageSize);
     Task<User?> GetByIdAsync(string id);
     Task<User?> GetByEmailAsync(string email);
     Task<User?> UpdateAsync(string id, UpdateUserRequest request);

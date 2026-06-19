@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using TaskHub.Application.Interfaces;
 using TaskHub.Application.DTOs;
+using TaskHub.Domain.Entities;
 
 namespace TaskHub.API.Controllers;
 
@@ -69,10 +70,19 @@ public class PaymentsController : ControllerBase
 
     [HttpGet("admin/orders")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> GetAllOrders()
+    public async Task<IActionResult> GetAllOrders([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var orders = await _paymentService.GetAllOrdersForAdminAsync();
-        return Ok(orders);
+        page = page < 1 ? 1 : page;
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var (orders, total) = await _paymentService.GetAllOrdersForAdminPagedAsync(page, pageSize);
+        return Ok(new PagedResult<Order>
+        {
+            Items = orders,
+            Total = total,
+            Page = page,
+            PageSize = pageSize
+        });
     }
 
     [HttpGet("admin/dashboard")]

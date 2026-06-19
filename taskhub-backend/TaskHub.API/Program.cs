@@ -1,8 +1,10 @@
 ﻿﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using System.Threading.RateLimiting;
 using TaskHub.Application.Interfaces;
 using TaskHub.Application.Services;
 using TaskHub.API.Hubs;
@@ -68,6 +70,36 @@ var key = Encoding.ASCII.GetBytes(secret);
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+});
+
+// ==========================================
+// RATE LIMITING — chống brute-force trên các endpoint nhạy cảm (login / OTP / reset).
+// Policy "auth": tối đa 10 request / phút cho mỗi IP. Phân vùng theo X-Forwarded-For
+// (Render đứng sau proxy) rồi mới tới RemoteIpAddress.
+// ==========================================
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", httpContext =>
+    {
+        var ip = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',')[0].Trim();
+        if (string.IsNullOrEmpty(ip))
+        {
+            ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        }
+        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        });
+    });
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new { error = "Bạn thao tác quá nhanh. Vui lòng thử lại sau một phút." }, token);
+    };
 });
 
 builder.Services.AddAuthentication(options =>
@@ -307,6 +339,7 @@ else
 
 app.UseRouting();
 app.UseCors("AllowAll");
+app.UseRateLimiter();
 
 app.UseSwagger();
 app.UseSwaggerUI(options =>

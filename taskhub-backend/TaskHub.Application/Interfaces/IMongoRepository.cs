@@ -19,6 +19,9 @@ namespace TaskHub.Application.Interfaces
         Task<List<T>> FindAsync(Expression<Func<T, bool>> predicate);
         Task<T?> FindOneAsync(Expression<Func<T, bool>> predicate);
         Task<long> CountAsync(Expression<Func<T, bool>> predicate);
+
+        // Phân trang: bỏ qua `skip` bản ghi, lấy `limit` bản ghi, sắp mới-nhất-trước (theo _id giảm dần).
+        Task<List<T>> FindPagedAsync(Expression<Func<T, bool>> predicate, int skip, int limit);
         Task<long> DeleteManyAsync(Expression<Func<T, bool>> predicate);
     }
 }

@@ -203,6 +203,17 @@ public class PaymentService : IPaymentService
         return all.OrderByDescending(o => o.CreatedAt).ToList();
     }
 
+    public async Task<(List<Order> Items, long Total)> GetAllOrdersForAdminPagedAsync(int page, int pageSize)
+    {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 20;
+
+        // FindPagedAsync sắp theo _id giảm dần (ObjectId mã hoá thời gian tạo) ≈ mới nhất trước.
+        var total = await _orderRepository.CountAsync(_ => true);
+        var items = await _orderRepository.FindPagedAsync(_ => true, (page - 1) * pageSize, pageSize);
+        return (items, total);
+    }
+
     public async Task<AdminDashboardDto> GetAdminDashboardAnalyticsAsync()
     {
         var allOrders = await _orderRepository.GetAllAsync();

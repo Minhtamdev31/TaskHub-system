@@ -57,6 +57,16 @@ public class UserService : IUserService
         return await _userRepository.GetAllAsync();
     }
 
+    public async Task<(List<User> Items, long Total)> GetPagedAsync(int page, int pageSize)
+    {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 20;
+
+        var total = await _userRepository.CountAsync(_ => true);
+        var items = await _userRepository.FindPagedAsync(_ => true, (page - 1) * pageSize, pageSize);
+        return (items, total);
+    }
+
     public async Task<User?> GetByIdAsync(string id)
     {
         return await _userRepository.GetByIdAsync(id);

@@ -66,6 +66,15 @@ namespace TaskHub.Persistence.Repositories
             return await _collection.CountDocumentsAsync(predicate);
         }
 
+        public async Task<List<T>> FindPagedAsync(Expression<Func<T, bool>> predicate, int skip, int limit)
+        {
+            return await _collection.Find(predicate)
+                .Sort(Builders<T>.Sort.Descending("_id")) // mới nhất trước
+                .Skip(skip)
+                .Limit(limit)
+                .ToListAsync();
+        }
+
         public async Task<long> DeleteManyAsync(Expression<Func<T, bool>> predicate)
         {
             var result = await _collection.DeleteManyAsync(predicate);

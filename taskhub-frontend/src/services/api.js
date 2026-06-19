@@ -158,8 +158,8 @@ export const paymentService = {
  */
 export const adminService = {
   getDashboard: () => apiClient.get('/payments/admin/dashboard'),
-  getAllOrders: () => apiClient.get('/payments/admin/orders'),
-  getUsers: () => apiClient.get('/users'),
+  getAllOrders: (page = 1, pageSize = 20) => apiClient.get('/payments/admin/orders', { params: { page, pageSize } }),
+  getUsers: (page = 1, pageSize = 20) => apiClient.get('/users', { params: { page, pageSize } }),
   updateUser: (id, data) => apiClient.put(`/users/${id}`, data),
   deleteUser: (id) => apiClient.delete(`/users/${id}`),
   grantPremium: (id, durationDays) => apiClient.post(`/users/${id}/grant-premium`, { durationDays }),

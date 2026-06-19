@@ -32,11 +32,19 @@ public class UsersController : ControllerBase
 
     [HttpGet]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var users = await _userService.GetAllAsync();
-        var response = users.Select(user => new AuthResponse(user));
-        return Ok(response);
+        page = page < 1 ? 1 : page;
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var (users, total) = await _userService.GetPagedAsync(page, pageSize);
+        return Ok(new PagedResult<AuthResponse>
+        {
+            Items = users.Select(user => new AuthResponse(user)).ToList(),
+            Total = total,
+            Page = page,
+            PageSize = pageSize
+        });
     }
 
     [HttpGet("{id}")]

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Clock, CalendarDays } from 'lucide-react';
-import { projectService, taskService } from '../services/api';
+import { taskService } from '../services/api';
 
 const WEEKDAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const MONTHS = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
@@ -30,17 +30,12 @@ const CalendarPage = () => {
     let cancelled = false;
     (async () => {
       try {
-        const projectsRes = await projectService.getAll().catch(() => ({ data: [] }));
-        const projectList = projectsRes.data || [];
-        const results = await Promise.all(
-          projectList.map((p) =>
-            taskService.getByProject(p.id).then((r) => ({ p, ts: r.data || [] })).catch(() => ({ p, ts: [] }))
-          )
-        );
+        // 1 request gộp (/tasks/workspace) thay cho 1 + N getByProject — tránh N+1.
+        const wsRes = await taskService.getWorkspace().catch(() => ({ data: [] }));
         if (cancelled) return;
-        const all = [];
+        const all = wsRes.data || [];
         const names = {};
-        results.forEach(({ p, ts }) => ts.forEach((t) => { all.push(t); names[t.id] = p.name; }));
+        all.forEach((t) => { names[t.id] = t.projectName; });
         setTasks(all.filter((t) => t.dueDate));
         setProjectName(names);
       } catch (err) {
