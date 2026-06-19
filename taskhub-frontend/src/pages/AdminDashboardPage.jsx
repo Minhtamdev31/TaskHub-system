@@ -125,8 +125,9 @@ const SystemTab = () => {
           <div className="flex-1">
             <h3 className="text-lg font-extrabold text-slate-900">Chống ngủ đông (Keep-alive)</h3>
             <p className="text-sm text-slate-500 mt-1">
-              Khi bật, server sẽ tự ping <code className="text-xs bg-slate-100 px-1.5 py-0.5 rounded">/api/health</code> mỗi 10 phút
-              để Render không đưa dịch vụ vào trạng thái ngủ sau ~15 phút không hoạt động. Giúp lần truy cập đầu không bị chờ khởi động lại.
+              Khi bật, hệ thống tự “cựa mình” vài phút một lần để máy chủ luôn thức.
+              Nhờ vậy người dùng mở web là vào được ngay, không phải chờ máy chủ khởi động lại
+              (thường mất nửa phút đến một phút sau một thời gian dài không ai truy cập).
             </p>
           </div>
           {enabled === null ? (
@@ -152,8 +153,9 @@ const SystemTab = () => {
       </div>
 
       <p className="text-xs text-slate-400 leading-relaxed">
-        Lưu ý: self-ping chỉ giữ thức khi dịch vụ đang chạy. Nếu dịch vụ đã ngủ (vd sau khi deploy), nó không tự thức được.
-        Để chắc chắn hơn, nên kết hợp một dịch vụ giám sát bên ngoài (UptimeRobot, cron-job.org) ping cùng endpoint.
+        Lưu ý: cách này chỉ giữ máy chủ thức khi nó đang chạy. Nếu máy chủ đã “ngủ” (ví dụ vừa cập nhật hệ thống),
+        nó không tự thức dậy được — cần có người mở web lần đầu để đánh thức. Muốn chắc chắn hơn, có thể dùng thêm
+        một công cụ tự động ghé thăm web giúp (ví dụ UptimeRobot) để giữ máy chủ luôn thức.
       </p>
     </div>
   );
