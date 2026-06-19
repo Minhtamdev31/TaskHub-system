@@ -44,6 +44,7 @@ const formatPrice = (p) =>
 const STATUS_STYLE = {
   Completed: 'bg-green-100 text-green-700',
   Pending: 'bg-amber-100 text-amber-700',
+  Cancelled: 'bg-slate-100 text-slate-500',
   Failed: 'bg-rose-100 text-rose-700',
 };
 

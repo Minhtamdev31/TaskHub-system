@@ -57,6 +57,17 @@ public class PaymentsController : ControllerBase
         return Ok(new { completed });
     }
 
+    [HttpPost("payos/cancel/{orderCode}")]
+    [Authorize]
+    public async Task<IActionResult> CancelPayOS(string orderCode)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userId == null) return Unauthorized();
+
+        var cancelled = await _paymentService.CancelPendingOrderAsync(orderCode, userId);
+        return Ok(new { cancelled });
+    }
+
     [HttpGet("my-orders")]
     [Authorize]
     public async Task<IActionResult> GetMyOrders()

@@ -63,7 +63,12 @@ const PricingPage = () => {
       setSearchParams(searchParams, { replace: true });
     } else if (status === 'cancel') {
       toast.info('Bạn đã hủy thanh toán.');
+      // Báo backend để đơn chuyển "Đã hủy" thay vì kẹt "Đang xử lý".
+      if (orderCode) {
+        paymentService.cancelPayOS(orderCode).catch(() => { /* không nghiêm trọng */ });
+      }
       searchParams.delete('status');
+      searchParams.delete('orderCode');
       setSearchParams(searchParams, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

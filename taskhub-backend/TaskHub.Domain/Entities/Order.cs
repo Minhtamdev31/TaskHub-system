@@ -14,7 +14,7 @@ public class Order
     public string PlanTitle { get; set; } = string.Empty;
     public decimal Amount { get; set; }
     public string PaymentCode { get; set; } = string.Empty; // numeric for PayOS
-    public string Status { get; set; } = "Pending"; // "Pending", "Completed", "Failed"
+    public string Status { get; set; } = "Pending"; // "Pending", "Completed", "Cancelled", "Failed"
     public string PaymentGateway { get; set; } = string.Empty; // "PayOS", "MoMo"
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }

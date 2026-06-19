@@ -194,6 +194,58 @@ public class PaymentService : IPaymentService
         return await CompleteSubscriptionOrder(orderCode);
     }
 
+    // Hỏi PayOS trạng thái 1 đơn theo orderCode (PAID/CANCELLED/EXPIRED/PENDING...). null nếu không hỏi được.
+    private async Task<string?> GetPayOsOrderStatusAsync(string orderCode)
+    {
+        var clientId = _config["PayOS:ClientId"];
+        var apiKey = _config["PayOS:ApiKey"];
+        if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(apiKey)) return null;
+
+        _httpClient.DefaultRequestHeaders.Clear();
+        _httpClient.DefaultRequestHeaders.Add("x-client-id", clientId);
+        _httpClient.DefaultRequestHeaders.Add("x-api-key", apiKey);
+
+        var response = await _httpClient.GetAsync($"https://api-merchant.payos.vn/v2/payment-requests/{orderCode}");
+        if (!response.IsSuccessStatusCode) return null;
+
+        var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+        if (result.GetProperty("code").GetString() != "00") return null;
+        return result.GetProperty("data").GetProperty("status").GetString();
+    }
+
+    // Người dùng bấm hủy ở trang thanh toán → đánh dấu đơn "Cancelled".
+    // An toàn: hỏi PayOS trước — nếu thực ra đã PAID thì hoàn tất thay vì hủy nhầm.
+    public async Task<bool> CancelPendingOrderAsync(string orderCode, string userId)
+    {
+        if (string.IsNullOrWhiteSpace(orderCode) || string.IsNullOrWhiteSpace(userId)) return false;
+
+        var order = await _orderRepository.FindOneAsync(o => o.PaymentCode == orderCode && o.UserId == userId);
+        if (order == null) return false;
+        if (order.Status != "Pending") return order.Status == "Cancelled"; // đã xử lý trước đó
+
+        if (await GetPayOsOrderStatusAsync(orderCode) == "PAID")
+        {
+            return await CompleteSubscriptionOrder(orderCode); // hóa ra đã trả tiền → hoàn tất, không hủy
+        }
+
+        order.Status = "Cancelled";
+        await _orderRepository.UpdateAsync(order.Id, order);
+        return true;
+    }
+
+    // Quét các đơn còn "Pending" quá lâu (vd > 30 phút) → tự chuyển "Cancelled". Gọi định kỳ bởi worker.
+    public async Task<int> ExpireStalePendingOrdersAsync(TimeSpan olderThan)
+    {
+        var cutoff = DateTime.UtcNow - olderThan;
+        var stale = await _orderRepository.FindAsync(o => o.Status == "Pending" && o.CreatedAt < cutoff);
+        foreach (var order in stale)
+        {
+            order.Status = "Cancelled";
+            await _orderRepository.UpdateAsync(order.Id, order);
+        }
+        return stale.Count;
+    }
+
     public async Task<List<Order>> GetOrdersByUserIdAsync(string userId)
     {
         var all = await _orderRepository.GetAllAsync();

@@ -15,7 +15,7 @@ const TABS = [
 ];
 
 const THEME_LABELS = { Light: 'Sáng', Dark: 'Tối' };
-const ORDER_STATUS_LABELS = { Completed: 'Hoàn tất', Pending: 'Đang xử lý', Failed: 'Thất bại' };
+const ORDER_STATUS_LABELS = { Completed: 'Hoàn tất', Pending: 'Đang xử lý', Cancelled: 'Đã hủy', Failed: 'Thất bại' };
 
 const MAX_AVATAR_BYTES = 1024 * 1024; // 1MB
 
@@ -25,6 +25,7 @@ const formatPrice = (price) =>
 const ORDER_STATUS_STYLE = {
   Completed: 'bg-green-100 text-green-700',
   Pending: 'bg-amber-100 text-amber-700',
+  Cancelled: 'bg-slate-100 text-slate-500',
   Failed: 'bg-rose-100 text-rose-700',
 };
 
