@@ -91,7 +91,6 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState('bạn');
   const [tasks, setTasks] = useState([]);
-  const [projects, setProjects] = useState([]);
   const [projectName, setProjectName] = useState({}); // taskId -> project name
   const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -133,7 +132,6 @@ const DashboardPage = () => {
 
         setUserName((meRes.data?.profile?.fullName || meRes.data?.username || meRes.data?.email || 'bạn').split('@')[0]);
         setIsPremium(!!meRes.data?.subscription?.isPremium);
-        setProjects(projectList);
         setTasks(allTasks);
         setProjectName(nameMap);
         setServerStats(statsRes.data);
@@ -165,6 +163,7 @@ const DashboardPage = () => {
 
   const weekly = useMemo(() => serverStats?.weeklyCompleted ?? new Array(7).fill(0), [serverStats]);
   const weeklyMax = Math.max(1, ...weekly);
+  const weeklyEmpty = useMemo(() => weekly.every((c) => !c), [weekly]);
 
   // Đóng dropdown kết quả tìm kiếm khi bấm ra ngoài.
   useEffect(() => {
@@ -295,7 +294,12 @@ const DashboardPage = () => {
           <h3 className="text-xl font-extrabold text-slate-900">Tiến độ tuần này</h3>
           <p className="text-slate-500 text-sm mt-0.5">Công việc hoàn thành trong tuần</p>
 
-          <div className="flex items-end justify-between gap-3 h-64 mt-8">
+          <div className="relative flex items-end justify-between gap-3 h-64 mt-8">
+            {weeklyEmpty && (
+              <div className="absolute inset-x-0 top-0 bottom-8 flex items-center justify-center pointer-events-none">
+                <p className="text-slate-400 text-sm">Chưa có công việc hoàn thành trong tuần này.</p>
+              </div>
+            )}
             {weekly.map((count, i) => (
               <div key={i} className="flex-1 flex flex-col items-center justify-end h-full gap-3">
                 <div className="w-full flex items-end justify-center h-full">
@@ -355,7 +359,7 @@ const DashboardPage = () => {
               </div>
               <div>
                 <p className="font-bold text-slate-900 text-sm">Kho mật khẩu</p>
-                <p className="text-xs text-slate-400">{projects.length} dự án đang hoạt động</p>
+                <p className="text-xs text-slate-400">Lưu trữ &amp; mở khoá mật khẩu an toàn</p>
               </div>
             </div>
             <ChevronRight size={18} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
