@@ -48,6 +48,13 @@ const STATUS_STYLE = {
   Failed: 'bg-rose-100 text-rose-700',
 };
 
+const STATUS_LABEL = {
+  Completed: 'Hoàn tất',
+  Pending: 'Đang xử lý',
+  Cancelled: 'Đã hủy',
+  Failed: 'Thất bại',
+};
+
 const AdminDashboardPage = () => {
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -488,7 +495,7 @@ const OrdersTab = () => {
               <td className="px-6 py-4 text-slate-500">{o.paymentGateway}</td>
               <td className="px-6 py-4 text-slate-400 font-mono text-xs">{o.paymentCode}</td>
               <td className="px-6 py-4">
-                <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${STATUS_STYLE[o.status] || 'bg-slate-100 text-slate-500'}`}>{o.status}</span>
+                <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${STATUS_STYLE[o.status] || 'bg-slate-100 text-slate-500'}`}>{STATUS_LABEL[o.status] || o.status}</span>
               </td>
               <td className="px-6 py-4 text-slate-400 text-xs">{new Date(o.createdAt).toLocaleString('vi-VN')}</td>
             </tr>
