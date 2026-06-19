@@ -138,6 +138,7 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+builder.Services.AddMemoryCache(); // cache trong RAM cho dữ liệu đọc-nhiều/đổi-ít (vd: gói dịch vụ)
 builder.Services.AddSignalR();
 builder.Services.AddScoped<IRealtimeNotifier, SignalRRealtimeNotifier>();
 builder.Services.AddControllers();
