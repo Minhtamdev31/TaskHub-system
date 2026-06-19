@@ -19,6 +19,9 @@ public interface IUserService
     Task<User?> SetSubscriptionAsync(string userId, bool isPremium, int durationDays);
     Task<User?> CreateAsync(User user);
 
+    /// <summary>Xóa cache của 1 user — gọi sau khi sửa user đó từ bất kỳ service nào.</summary>
+    void InvalidateUserCache(string userId);
+
     /// <summary>
     /// Đảm bảo tồn tại 1 tài khoản Admin với email cho trước (idempotent).
     /// Chưa có → tạo mới role "Admin"; đã có nhưng chưa phải Admin → nâng quyền. Trả về true nếu có thay đổi.

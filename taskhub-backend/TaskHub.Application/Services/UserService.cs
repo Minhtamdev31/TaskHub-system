@@ -1,4 +1,5 @@
 using BCrypt.Net;
+using Microsoft.Extensions.Caching.Memory;
 using TaskHub.Application.DTOs;
 using TaskHub.Application.Interfaces;
 using TaskHub.Domain.Entities;
@@ -8,10 +9,23 @@ namespace TaskHub.Application.Services;
 public class UserService : IUserService
 {
     private readonly IMongoRepository<User> _userRepository;
+    private readonly IMemoryCache _cache;
 
-    public UserService(IMongoRepository<User> userRepository)
+    // Cache 1 user theo id (phục vụ /users/me, gọi rất nhiều). TTL ngắn làm "lưới an toàn",
+    // và xóa chủ động mỗi khi user bị sửa (xem InvalidateUserCache). Khóa: user:{id}.
+    private static readonly TimeSpan UserCacheTtl = TimeSpan.FromMinutes(5);
+    private static string UserCacheKey(string id) => $"user:{id}";
+
+    public UserService(IMongoRepository<User> userRepository, IMemoryCache cache)
     {
         _userRepository = userRepository;
+        _cache = cache;
+    }
+
+    // Xóa cache của 1 user — gọi sau MỌI thao tác ghi lên user đó (kể cả từ service khác).
+    public void InvalidateUserCache(string userId)
+    {
+        if (!string.IsNullOrEmpty(userId)) _cache.Remove(UserCacheKey(userId));
     }
 
     public async Task<User?> RegisterAsync(string username, string email, string password)
@@ -69,12 +83,20 @@ public class UserService : IUserService
 
     public async Task<User?> GetByIdAsync(string id)
     {
-        return await _userRepository.GetByIdAsync(id);
+        if (string.IsNullOrEmpty(id)) return null;
+
+        // Cache hit → khỏi chạm DB. Miss → lấy từ DB rồi lưu lại với TTL ngắn.
+        return await _cache.GetOrCreateAsync(UserCacheKey(id), async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = UserCacheTtl;
+            return await _userRepository.GetByIdAsync(id);
+        });
     }
 
     public async Task<User?> UpdateAsync(string id, UpdateUserRequest request)
     {
-        var existingUser = await GetByIdAsync(id);
+        // Đọc bản tươi từ DB (không qua cache) vì sắp sửa tại chỗ — tránh làm bẩn object đang nằm trong cache.
+        var existingUser = await _userRepository.GetByIdAsync(id);
         if (existingUser is null)
         {
             return null;
@@ -158,6 +180,7 @@ public class UserService : IUserService
 
         existingUser.UpdatedAt = DateTime.UtcNow;
         await _userRepository.UpdateAsync(id, existingUser);
+        InvalidateUserCache(id);
         return existingUser;
     }
 
@@ -170,12 +193,13 @@ public class UserService : IUserService
         }
 
         await _userRepository.DeleteAsync(id);
+        InvalidateUserCache(id);
         return true;
     }
 
     public async Task<User?> ChangePasswordAsync(string userId, string oldPassword, string newPassword)
     {
-        var user = await GetByIdAsync(userId);
+        var user = await _userRepository.GetByIdAsync(userId);
         if (user is null)
         {
             return null;
@@ -189,12 +213,13 @@ public class UserService : IUserService
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
         user.UpdatedAt = DateTime.UtcNow;
         await _userRepository.UpdateAsync(userId, user);
+        InvalidateUserCache(userId);
         return user;
     }
 
     public async Task<User?> SetPasswordAsync(string userId, string newPassword)
     {
-        var user = await GetByIdAsync(userId);
+        var user = await _userRepository.GetByIdAsync(userId);
         if (user is null)
         {
             return null;
@@ -203,6 +228,7 @@ public class UserService : IUserService
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
         user.UpdatedAt = DateTime.UtcNow;
         await _userRepository.UpdateAsync(userId, user);
+        InvalidateUserCache(userId);
         return user;
     }
 
@@ -218,12 +244,13 @@ public class UserService : IUserService
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
         user.UpdatedAt = DateTime.UtcNow;
         await _userRepository.UpdateAsync(user.Id!, user);
+        InvalidateUserCache(user.Id!);
         return user;
     }
 
     public async Task<User?> SetSubscriptionAsync(string userId, bool isPremium, int durationDays)
     {
-        var user = await GetByIdAsync(userId);
+        var user = await _userRepository.GetByIdAsync(userId);
         if (user is null)
         {
             return null;
@@ -255,6 +282,7 @@ public class UserService : IUserService
 
         user.UpdatedAt = DateTime.UtcNow;
         await _userRepository.UpdateAsync(userId, user);
+        InvalidateUserCache(userId);
         return user;
     }
 
@@ -304,6 +332,7 @@ public class UserService : IUserService
             existing.Role = "Admin";
             existing.UpdatedAt = DateTime.UtcNow;
             await _userRepository.UpdateAsync(existing.Id, existing);
+            InvalidateUserCache(existing.Id);
             return true;
         }
 

@@ -16,6 +16,7 @@ public class PaymentService : IPaymentService
     private readonly IMongoRepository<Order> _orderRepository;
     private readonly IMongoRepository<SubscriptionPlan> _planRepository;
     private readonly IMongoRepository<User> _userRepository;
+    private readonly IUserService _userService;
     private readonly IConfiguration _config;
     private readonly HttpClient _httpClient;
 
@@ -23,12 +24,14 @@ public class PaymentService : IPaymentService
         IMongoRepository<Order> orderRepository,
         IMongoRepository<SubscriptionPlan> planRepository,
         IMongoRepository<User> userRepository,
+        IUserService userService,
         IConfiguration config,
         HttpClient httpClient)
     {
         _orderRepository = orderRepository;
         _planRepository = planRepository;
         _userRepository = userRepository;
+        _userService = userService;
         _config = config;
         _httpClient = httpClient;
     }
@@ -264,6 +267,7 @@ public class PaymentService : IPaymentService
         // khi mua gói, và khiến Role kẹt "PremiumMember" mãi cả khi gói đã hết hạn.
 
         await _userRepository.UpdateAsync(user.Id, user);
+        _userService.InvalidateUserCache(user.Id); // xóa cache /users/me để Premium hiện ngay
         return true;
     }
 
