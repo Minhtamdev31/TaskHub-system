@@ -292,6 +292,16 @@ const UsersTab = () => {
                   <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${isPremium ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>
                     {isPremium ? 'Premium' : 'Free'}
                   </span>
+                  {isPremium && (() => {
+                    const until = u.subscription?.premiumUntil;
+                    if (!until) return <div className="text-[11px] mt-1 text-slate-400">Không thời hạn</div>;
+                    const expired = new Date(until) < new Date();
+                    return (
+                      <div className={`text-[11px] mt-1 ${expired ? 'text-rose-500 font-semibold' : 'text-slate-400'}`}>
+                        {expired ? 'Đã hết hạn ' : 'Hết hạn '}{new Date(until).toLocaleDateString('vi-VN')}
+                      </div>
+                    );
+                  })()}
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-1.5 flex-wrap">
