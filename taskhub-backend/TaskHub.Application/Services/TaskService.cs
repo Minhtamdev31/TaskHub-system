@@ -358,6 +358,29 @@ public class TaskService : ITaskService
         return stats;
     }
 
+    public async Task<List<WorkspaceTaskDto>> GetWorkspaceTasksAsync(string userId)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return new List<WorkspaceTaskDto>();
+        }
+
+        // Cùng scope với GetDashboardStatsAsync: dự án sở hữu hoặc là thành viên (index ownerId / members.userId).
+        var projects = await _projectRepository.FindAsync(p =>
+            p.OwnerId == userId || p.Members.Any(m => m.UserId == userId));
+        var nameByProjectId = projects.ToDictionary(p => p.Id, p => p.Name);
+        var projectIds = nameByProjectId.Keys.ToList();
+
+        // 1 truy vấn $in cho toàn bộ task — thay vì client gọi getByProject N lần.
+        var tasks = projectIds.Count == 0
+            ? new List<TaskItem>()
+            : await _taskRepository.FindAsync(t => projectIds.Contains(t.ProjectId));
+
+        return tasks
+            .Select(t => new WorkspaceTaskDto(t, nameByProjectId.GetValueOrDefault(t.ProjectId, string.Empty)))
+            .ToList();
+    }
+
     // Đưa về đầu tuần (Thứ 2, 00:00 UTC).
     private static DateTime StartOfWeek(DateTime d)
     {

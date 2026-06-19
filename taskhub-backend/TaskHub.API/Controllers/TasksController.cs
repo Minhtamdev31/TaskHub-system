@@ -32,6 +32,19 @@ public class TasksController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("workspace")]
+    public async Task<IActionResult> GetWorkspace()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var tasks = await _taskService.GetWorkspaceTasksAsync(userId);
+        return Ok(tasks);
+    }
+
     [HttpGet("stats")]
     public async Task<IActionResult> GetDashboardStats()
     {

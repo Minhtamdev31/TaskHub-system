@@ -12,7 +12,7 @@ import {
   ChevronRight,
   Sparkles,
 } from 'lucide-react';
-import { authService, projectService, taskService } from '../services/api';
+import { authService, taskService } from '../services/api';
 import NotificationBell from '../components/NotificationBell';
 
 // --- Helpers ---------------------------------------------------------------
@@ -104,31 +104,17 @@ const DashboardPage = () => {
     let cancelled = false;
     (async () => {
       try {
-        const [meRes, projectsRes, statsRes] = await Promise.all([
+        // 1 request gộp (/tasks/workspace) thay cho 1 + N getByProject — tránh N+1.
+        const [meRes, statsRes, wsRes] = await Promise.all([
           authService.getCurrentUser().catch(() => ({ data: null })),
-          projectService.getAll().catch(() => ({ data: [] })),
           taskService.getDashboardStats().catch(() => ({ data: null })),
+          taskService.getWorkspace().catch(() => ({ data: [] })),
         ]);
-        const projectList = projectsRes.data || [];
-
-        const taskResults = await Promise.all(
-          projectList.map((p) =>
-            taskService
-              .getByProject(p.id)
-              .then((r) => ({ project: p, tasks: r.data || [] }))
-              .catch(() => ({ project: p, tasks: [] }))
-          )
-        );
         if (cancelled) return;
 
-        const allTasks = [];
+        const allTasks = wsRes.data || [];
         const nameMap = {};
-        taskResults.forEach(({ project, tasks: ts }) => {
-          ts.forEach((t) => {
-            allTasks.push(t);
-            nameMap[t.id] = project.name;
-          });
-        });
+        allTasks.forEach((t) => { nameMap[t.id] = t.projectName; });
 
         setUserName((meRes.data?.profile?.fullName || meRes.data?.username || meRes.data?.email || 'bạn').split('@')[0]);
         setIsPremium(!!meRes.data?.subscription?.isPremium);
