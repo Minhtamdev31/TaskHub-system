@@ -10,6 +10,7 @@ import { HubConnectionBuilder } from '@microsoft/signalr';
 // Backend (SignalR hub) luôn chạy trên Render. Kết nối thẳng, không qua proxy /api của Vercel.
 const HUB_URL = 'https://taskhub-system.onrender.com/hubs/project';
 import { Plus, MoreHorizontal, Clock, X, ArrowLeft, Trash2, Send, UserPlus, MessageSquare, Search, Paperclip, Download, FileText, Users, Crown, Shield, Sparkles, Move } from 'lucide-react';
+import Avatar from '../components/Avatar';
 
 const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024; // 3MB
 
@@ -169,6 +170,8 @@ const ProjectBoardPage = () => {
     (userId) => userMap[userId]?.username || userMap[userId]?.fullName || userId || 'Unassigned',
     [userMap]
   );
+
+  const avatarOf = useCallback((userId) => userMap[userId]?.avatarUrl, [userMap]);
 
   const loadUserNames = useCallback(async (members, taskList) => {
     const ids = new Set();
@@ -416,9 +419,9 @@ const ProjectBoardPage = () => {
                 type="button"
                 onClick={() => setProfileUserId(m.userId)}
                 title={`Xem hồ sơ: ${displayName(m.userId)}`}
-                className="w-10 h-10 rounded-full border-4 border-slate-50 bg-white flex items-center justify-center text-xs font-bold shadow-sm hover:ring-2 hover:ring-blue-400 hover:z-10 transition-all"
+                className="w-10 h-10 rounded-full border-4 border-slate-50 bg-white text-xs font-bold shadow-sm hover:ring-2 hover:ring-blue-400 hover:z-10 transition-all overflow-hidden"
               >
-                {initials(displayName(m.userId))}
+                <Avatar src={avatarOf(m.userId)} name={displayName(m.userId)} className="w-full h-full rounded-full text-indigo-600" />
               </button>
             ))}
           </div>
@@ -549,9 +552,7 @@ const ProjectBoardPage = () => {
                         </div>
                       )}
                     </div>
-                    <div title={displayName(task.userId)} className="w-7 h-7 bg-indigo-50 rounded-lg flex items-center justify-center text-[10px] font-black text-indigo-600 border border-indigo-100">
-                      {initials(displayName(task.userId))}
-                    </div>
+                    <Avatar src={avatarOf(task.userId)} name={displayName(task.userId)} className="w-7 h-7 rounded-lg text-[10px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 overflow-hidden" />
                   </div>
 
                 </div>
@@ -726,6 +727,7 @@ const ProjectBoardPage = () => {
           project={project}
           currentUserId={currentUserId}
           displayName={displayName}
+          avatarOf={avatarOf}
           onClose={() => setManageOpen(false)}
           onChangeRole={handleChangeRole}
           onRemove={handleRemoveMember}
@@ -1049,7 +1051,7 @@ const TaskDetailModal = ({ task, realtimeTick, members, displayName, onClose, on
   );
 };
 
-const ManageMembersModal = ({ project, currentUserId, displayName, onClose, onChangeRole, onRemove, onTransferOwner, onViewProfile }) => {
+const ManageMembersModal = ({ project, currentUserId, displayName, avatarOf, onClose, onChangeRole, onRemove, onTransferOwner, onViewProfile }) => {
   const myRole = project.ownerId === currentUserId
     ? 'Owner'
     : project.members?.find((m) => m.userId === currentUserId)?.projectRole || 'Member';
@@ -1082,9 +1084,7 @@ const ManageMembersModal = ({ project, currentUserId, displayName, onClose, onCh
                   title="Xem hồ sơ"
                   className="flex items-center gap-3 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
                 >
-                  <div className="w-9 h-9 bg-indigo-50 rounded-full flex items-center justify-center text-xs font-black text-indigo-600 shrink-0">
-                    {initials(displayName(m.userId))}
-                  </div>
+                  <Avatar src={avatarOf?.(m.userId)} name={displayName(m.userId)} className="w-9 h-9 rounded-full text-xs font-black text-indigo-600 bg-indigo-50 shrink-0 overflow-hidden" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-slate-800 truncate">
                       {displayName(m.userId)} {isSelf && <span className="text-slate-400 font-medium">(bạn)</span>}
