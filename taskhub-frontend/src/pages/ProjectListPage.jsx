@@ -1,12 +1,34 @@
 import { useEffect, useMemo, useState } from 'react';
 import { projectService, userService } from '../services/api';
 import { Link } from 'react-router-dom';
-import { Plus, Folder, Users, Calendar, ArrowRight, X, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Folder, Users, ArrowRight, X, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from '../components/Toast';
 
 const PAGE_SIZE = 6;
 
 const initials = (name) => (name || 'NA').substring(0, 2).toUpperCase();
+
+// Bảng màu nhấn — mỗi dự án/avatar nhận 1 màu ổn định theo tên (hash) để giao diện đa sắc mà nhất quán.
+const ACCENTS = [
+  { soft: 'bg-indigo-50 text-indigo-600', bar: 'bg-indigo-500', hoverBorder: 'hover:border-indigo-200', solid: 'group-hover:bg-indigo-600' },
+  { soft: 'bg-rose-50 text-rose-600', bar: 'bg-rose-500', hoverBorder: 'hover:border-rose-200', solid: 'group-hover:bg-rose-600' },
+  { soft: 'bg-emerald-50 text-emerald-600', bar: 'bg-emerald-500', hoverBorder: 'hover:border-emerald-200', solid: 'group-hover:bg-emerald-600' },
+  { soft: 'bg-amber-50 text-amber-600', bar: 'bg-amber-500', hoverBorder: 'hover:border-amber-200', solid: 'group-hover:bg-amber-600' },
+  { soft: 'bg-sky-50 text-sky-600', bar: 'bg-sky-500', hoverBorder: 'hover:border-sky-200', solid: 'group-hover:bg-sky-600' },
+  { soft: 'bg-violet-50 text-violet-600', bar: 'bg-violet-500', hoverBorder: 'hover:border-violet-200', solid: 'group-hover:bg-violet-600' },
+];
+const accentFor = (key) => {
+  let h = 0;
+  for (const ch of key || 'x') h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return ACCENTS[h % ACCENTS.length];
+};
+
+const STATUS_PILL = {
+  Active: { label: 'Đang hoạt động', cls: 'bg-emerald-50 text-emerald-700' },
+  Archived: { label: 'Đã lưu trữ', cls: 'bg-slate-100 text-slate-500' },
+  Completed: { label: 'Hoàn thành', cls: 'bg-blue-50 text-blue-700' },
+};
+const statusPill = (s) => STATUS_PILL[s] || { label: s || 'Hoạt động', cls: 'bg-slate-100 text-slate-500' };
 
 const ProjectListPage = () => {
   const [projects, setProjects] = useState([]);
@@ -90,7 +112,12 @@ const ProjectListPage = () => {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-4xl font-black text-slate-900 tracking-tight">Dự án</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-4xl font-black text-slate-900 tracking-tight">Dự án</h2>
+            {projects.length > 0 && (
+              <span className="mt-1 text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">{projects.length}</span>
+            )}
+          </div>
           <p className="text-slate-500 mt-1">Quản lý và theo dõi tất cả không gian làm việc của bạn.</p>
         </div>
         <button
@@ -134,56 +161,64 @@ const ProjectListPage = () => {
       ) : (
         <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {pageItems.map((project) => (
-            <div key={project.id} className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all group flex flex-col justify-between">
-              <div>
-                <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                  <Folder size={24} />
+          {pageItems.map((project) => {
+            const accent = accentFor(project.id || project.name);
+            const pill = statusPill(project.status);
+            return (
+            <Link
+              key={project.id}
+              to={`/projects/${project.id}`}
+              className={`bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 ${accent.hoverBorder} transition-all duration-200 group flex flex-col`}
+            >
+              <div className={`h-1.5 ${accent.bar}`} />
+              <div className="p-6 flex flex-col flex-1">
+                <div className="flex items-start justify-between mb-4">
+                  <div className={`w-12 h-12 rounded-2xl ${accent.soft} flex items-center justify-center ${accent.solid} group-hover:text-white transition-colors`}>
+                    <Folder size={24} />
+                  </div>
+                  <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${pill.cls}`}>{pill.label}</span>
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors">
+
+                <h3 className="text-xl font-bold text-slate-900 mb-2 break-words group-hover:text-indigo-600 transition-colors">
                   {project.name}
                 </h3>
-                <p className="text-slate-500 text-sm line-clamp-2 mb-4 leading-relaxed">
+                <p className="text-slate-500 text-sm line-clamp-2 mb-4 leading-relaxed flex-1">
                   {project.description || 'Chưa có mô tả cho dự án này.'}
                 </p>
 
-                <div className="flex items-center gap-4 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  <div className="flex items-center gap-1.5">
-                    <Users size={14} />
-                    <span>{project.members?.length || 0} Thành viên</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Calendar size={14} />
-                    <span>{project.status}</span>
-                  </div>
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider mb-5">
+                  <Users size={14} />
+                  <span>{project.members?.length || 0} Thành viên</span>
                 </div>
-              </div>
 
-              <div className="mt-6 pt-6 border-t border-slate-50 flex items-center justify-between">
-                <div className="flex -space-x-2">
-                  {project.members?.slice(0, 3).map((m, i) => {
-                    const name = userMap[m.userId]?.username || userMap[m.userId]?.fullName || m.userId;
-                    return (
-                      <div key={i} title={name} className="w-8 h-8 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
-                        {initials(name)}
+                <div className="mt-auto pt-5 border-t border-slate-100 flex items-center justify-between">
+                  <div className="flex -space-x-2">
+                    {project.members?.slice(0, 3).map((m, i) => {
+                      const name = userMap[m.userId]?.username || userMap[m.userId]?.fullName || m.userId;
+                      const a = accentFor(name);
+                      return (
+                        <div key={i} title={name} className={`w-8 h-8 rounded-full border-2 border-white ${a.soft} flex items-center justify-center text-[10px] font-bold`}>
+                          {initials(name)}
+                        </div>
+                      );
+                    })}
+                    {project.members?.length > 3 && (
+                      <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400">
+                        +{project.members.length - 3}
                       </div>
-                    );
-                  })}
-                  {project.members?.length > 3 && (
-                    <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400">
-                      +{project.members.length - 3}
-                    </div>
-                  )}
+                    )}
+                    {(!project.members || project.members.length === 0) && (
+                      <span className="text-xs text-slate-400 normal-case font-medium">Chưa có thành viên</span>
+                    )}
+                  </div>
+                  <span className="text-indigo-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                    Mở bảng <ArrowRight size={16} />
+                  </span>
                 </div>
-                <Link
-                  to={`/projects/${project.id}`}
-                  className="text-indigo-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-1 transition-transform"
-                >
-                  Mở bảng <ArrowRight size={16} />
-                </Link>
               </div>
-            </div>
-          ))}
+            </Link>
+            );
+          })}
         </div>
 
         {totalPages > 1 && (
