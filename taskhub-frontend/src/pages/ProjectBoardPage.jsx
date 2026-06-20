@@ -490,9 +490,9 @@ const ProjectBoardPage = () => {
         <span className="text-xs font-bold text-slate-400 ml-auto">{visibleTasks.length} / {tasks.length} công việc</span>
       </div>
 
-      <div className="flex gap-6 overflow-x-auto pb-6">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 pb-6">
         {columns.map((column) => (
-          <div key={column} className="flex-shrink-0 w-80 flex flex-col">
+          <div key={column} className="min-w-0 flex flex-col">
             <div className="flex justify-between items-center mb-4 px-2">
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-slate-700">{statusLabel(column)}</h3>
@@ -507,7 +507,7 @@ const ProjectBoardPage = () => {
               onDragOver={(e) => { e.preventDefault(); if (dragOverColumn !== column) setDragOverColumn(column); }}
               onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverColumn(null); }}
               onDrop={() => handleDrop(column)}
-              className={`flex-1 space-y-4 min-h-[500px] p-2 rounded-3xl border transition-colors ${
+              className={`flex-1 space-y-4 min-h-[300px] max-h-[calc(100vh-16rem)] overflow-y-auto p-2 rounded-3xl border transition-colors ${
                 dragOverColumn === column
                   ? 'bg-indigo-50 border-indigo-300 border-dashed'
                   : 'bg-slate-100/50 border-slate-200/50'
