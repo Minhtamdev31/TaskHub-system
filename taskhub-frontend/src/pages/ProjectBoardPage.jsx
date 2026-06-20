@@ -9,7 +9,7 @@ import { HubConnectionBuilder } from '@microsoft/signalr';
 
 // Backend (SignalR hub) luôn chạy trên Render. Kết nối thẳng, không qua proxy /api của Vercel.
 const HUB_URL = 'https://taskhub-system.onrender.com/hubs/project';
-import { Plus, MoreHorizontal, Clock, X, ArrowLeft, Trash2, Send, UserPlus, MessageSquare, Search, Paperclip, Download, FileText, Users, Crown, Shield, Sparkles } from 'lucide-react';
+import { Plus, MoreHorizontal, Clock, X, ArrowLeft, Trash2, Send, UserPlus, MessageSquare, Search, Paperclip, Download, FileText, Users, Crown, Shield, Sparkles, Move } from 'lucide-react';
 
 const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024; // 3MB
 
@@ -490,6 +490,11 @@ const ProjectBoardPage = () => {
         <span className="text-xs font-bold text-slate-400 ml-auto">{visibleTasks.length} / {tasks.length} công việc</span>
       </div>
 
+      <p className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+        <Move size={14} className="text-slate-400 shrink-0" />
+        Mẹo: <b className="font-semibold text-slate-600">kéo thẻ</b> sang cột khác để đổi trạng thái, hoặc <b className="font-semibold text-slate-600">bấm vào thẻ</b> rồi đổi ở mục “Trạng thái”.
+      </p>
+
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 pb-6">
         {columns.map((column) => (
           <div key={column} className="min-w-0 flex flex-col">
@@ -525,7 +530,7 @@ const ProjectBoardPage = () => {
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2 mb-3">
-                    <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                    <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors break-words min-w-0">
                       {task.title}
                     </h4>
                     <span className={`shrink-0 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${priorityBadge(task.priority).badge}`}>
@@ -549,17 +554,6 @@ const ProjectBoardPage = () => {
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-4 border-t border-slate-50 hidden group-hover:flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
-                    {columns.filter((c) => c !== column).map((c) => (
-                      <button
-                        key={c}
-                        onClick={() => handleUpdateStatus(task.id, c)}
-                        className="text-[9px] font-bold px-2 py-1 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 rounded-md transition-colors"
-                      >
-                        Chuyển sang {statusLabel(c)}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               ))}
             </div>
@@ -914,8 +908,8 @@ const TaskDetailModal = ({ task, realtimeTick, members, displayName, onClose, on
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl relative max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="p-8 pb-4 border-b border-slate-100">
           <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><X size={20} /></button>
-          <h3 className="text-2xl font-bold text-slate-900 pr-8">{task.title}</h3>
-          {task.description && <p className="text-slate-600 mt-3 whitespace-pre-wrap">{task.description}</p>}
+          <h3 className="text-2xl font-bold text-slate-900 pr-8 break-words">{task.title}</h3>
+          {task.description && <p className="text-slate-600 mt-3 whitespace-pre-wrap break-words">{task.description}</p>}
 
           <div className="grid grid-cols-3 gap-4 mt-5">
             <div>
