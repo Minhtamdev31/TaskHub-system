@@ -18,6 +18,7 @@ public sealed class TaskResponse
         Priority = task.Priority ?? "Medium";
         DueDate = task.DueDate;
         UserId = task.UserId ?? string.Empty;
+        ProjectId = task.ProjectId ?? string.Empty;
         CreatedAt = task.CreatedAt;
         UpdatedAt = task.UpdatedAt;
     }
@@ -29,6 +30,7 @@ public sealed class TaskResponse
     public string Priority { get; }
     public DateTime? DueDate { get; }
     public string UserId { get; }
+    public string ProjectId { get; }
     public DateTime CreatedAt { get; }
     public DateTime? UpdatedAt { get; }
 }
