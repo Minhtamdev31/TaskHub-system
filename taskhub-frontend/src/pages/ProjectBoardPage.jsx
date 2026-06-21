@@ -13,6 +13,7 @@ import { Plus, MoreHorizontal, Clock, X, ArrowLeft, Trash2, Send, UserPlus, Mess
 import Avatar from '../components/Avatar';
 import Select from '../components/Select';
 import DateTimePicker from '../components/DateTimePicker';
+import { MarkdownLite } from '../utils/markdownLite';
 
 const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024; // 3MB
 
@@ -122,13 +123,6 @@ const toDateTimeLocal = (iso) => {
 };
 
 // Render markdown rút gọn cho tóm tắt AI: in đậm **...** và giữ xuống dòng (container đã pre-wrap).
-const renderMarkdownLite = (text) => {
-  if (!text) return null;
-  // Tách theo cặp **...**; phần lẻ là chữ đậm.
-  return text.split(/\*\*(.+?)\*\*/g).map((part, i) =>
-    i % 2 === 1 ? <strong key={i} className="font-bold text-slate-900">{part}</strong> : part
-  );
-};
 
 // Escape ký tự đặc biệt để dùng tên thành viên trong regex.
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -650,7 +644,14 @@ const ProjectBoardPage = () => {
                         </div>
                       )}
                     </div>
-                    <Avatar src={avatarOf(task.userId)} name={displayName(task.userId)} className="w-7 h-7 rounded-lg text-[10px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 overflow-hidden" />
+                    {task.userId === currentUserId ? (
+                      <div className="flex items-center gap-1.5" title="Việc giao cho bạn">
+                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded-md">Bạn</span>
+                        <Avatar src={avatarOf(task.userId)} name={displayName(task.userId)} className="w-7 h-7 rounded-lg text-[10px] font-black text-indigo-600 bg-indigo-50 ring-2 ring-indigo-400 overflow-hidden" />
+                      </div>
+                    ) : (
+                      <Avatar src={avatarOf(task.userId)} name={displayName(task.userId)} className="w-7 h-7 rounded-lg text-[10px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 overflow-hidden" />
+                    )}
                   </div>
 
                 </div>
@@ -733,9 +734,7 @@ const ProjectBoardPage = () => {
               )}
 
               {!aiLoading && !aiError && !aiRequiresUpgrade && aiSummary && (
-                <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-                  {renderMarkdownLite(aiSummary)}
-                </div>
+                <MarkdownLite text={aiSummary} />
               )}
             </div>
 
@@ -1123,7 +1122,7 @@ const TaskDetailModal = ({ task, realtimeTick, members, displayName, onClose, on
                   <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl text-sm">{aiError}</div>
                 )}
                 {!aiLoading && !aiUpgrade && !aiError && aiText && (
-                  <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{renderMarkdownLite(aiText)}</div>
+                  <MarkdownLite text={aiText} />
                 )}
               </div>
             )}

@@ -15,7 +15,7 @@ import {
 import { authService, taskService } from '../services/api';
 import NotificationBell from '../components/NotificationBell';
 import UpgradePanel from '../components/UpgradePanel';
-import { renderMarkdownLite } from '../utils/markdownLite';
+import { MarkdownLite } from '../utils/markdownLite';
 
 // --- Helpers ---------------------------------------------------------------
 
@@ -313,9 +313,11 @@ const DashboardPage = () => {
       </div>
 
       {/* Main grid: weekly chart + side column */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Left column: biểu đồ + hoạt động gần đây */}
+        <div className="lg:col-span-2 space-y-6">
         {/* Weekly progress */}
-        <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
           <h3 className="text-xl font-extrabold text-slate-900">Tiến độ tuần này</h3>
           <p className="text-slate-500 text-sm mt-0.5">Công việc hoàn thành trong tuần</p>
 
@@ -337,6 +339,25 @@ const DashboardPage = () => {
                 <span className="text-sm font-medium text-slate-500">{WEEKDAYS[i]}</span>
               </div>
             ))}
+          </div>
+        </div>
+
+          {/* Recent activity */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+            <h3 className="text-xl font-extrabold text-slate-900 mb-4">Hoạt động gần đây</h3>
+            {recent.length === 0 ? (
+              <p className="text-slate-400 text-sm">Chưa có hoạt động nào.</p>
+            ) : (
+              <div className="space-y-4">
+                {recent.map((r) => (
+                  <div key={r.id} className="flex items-center gap-4">
+                    <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                    <p className="text-sm text-slate-700 flex-1">{r.text}</p>
+                    <span className="text-xs text-slate-400 font-medium shrink-0">{timeAgo(r.when, now)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -381,7 +402,7 @@ const DashboardPage = () => {
               <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl text-sm">{aiError}</div>
             )}
             {!aiLoading && !aiUpgrade && !aiError && aiText && (
-              <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{renderMarkdownLite(aiText)}</div>
+              <MarkdownLite text={aiText} />
             )}
           </div>
 
@@ -433,24 +454,6 @@ const DashboardPage = () => {
             <ChevronRight size={18} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
           </Link>
         </div>
-      </div>
-
-      {/* Recent activity */}
-      <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-        <h3 className="text-xl font-extrabold text-slate-900 mb-6">Hoạt động gần đây</h3>
-        {recent.length === 0 ? (
-          <p className="text-slate-400 text-sm">Chưa có hoạt động nào.</p>
-        ) : (
-          <div className="space-y-5">
-            {recent.map((r) => (
-              <div key={r.id} className="flex items-center gap-4">
-                <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
-                <p className="text-sm text-slate-700 flex-1">{r.text}</p>
-                <span className="text-xs text-slate-400 font-medium shrink-0">{timeAgo(r.when, now)}</span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
