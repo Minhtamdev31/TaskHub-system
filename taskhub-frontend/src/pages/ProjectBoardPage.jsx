@@ -30,6 +30,17 @@ const statusLabel = (s) => statusLabels[s] || s;
 
 const roleLabels = { Owner: 'Chủ sở hữu', Leader: 'Trưởng nhóm', Member: 'Thành viên' };
 
+// Trạng thái của cả dự án (khác với trạng thái từng task ở trên).
+const PROJECT_STATUSES = [
+  { value: 'Planning', label: 'Lên kế hoạch' },
+  { value: 'Active', label: 'Đang hoạt động' },
+  { value: 'InProgress', label: 'Đang thực hiện' },
+  { value: 'OnHold', label: 'Tạm dừng' },
+  { value: 'Completed', label: 'Hoàn thành' },
+  { value: 'Archived', label: 'Đã lưu trữ' },
+];
+const projectStatusLabel = (s) => PROJECT_STATUSES.find((x) => x.value === s)?.label || s || 'Lên kế hoạch';
+
 const priorities = ['Low', 'Medium', 'High', 'Critical'];
 
 const priorityConfig = {
@@ -139,6 +150,19 @@ const ProjectBoardPage = () => {
       toast.error(msg);
       setDeleting(false);
       setDeleteOpen(false);
+    }
+  };
+
+  const handleChangeProjectStatus = async (newStatus) => {
+    if (!project || newStatus === project.status) return;
+    const prev = project.status;
+    setProject((p) => ({ ...p, status: newStatus })); // cập nhật lạc quan
+    try {
+      await projectService.update(project.id, { status: newStatus });
+      toast.success('Đã cập nhật trạng thái dự án.');
+    } catch {
+      setProject((p) => ({ ...p, status: prev })); // lỗi → khôi phục
+      toast.error('Không cập nhật được trạng thái dự án.');
     }
   };
 
@@ -409,7 +433,26 @@ const ProjectBoardPage = () => {
             <ArrowLeft size={14} /> Quay lại Dự án
           </Link>
           <nav className="text-sm font-medium text-slate-400 mb-1">Dự án / {project.name}</nav>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Bảng Kanban</h2>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Bảng Kanban</h2>
+            {(project.ownerId === currentUserId ||
+              (project.members || []).some((m) => m.userId === currentUserId && m.projectRole === 'Leader')) ? (
+              <select
+                value={project.status || 'Planning'}
+                onChange={(e) => handleChangeProjectStatus(e.target.value)}
+                title="Đổi trạng thái dự án"
+                className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full pl-3 pr-7 py-1.5 outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer hover:bg-indigo-100 transition-colors"
+              >
+                {PROJECT_STATUSES.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            ) : (
+              <span className="text-xs font-bold text-slate-600 bg-slate-100 rounded-full px-3 py-1.5">
+                {projectStatusLabel(project.status)}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex -space-x-2 mr-2">
