@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
@@ -14,6 +15,7 @@ public class AiService : IAiService
     private readonly IMongoRepository<Project> _projectRepository;
     private readonly IMongoRepository<TaskItem> _taskRepository;
     private readonly IMongoRepository<Comment> _commentRepository;
+    private readonly IMongoRepository<AiAnalysis> _analysisRepository;
     private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
 
@@ -35,12 +37,14 @@ public class AiService : IAiService
         IMongoRepository<Project> projectRepository,
         IMongoRepository<TaskItem> taskRepository,
         IMongoRepository<Comment> commentRepository,
+        IMongoRepository<AiAnalysis> analysisRepository,
         IConfiguration configuration,
         IHttpClientFactory httpClientFactory)
     {
         _projectRepository = projectRepository;
         _taskRepository = taskRepository;
         _commentRepository = commentRepository;
+        _analysisRepository = analysisRepository;
         _configuration = configuration;
         _httpClientFactory = httpClientFactory;
     }
@@ -87,17 +91,29 @@ public class AiService : IAiService
             .ToList();
 
         var prompt = BuildPrompt(project, tasks, comments);
+        var text = await CallGroqAsync(SystemInstruction, prompt, 2000);
+        return string.IsNullOrWhiteSpace(text) ? null : text;
+    }
+
+    // ====== Gọi Groq (tách dùng chung cho mọi tính năng AI) ======
+    private async Task<string> CallGroqAsync(string systemPrompt, string userPrompt, int maxTokens)
+    {
+        var apiKey = _configuration["Groq:ApiKey"];
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new InvalidOperationException("Groq API key chưa được cấu hình (Groq:ApiKey).");
+        }
 
         var requestBody = new
         {
             model = GroqModel,
             messages = new[]
             {
-                new { role = "system", content = SystemInstruction },
-                new { role = "user", content = prompt }
+                new { role = "system", content = systemPrompt },
+                new { role = "user", content = userPrompt }
             },
-            max_tokens = 2000,
-            temperature = 0.4
+            max_tokens = maxTokens,
+            temperature = 0.3
         };
 
         var http = _httpClientFactory.CreateClient();
@@ -111,16 +127,130 @@ public class AiService : IAiService
 
         using var resp = await http.SendAsync(request);
         var body = await resp.Content.ReadAsStringAsync();
-
         if (!resp.IsSuccessStatusCode)
         {
-            // Đưa lỗi thật của Groq ra ngoài để dễ chẩn đoán.
             throw new HttpRequestException($"Groq API {(int)resp.StatusCode}: {body}");
         }
 
         using var doc = JsonDocument.Parse(body);
-        var text = ExtractText(doc.RootElement);
-        return string.IsNullOrWhiteSpace(text) ? null : text;
+        return ExtractText(doc.RootElement);
+    }
+
+    // ====== Cache DB theo hash: dữ liệu không đổi → trả bản đã lưu (0 token) ======
+    private static string Sha256(string input)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
+        return Convert.ToHexString(bytes);
+    }
+
+    private async Task<string?> GetOrGenerateAsync(string cacheKey, string sourceHash, string userId, Func<Task<string>> generate)
+    {
+        var existing = await _analysisRepository.FindOneAsync(a => a.CacheKey == cacheKey);
+        if (existing is not null && existing.SourceHash == sourceHash && !string.IsNullOrWhiteSpace(existing.Content))
+        {
+            return existing.Content; // cache hit — không gọi Groq
+        }
+
+        var content = await generate();
+        if (string.IsNullOrWhiteSpace(content)) return null;
+
+        if (existing is null)
+        {
+            await _analysisRepository.CreateAsync(new AiAnalysis
+            {
+                CacheKey = cacheKey, SourceHash = sourceHash, Content = content,
+                GeneratedByUserId = userId, GeneratedAt = DateTime.UtcNow
+            });
+        }
+        else
+        {
+            existing.SourceHash = sourceHash;
+            existing.Content = content;
+            existing.GeneratedByUserId = userId;
+            existing.GeneratedAt = DateTime.UtcNow;
+            await _analysisRepository.UpdateAsync(existing.Id, existing);
+        }
+        return content;
+    }
+
+    // ====== Phân tích 1 task ======
+    private const string TaskSystemInstruction =
+        "Bạn là trợ lý quản lý công việc của TaskHub. Dựa trên 1 công việc được cung cấp, hãy trả lời ngắn gọn bằng tiếng Việt theo 3 mục: " +
+        "**Tóm tắt** (1-2 câu nội dung công việc), **Việc cần làm** (gạch đầu dòng các bước nên thực hiện), " +
+        "**Lưu ý** (về độ ưu tiên & hạn chót). Chỉ dựa trên dữ liệu đưa vào, không bịa. Dùng markdown.";
+
+    public async Task<string?> AnalyzeTaskAsync(string taskId, string userId)
+    {
+        if (string.IsNullOrEmpty(taskId) || string.IsNullOrEmpty(userId)) return null;
+
+        var task = await _taskRepository.GetByIdAsync(taskId);
+        if (task is null || string.IsNullOrWhiteSpace(task.ProjectId)) return null;
+
+        // Quyền: phải là owner/thành viên của dự án chứa task.
+        var project = await _projectRepository.GetByIdAsync(task.ProjectId);
+        if (project is null) return null;
+        var hasAccess = project.OwnerId.Equals(userId, StringComparison.OrdinalIgnoreCase) ||
+                        project.Members.Any(m => m.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase));
+        if (!hasAccess) return null;
+
+        var due = task.DueDate?.ToString("o") ?? "";
+        // KHÔNG đưa Status vào hash: trạng thái chỉ là tiến độ, không đổi nội dung phân tích
+        // → đổi trạng thái không tốn token gọi lại AI.
+        var sourceHash = Sha256($"{task.Title}|{task.Description}|{task.Priority}|{due}");
+
+        return await GetOrGenerateAsync($"task:{taskId}", sourceHash, userId, () =>
+        {
+            var now = DateTime.UtcNow;
+            var dueStr = task.DueDate.HasValue ? task.DueDate.Value.ToString("yyyy-MM-dd HH:mm") : "không có hạn";
+            var overdue = task.DueDate.HasValue && task.DueDate.Value < now && task.Status != "Done" ? " (ĐÃ QUÁ HẠN)" : "";
+            var prompt =
+                $"Tiêu đề: {task.Title}\n" +
+                $"Mô tả: {(string.IsNullOrWhiteSpace(task.Description) ? "(không có)" : task.Description)}\n" +
+                $"Trạng thái: {task.Status}\n" +
+                $"Độ ưu tiên: {task.Priority}\n" +
+                $"Hạn chót: {dueStr}{overdue}\n" +
+                $"Hôm nay: {now:yyyy-MM-dd HH:mm}";
+            return CallGroqAsync(TaskSystemInstruction, prompt, 600);
+        });
+    }
+
+    // ====== Tóm tắt công việc của tôi (Dashboard) ======
+    private const string MyWorkSystemInstruction =
+        "Bạn là trợ lý cá nhân của TaskHub. Tóm tắt khối lượng công việc của người dùng bằng tiếng Việt theo các mục: " +
+        "**Tổng quan**, **Cần ưu tiên** (việc gấp/quá hạn), **Gợi ý hôm nay**. Ngắn gọn, chỉ dựa trên dữ liệu, dùng markdown.";
+
+    public async Task<string?> SummarizeMyWorkAsync(string userId)
+    {
+        if (string.IsNullOrEmpty(userId)) return null;
+
+        var projects = await _projectRepository.FindAsync(p =>
+            p.OwnerId == userId || p.Members.Any(m => m.UserId == userId));
+        var projectIds = projects.Select(p => p.Id).ToList();
+        var tasks = projectIds.Count == 0
+            ? new List<TaskItem>()
+            : (await _taskRepository.FindAsync(t => projectIds.Contains(t.ProjectId)))
+                .Where(t => t.UserId == userId) // chỉ việc giao cho user
+                .ToList();
+
+        // Hash snapshot: nếu các việc của user không đổi thì tái dùng tóm tắt.
+        var snapshot = string.Join(";", tasks
+            .OrderBy(t => t.Id)
+            .Select(t => $"{t.Id}:{t.Status}:{t.Priority}:{t.DueDate?.ToString("o")}:{t.UpdatedAt?.ToString("o")}"));
+        var sourceHash = Sha256(snapshot);
+
+        return await GetOrGenerateAsync($"mywork:{userId}", sourceHash, userId, () =>
+        {
+            var now = DateTime.UtcNow;
+            var sb = new StringBuilder();
+            sb.AppendLine($"Hôm nay: {now:yyyy-MM-dd HH:mm}. Tổng số việc của tôi: {tasks.Count}.");
+            foreach (var t in tasks.OrderBy(t => t.DueDate ?? DateTime.MaxValue).Take(MaxTasks))
+            {
+                var dueStr = t.DueDate.HasValue ? t.DueDate.Value.ToString("yyyy-MM-dd HH:mm") : "không có hạn";
+                var overdue = t.DueDate.HasValue && t.DueDate.Value < now && t.Status != "Done" ? " [QUÁ HẠN]" : "";
+                sb.AppendLine($"- [{t.Status}] (ưu tiên {t.Priority}, hạn {dueStr}){overdue} {t.Title}");
+            }
+            return CallGroqAsync(MyWorkSystemInstruction, sb.ToString(), 800);
+        });
     }
 
     private static string ExtractText(JsonElement root)

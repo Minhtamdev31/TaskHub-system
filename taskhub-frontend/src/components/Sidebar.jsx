@@ -98,9 +98,9 @@ const Sidebar = () => {
   return (
     <aside className="w-64 bg-white text-slate-800 h-screen fixed left-0 top-0 flex flex-col border-r border-slate-200 z-50">
       {/* Brand */}
-      <NavLink to="/dashboard" className="px-6 pt-6 pb-5 block hover:opacity-90 transition-opacity">
+      <NavLink to="/dashboard" className="px-6 pt-6 pb-5 flex items-center gap-2.5 hover:opacity-90 transition-opacity">
+        <img src="/TaskHubLogo.png" alt="TaskHub" className="w-9 h-9 rounded-xl object-contain shrink-0" />
         <h1 className="text-2xl font-black text-blue-600 tracking-tight">TaskHub</h1>
-        <p className="text-xs text-slate-400 font-medium mt-0.5">Bảng điều khiển</p>
       </NavLink>
 
       {/* Nav */}

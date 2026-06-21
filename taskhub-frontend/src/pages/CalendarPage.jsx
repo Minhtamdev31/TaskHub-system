@@ -89,7 +89,7 @@ const CalendarPage = () => {
   if (loading) return <div className="p-8 text-slate-500">Đang tải lịch...</div>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between border-b border-slate-200 pb-5">
         <div>
           <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Lịch</h1>
@@ -103,7 +103,7 @@ const CalendarPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Month calendar */}
         <div className="lg:col-span-2 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-extrabold text-slate-900">{MONTHS[cursor.getMonth()]} {cursor.getFullYear()}</h2>
             <div className="flex items-center gap-2">
               <button onClick={() => moveMonth(-1)} className="w-9 h-9 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500"><ChevronLeft size={18} /></button>
@@ -113,7 +113,7 @@ const CalendarPage = () => {
           </div>
 
           <div className="grid grid-cols-7 gap-1 mb-2">
-            {WEEKDAYS.map((w) => <div key={w} className="text-center text-xs font-bold text-slate-400 py-2">{w}</div>)}
+            {WEEKDAYS.map((w) => <div key={w} className="text-center text-xs font-bold text-slate-400 py-1">{w}</div>)}
           </div>
 
           <div className="grid grid-cols-7 gap-1">
@@ -127,7 +127,7 @@ const CalendarPage = () => {
                 <button
                   key={dateKey(d)}
                   onClick={() => setSelected(d)}
-                  className={`aspect-square rounded-2xl flex flex-col items-center justify-center gap-1 text-sm transition-colors ${
+                  className={`h-14 rounded-xl flex flex-col items-center justify-center gap-1 text-sm transition-colors ${
                     isSelected ? 'bg-blue-600 text-white font-bold shadow-lg shadow-blue-600/30'
                       : isToday ? 'bg-blue-50 text-blue-700 font-bold' : 'hover:bg-slate-100 text-slate-700'
                   }`}
@@ -141,7 +141,7 @@ const CalendarPage = () => {
             })}
           </div>
 
-          <div className="flex items-center gap-5 mt-6 pt-5 border-t border-slate-100 text-sm text-slate-500">
+          <div className="flex items-center gap-5 mt-4 pt-4 border-t border-slate-100 text-sm text-slate-500">
             <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Có việc đến hạn</span>
             <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-rose-500" /> Ưu tiên cao</span>
           </div>
@@ -182,11 +182,20 @@ const CalendarPage = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             {upcoming.map((t) => (
-              <Link key={t.id} to={`/projects/${t.projectId}`} className={`block bg-white border border-slate-200 rounded-2xl p-4 border-l-4 ${prio(t.priority).border} hover:shadow-sm transition-shadow`}>
-                <p className="text-xs text-slate-400 font-semibold">
-                  {new Date(t.dueDate).toLocaleDateString('vi-VN', { day: 'numeric', month: 'short' })}
-                </p>
-                <p className="font-bold text-slate-900 mt-1 truncate">{t.title}</p>
+              <Link
+                key={t.id}
+                to={`/projects/${t.projectId}`}
+                className="group block bg-white border border-slate-200 rounded-2xl p-4 hover:border-slate-300 hover:shadow-md hover:-translate-y-0.5 transition-all"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                    <CalendarDays size={13} /> {new Date(t.dueDate).toLocaleDateString('vi-VN', { day: 'numeric', month: 'short' })}
+                  </span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${prio(t.priority).badge}`}>
+                    {prio(t.priority).label}
+                  </span>
+                </div>
+                <p className="font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors">{t.title}</p>
                 <p className="text-xs text-slate-400 mt-0.5 truncate">{projectName[t.id] || 'Dự án'}</p>
               </Link>
             ))}

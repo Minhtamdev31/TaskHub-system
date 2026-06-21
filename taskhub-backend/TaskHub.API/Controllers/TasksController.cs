@@ -12,10 +12,25 @@ namespace TaskHub.API.Controllers;
 public class TasksController : ControllerBase
 {
     private readonly ITaskService _taskService;
+    private readonly IAiService _aiService;
+    private readonly IUserService _userService;
 
-    public TasksController(ITaskService taskService)
+    public TasksController(ITaskService taskService, IAiService aiService, IUserService userService)
     {
         _taskService = taskService;
+        _aiService = aiService;
+        _userService = userService;
+    }
+
+    // Kiểm tra Premium; trả null nếu OK, hoặc IActionResult 403 nếu không phải Premium.
+    private async Task<IActionResult?> RequirePremiumAsync(string userId)
+    {
+        var user = await _userService.GetByIdAsync(userId);
+        if (!(user?.Subscription?.IsActivePremium ?? false))
+        {
+            return StatusCode(403, new { message = "Tính năng AI dành cho gói Premium. Vui lòng nâng cấp để sử dụng.", requiresUpgrade = true });
+        }
+        return null;
     }
 
     [HttpGet]
@@ -43,6 +58,58 @@ public class TasksController : ControllerBase
 
         var tasks = await _taskService.GetWorkspaceTasksAsync(userId);
         return Ok(tasks);
+    }
+
+    // Tóm tắt công việc của tôi bằng AI (Dashboard) — chỉ Premium.
+    [HttpGet("ai-summary")]
+    public async Task<IActionResult> GetMyWorkAiSummary()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return Unauthorized("User ID not found in token.");
+
+        var gate = await RequirePremiumAsync(userId);
+        if (gate is not null) return gate;
+
+        try
+        {
+            var summary = await _aiService.SummarizeMyWorkAsync(userId);
+            if (summary is null) return Ok(new { summary = "Bạn chưa có công việc nào để tóm tắt." });
+            return Ok(new { summary });
+        }
+        catch (InvalidOperationException)
+        {
+            return StatusCode(503, new { message = "Dịch vụ AI chưa được cấu hình trên máy chủ." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(502, new { message = "Không tạo được tóm tắt: " + ex.Message });
+        }
+    }
+
+    // Phân tích 1 task bằng AI (có cache) — chỉ Premium.
+    [HttpGet("{id}/ai-analysis")]
+    public async Task<IActionResult> GetTaskAiAnalysis(string id)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return Unauthorized("User ID not found in token.");
+
+        var gate = await RequirePremiumAsync(userId);
+        if (gate is not null) return gate;
+
+        try
+        {
+            var analysis = await _aiService.AnalyzeTaskAsync(id, userId);
+            if (analysis is null) return NotFound(new { message = "Không tìm thấy task hoặc bạn không có quyền." });
+            return Ok(new { analysis });
+        }
+        catch (InvalidOperationException)
+        {
+            return StatusCode(503, new { message = "Dịch vụ AI chưa được cấu hình trên máy chủ." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(502, new { message = "Không phân tích được: " + ex.Message });
+        }
     }
 
     [HttpGet("stats")]

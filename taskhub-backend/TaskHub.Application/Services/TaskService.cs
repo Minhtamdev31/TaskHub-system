@@ -328,6 +328,8 @@ public class TaskService : ITaskService
         int doneNow = tasks.Count(t => StatusAt(t, now) == "Done");
         int wipNow = tasks.Count(t => StatusAt(t, now) is "InProgress" or "Review");
         int prodNow = totalNow > 0 ? (int)Math.Round(doneNow * 100.0 / totalNow) : 0;
+        // Quá hạn: có hạn chót đã trôi qua mà task chưa hoàn thành.
+        int overdueNow = tasks.Count(t => t.DueDate.HasValue && t.DueDate.Value < now && t.Status != "Done");
 
         // --- Ảnh chụp cùng thời điểm tuần trước (tái dựng từ lịch sử) ---
         var existedLastWeek = tasks.Where(t => t.CreatedAt <= weekAgo).ToList();
@@ -340,6 +342,7 @@ public class TaskService : ITaskService
         stats.CompletedTasks = doneNow;
         stats.InProgressTasks = wipNow;
         stats.Productivity = prodNow;
+        stats.OverdueTasks = overdueNow;
         stats.TotalChangePct = PctChange(totalNow, totalLast);
         stats.CompletedChangePct = PctChange(doneNow, doneLast);
         stats.InProgressChangePct = PctChange(wipNow, wipLast);

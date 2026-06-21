@@ -7,13 +7,15 @@ import {
   ListChecks,
   CheckCircle2,
   Clock,
-  TrendingUp,
+  AlertTriangle,
   ShieldCheck,
   ChevronRight,
   Sparkles,
 } from 'lucide-react';
 import { authService, taskService } from '../services/api';
 import NotificationBell from '../components/NotificationBell';
+import UpgradePanel from '../components/UpgradePanel';
+import { renderMarkdownLite } from '../utils/markdownLite';
 
 // --- Helpers ---------------------------------------------------------------
 
@@ -42,13 +44,6 @@ const fmtPct = (pct) => {
   return { text: `${up ? '+' : '−'}${Math.abs(pct)}% so với tuần trước`, up };
 };
 
-// Định dạng chênh lệch điểm phần trăm (cho năng suất).
-const fmtPoints = (diff) => {
-  if (!diff) return { text: 'Không đổi so với tuần trước', up: true };
-  const up = diff >= 0;
-  return { text: `${up ? '+' : '−'}${Math.abs(diff)}đ so với tuần trước`, up };
-};
-
 const formatDue = (date) => {
   const d = new Date(date);
   const day = `${d.getDate()} thg ${d.getMonth() + 1}`;
@@ -69,16 +64,16 @@ const timeAgo = (date, now) => {
 // --- Small presentational pieces ------------------------------------------
 
 const StatCard = ({ label, value, trend, icon: Icon, tint }) => (
-  <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-sm transition-all hover:shadow-md">
-    <div className="flex items-start justify-between">
+  <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-sm transition-all hover:shadow-md">
+    <div className="flex items-center justify-between">
       <p className="text-sm font-semibold text-slate-500">{label}</p>
-      <div className={`w-9 h-9 rounded-full flex items-center justify-center ${tint}`}>
-        <Icon size={18} />
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${tint}`}>
+        <Icon size={16} />
       </div>
     </div>
-    <p className="text-4xl font-black text-slate-900 mt-3 tracking-tight">{value}</p>
+    <p className="text-3xl font-black text-slate-900 mt-1.5 tracking-tight">{value}</p>
     {trend && (
-      <p className={`text-sm font-medium mt-2 ${trend.up ? 'text-emerald-600' : 'text-rose-600'}`}>
+      <p className={`text-xs font-medium mt-1 ${trend.up ? 'text-emerald-600' : 'text-rose-600'}`}>
         {trend.text}
       </p>
     )}
@@ -99,6 +94,27 @@ const DashboardPage = () => {
   const searchRef = useRef(null);
   // Mốc thời gian chụp một lần khi mount — giữ render thuần (pure).
   const [now] = useState(() => Date.now());
+
+  // Tóm tắt công việc bằng AI (Premium, có cache phía server)
+  const [aiText, setAiText] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [aiUpgrade, setAiUpgrade] = useState(false);
+
+  const handleAiSummary = async () => {
+    setAiLoading(true);
+    setAiError('');
+    setAiUpgrade(false);
+    try {
+      const res = await taskService.aiMyWork();
+      setAiText(res.data?.summary || '');
+    } catch (err) {
+      if (err.response?.data?.requiresUpgrade) setAiUpgrade(true);
+      else setAiError(err.response?.data?.message || 'Không tạo được tóm tắt. Thử lại sau.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -137,12 +153,11 @@ const DashboardPage = () => {
       total: s.totalTasks ?? 0,
       done: s.completedTasks ?? 0,
       inProgress: s.inProgressTasks ?? 0,
-      productivity: s.productivity ?? 0,
+      overdue: s.overdueTasks ?? 0,
       trends: {
         total: fmtPct(s.totalChangePct ?? 0),
         done: fmtPct(s.completedChangePct ?? 0),
         inProgress: fmtPct(s.inProgressChangePct ?? 0),
-        productivity: fmtPoints(s.productivityChangePoints ?? 0),
       },
     };
   }, [serverStats]);
@@ -193,14 +208,14 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
         <div>
-          <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
             Chào mừng trở lại, {userName}! <span className="inline-block">👋</span>
           </h1>
-          <p className="text-slate-500 mt-1">Đây là tổng quan công việc của bạn hôm nay</p>
+          <p className="text-slate-500 text-sm mt-0.5">Đây là tổng quan công việc của bạn hôm nay</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -284,11 +299,17 @@ const DashboardPage = () => {
       )}
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Tổng công việc" value={stats.total} trend={tasks.length ? stats.trends.total : null} icon={ListChecks} tint="bg-blue-50 text-blue-600" />
         <StatCard label="Hoàn thành" value={stats.done} trend={tasks.length ? stats.trends.done : null} icon={CheckCircle2} tint="bg-emerald-50 text-emerald-600" />
         <StatCard label="Đang làm" value={stats.inProgress} trend={tasks.length ? stats.trends.inProgress : null} icon={Clock} tint="bg-amber-50 text-amber-600" />
-        <StatCard label="Năng suất" value={`${stats.productivity}%`} trend={tasks.length ? stats.trends.productivity : null} icon={TrendingUp} tint="bg-violet-50 text-violet-600" />
+        <StatCard
+          label="Quá hạn"
+          value={stats.overdue}
+          trend={tasks.length ? (stats.overdue > 0 ? { text: 'Cần xử lý gấp', up: false } : { text: 'Không có việc trễ hạn', up: true }) : null}
+          icon={AlertTriangle}
+          tint={stats.overdue > 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}
+        />
       </div>
 
       {/* Main grid: weekly chart + side column */}
@@ -298,7 +319,7 @@ const DashboardPage = () => {
           <h3 className="text-xl font-extrabold text-slate-900">Tiến độ tuần này</h3>
           <p className="text-slate-500 text-sm mt-0.5">Công việc hoàn thành trong tuần</p>
 
-          <div className="relative flex items-end justify-between gap-3 h-64 mt-8">
+          <div className="relative flex items-end justify-between gap-3 h-44 mt-6">
             {weeklyEmpty && (
               <div className="absolute inset-x-0 top-0 bottom-8 flex items-center justify-center pointer-events-none">
                 <p className="text-slate-400 text-sm">Chưa có công việc hoàn thành trong tuần này.</p>
@@ -321,6 +342,49 @@ const DashboardPage = () => {
 
         {/* Side column */}
         <div className="space-y-6">
+          {/* AI summary */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                <Sparkles size={18} className="text-indigo-600" /> Tóm tắt bằng AI
+              </h3>
+              {(aiText || aiError) && !aiLoading && !aiUpgrade && (
+                <button onClick={handleAiSummary} className="text-xs font-bold text-slate-500 hover:text-indigo-600">Làm mới</button>
+              )}
+            </div>
+
+            {!aiText && !aiLoading && !aiUpgrade && !aiError && (
+              <>
+                <p className="text-sm text-slate-500 mb-4">Để AI tóm tắt khối lượng công việc và gợi ý việc cần ưu tiên hôm nay.</p>
+                <button
+                  onClick={handleAiSummary}
+                  className="w-full bg-brand-gradient text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                >
+                  <Sparkles size={16} /> Tóm tắt công việc của tôi
+                </button>
+              </>
+            )}
+            {aiLoading && (
+              <div className="flex items-center gap-2 text-sm text-slate-500 py-3">
+                <span className="w-4 h-4 border-2 border-slate-200 border-t-indigo-600 rounded-full animate-spin" />
+                AI đang đọc công việc của bạn…
+              </div>
+            )}
+            {!aiLoading && aiUpgrade && (
+              <UpgradePanel
+                title="Tóm tắt AI là tính năng Premium"
+                message="Nâng cấp Premium để AI tóm tắt công việc và gợi ý ưu tiên mỗi ngày."
+                perks={['Tóm tắt công việc bằng AI', 'Phân tích từng task bằng AI', 'Password Vault bảo mật']}
+              />
+            )}
+            {!aiLoading && !aiUpgrade && aiError && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl text-sm">{aiError}</div>
+            )}
+            {!aiLoading && !aiUpgrade && !aiError && aiText && (
+              <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{renderMarkdownLite(aiText)}</div>
+            )}
+          </div>
+
           {/* Upcoming deadlines */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between mb-1">

@@ -9,8 +9,10 @@ import { HubConnectionBuilder } from '@microsoft/signalr';
 
 // Backend (SignalR hub) luôn chạy trên Render. Kết nối thẳng, không qua proxy /api của Vercel.
 const HUB_URL = 'https://taskhub-system.onrender.com/hubs/project';
-import { Plus, MoreHorizontal, Clock, X, ArrowLeft, Trash2, Send, UserPlus, MessageSquare, Search, Paperclip, Download, FileText, Users, Crown, Shield, Sparkles, Move } from 'lucide-react';
+import { Plus, MoreHorizontal, Clock, X, ArrowLeft, Trash2, Send, UserPlus, MessageSquare, Search, Paperclip, Download, FileText, Users, Crown, Shield, Sparkles, Move, ChevronDown, Check } from 'lucide-react';
 import Avatar from '../components/Avatar';
+import Select from '../components/Select';
+import DateTimePicker from '../components/DateTimePicker';
 
 const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024; // 3MB
 
@@ -27,19 +29,75 @@ const columns = ['Todo', 'InProgress', 'Review', 'Done'];
 // Nhãn hiển thị tiếng Việt; key vẫn giữ tiếng Anh để khớp dữ liệu BE.
 const statusLabels = { Todo: 'Cần làm', InProgress: 'Đang làm', Review: 'Xem xét', Done: 'Hoàn thành' };
 const statusLabel = (s) => statusLabels[s] || s;
+const TASK_STATUS_DOT = { Todo: 'bg-slate-400', InProgress: 'bg-blue-500', Review: 'bg-amber-500', Done: 'bg-emerald-500' };
 
 const roleLabels = { Owner: 'Chủ sở hữu', Leader: 'Trưởng nhóm', Member: 'Thành viên' };
 
-// Trạng thái của cả dự án (khác với trạng thái từng task ở trên).
+// Trạng thái của cả dự án (khác với trạng thái từng task ở trên). Mỗi trạng thái 1 chấm màu.
 const PROJECT_STATUSES = [
-  { value: 'Planning', label: 'Lên kế hoạch' },
-  { value: 'Active', label: 'Đang hoạt động' },
-  { value: 'InProgress', label: 'Đang thực hiện' },
-  { value: 'OnHold', label: 'Tạm dừng' },
-  { value: 'Completed', label: 'Hoàn thành' },
-  { value: 'Archived', label: 'Đã lưu trữ' },
+  { value: 'Planning', label: 'Lên kế hoạch', dot: 'bg-slate-400', pill: 'bg-slate-100 text-slate-600' },
+  { value: 'InProgress', label: 'Đang thực hiện', dot: 'bg-blue-500', pill: 'bg-blue-50 text-blue-700' },
+  { value: 'OnHold', label: 'Tạm dừng', dot: 'bg-amber-500', pill: 'bg-amber-50 text-amber-700' },
+  { value: 'Completed', label: 'Hoàn thành', dot: 'bg-emerald-500', pill: 'bg-emerald-50 text-emerald-700' },
+  { value: 'Archived', label: 'Đã lưu trữ', dot: 'bg-slate-400', pill: 'bg-slate-100 text-slate-500' },
 ];
-const projectStatusLabel = (s) => PROJECT_STATUSES.find((x) => x.value === s)?.label || s || 'Lên kế hoạch';
+// "Active" cũ (mặc định trước đây) được gộp vào "Đang thực hiện" khi hiển thị.
+const projectStatusMeta = (s) =>
+  PROJECT_STATUSES.find((x) => x.value === s) ||
+  (s === 'Active' ? PROJECT_STATUSES[1] : PROJECT_STATUSES[0]);
+
+// Dropdown trạng thái dự án tùy biến (đẹp hơn <select> mặc định): chấm màu + dấu tick.
+const ProjectStatusControl = ({ status, canEdit, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const meta = projectStatusMeta(status);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [open]);
+
+  if (!canEdit) {
+    return (
+      <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full ${meta.pill}`}>
+        <span className={`w-2 h-2 rounded-full ${meta.dot}`} /> {meta.label}
+      </span>
+    );
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        title="Đổi trạng thái dự án"
+        className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full ${meta.pill} hover:brightness-95 transition`}
+      >
+        <span className={`w-2 h-2 rounded-full ${meta.dot}`} />
+        {meta.label}
+        <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute left-0 mt-2 w-52 bg-white border border-slate-200 rounded-2xl shadow-xl py-1.5 z-30">
+          {PROJECT_STATUSES.map((s) => (
+            <button
+              key={s.value}
+              type="button"
+              onClick={() => { setOpen(false); onChange(s.value); }}
+              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
+              <span className="flex-1 text-left font-medium">{s.label}</span>
+              {s.value === status && <Check size={15} className="text-indigo-600" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const priorities = ['Low', 'Medium', 'High', 'Critical'];
 
@@ -432,27 +490,16 @@ const ProjectBoardPage = () => {
           <Link to="/projects" className="text-sm font-medium text-slate-400 hover:text-indigo-600 flex items-center gap-1 mb-2">
             <ArrowLeft size={14} /> Quay lại Dự án
           </Link>
-          <nav className="text-sm font-medium text-slate-400 mb-1">Dự án / {project.name}</nav>
           <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Bảng Kanban</h2>
-            {(project.ownerId === currentUserId ||
-              (project.members || []).some((m) => m.userId === currentUserId && m.projectRole === 'Leader')) ? (
-              <select
-                value={project.status || 'Planning'}
-                onChange={(e) => handleChangeProjectStatus(e.target.value)}
-                title="Đổi trạng thái dự án"
-                className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full pl-3 pr-7 py-1.5 outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer hover:bg-indigo-100 transition-colors"
-              >
-                {PROJECT_STATUSES.map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
-            ) : (
-              <span className="text-xs font-bold text-slate-600 bg-slate-100 rounded-full px-3 py-1.5">
-                {projectStatusLabel(project.status)}
-              </span>
-            )}
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight break-words">{project.name}</h2>
+            <ProjectStatusControl
+              status={project.status}
+              canEdit={project.ownerId === currentUserId ||
+                (project.members || []).some((m) => m.userId === currentUserId && m.projectRole === 'Leader')}
+              onChange={handleChangeProjectStatus}
+            />
           </div>
+          <p className="text-sm text-slate-400 mt-1">Bảng công việc</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex -space-x-2 mr-2">
@@ -516,15 +563,23 @@ const ProjectBoardPage = () => {
             className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
           />
         </div>
-        <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-          <option value="All">Tất cả độ ưu tiên</option>
-          {priorities.map((p) => <option key={p} value={p}>{priorityConfig[p].label}</option>)}
-        </select>
-        <select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)} className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-          <option value="All">Tất cả người nhận</option>
-          <option value="Unassigned">Chưa giao</option>
-          {(project.members || []).map((m) => <option key={m.userId} value={m.userId}>{displayName(m.userId)}</option>)}
-        </select>
+        <Select
+          value={priorityFilter}
+          onChange={setPriorityFilter}
+          options={[
+            { value: 'All', label: 'Tất cả độ ưu tiên' },
+            ...priorities.map((p) => ({ value: p, label: priorityConfig[p].label, dot: priorityConfig[p].dot })),
+          ]}
+        />
+        <Select
+          value={assigneeFilter}
+          onChange={setAssigneeFilter}
+          options={[
+            { value: 'All', label: 'Tất cả người nhận' },
+            { value: 'Unassigned', label: 'Chưa giao' },
+            ...(project.members || []).map((m) => ({ value: m.userId, label: displayName(m.userId) })),
+          ]}
+        />
         {filtersActive && (
           <button
             onClick={() => { setSearch(''); setPriorityFilter('All'); setAssigneeFilter('All'); }}
@@ -724,13 +779,16 @@ const ProjectBoardPage = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Độ ưu tiên</label>
-                  <select className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={newTask.priority} onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}>
-                    {priorities.map((p) => <option key={p} value={p}>{priorityConfig[p].label}</option>)}
-                  </select>
+                  <Select
+                    value={newTask.priority}
+                    onChange={(v) => setNewTask({ ...newTask, priority: v })}
+                    buttonClassName="px-4 py-2.5"
+                    options={priorities.map((p) => ({ value: p, label: priorityConfig[p].label, dot: priorityConfig[p].dot }))}
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Hạn chót</label>
-                  <input type="datetime-local" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={newTask.dueDate} onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })} />
+                  <DateTimePicker value={newTask.dueDate} onChange={(v) => setNewTask({ ...newTask, dueDate: v })} />
                 </div>
               </div>
             </div>
@@ -807,6 +865,29 @@ const TaskDetailModal = ({ task, realtimeTick, members, displayName, onClose, on
   const [newComment, setNewComment] = useState('');
   const [posting, setPosting] = useState(false);
   const [attachment, setAttachment] = useState(null); // { name, type, dataUrl }
+
+  // Phân tích AI cho task (Premium, có cache phía server)
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiText, setAiText] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [aiUpgrade, setAiUpgrade] = useState(false);
+
+  const handleAnalyze = async () => {
+    setAiOpen(true);
+    setAiLoading(true);
+    setAiError('');
+    setAiUpgrade(false);
+    try {
+      const res = await taskService.aiAnalyze(task.id);
+      setAiText(res.data?.analysis || '');
+    } catch (err) {
+      if (err.response?.data?.requiresUpgrade) setAiUpgrade(true);
+      else setAiError(err.response?.data?.message || 'Không phân tích được. Thử lại sau.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   // @-mention: gợi ý thành viên khi gõ @ trong comment
   const commentInputRef = useRef(null);
@@ -959,32 +1040,37 @@ const TaskDetailModal = ({ task, realtimeTick, members, displayName, onClose, on
           <div className="grid grid-cols-3 gap-4 mt-5">
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Trạng thái</label>
-              <select value={task.status} onChange={(e) => onStatusChange(task.id, e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                {columns.map((c) => <option key={c} value={c}>{statusLabel(c)}</option>)}
-              </select>
+              <Select
+                value={task.status}
+                onChange={(v) => onStatusChange(task.id, v)}
+                options={columns.map((c) => ({ value: c, label: statusLabel(c), dot: TASK_STATUS_DOT[c] }))}
+              />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Độ ưu tiên</label>
-              <select value={task.priority || 'Medium'} onChange={(e) => onPriorityChange(task.id, e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                {priorities.map((p) => <option key={p} value={p}>{priorityConfig[p].label}</option>)}
-              </select>
+              <Select
+                value={task.priority || 'Medium'}
+                onChange={(v) => onPriorityChange(task.id, v)}
+                options={priorities.map((p) => ({ value: p, label: priorityConfig[p].label, dot: priorityConfig[p].dot }))}
+              />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Người nhận</label>
-              <select value={task.userId || ''} onChange={(e) => onAssign(task.id, e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                <option value="" disabled>Chọn thành viên</option>
-                {members.map((m) => <option key={m.userId} value={m.userId}>{displayName(m.userId)}</option>)}
-              </select>
+              <Select
+                value={task.userId || ''}
+                onChange={(v) => onAssign(task.id, v)}
+                placeholder="Chọn thành viên"
+                options={members.map((m) => ({ value: m.userId, label: displayName(m.userId) }))}
+              />
             </div>
           </div>
           <div className="mt-4">
             <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Hạn chót</label>
             <div className="flex items-center gap-2">
-              <input
-                type="datetime-local"
+              <DateTimePicker
                 value={toDateTimeLocal(task.dueDate)}
-                onChange={(e) => onDueDateChange(task.id, e.target.value)}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                onChange={(v) => onDueDateChange(task.id, v)}
+                className="w-60"
               />
               {task.dueDate && (
                 <button
@@ -1000,6 +1086,49 @@ const TaskDetailModal = ({ task, realtimeTick, members, displayName, onClose, on
         </div>
 
         <div className="flex-1 overflow-y-auto p-8 pt-5">
+          {/* Phân tích AI */}
+          <div className="mb-6">
+            {!aiOpen ? (
+              <button
+                onClick={handleAnalyze}
+                className="inline-flex items-center gap-2 bg-brand-gradient text-white px-4 py-2 rounded-xl font-bold text-sm shadow-sm hover:opacity-90 transition-opacity"
+              >
+                <Sparkles size={16} /> Phân tích bằng AI
+              </button>
+            ) : (
+              <div className="border border-slate-200 rounded-2xl p-5 bg-slate-50/50">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-bold text-slate-700 flex items-center gap-2"><Sparkles size={16} className="text-indigo-600" /> Phân tích AI</h4>
+                  <div className="flex items-center gap-2">
+                    {!aiLoading && !aiUpgrade && (
+                      <button onClick={handleAnalyze} className="text-xs font-bold text-slate-500 hover:text-indigo-600">Phân tích lại</button>
+                    )}
+                    <button onClick={() => setAiOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+                  </div>
+                </div>
+                {aiLoading && (
+                  <div className="flex items-center gap-2 text-sm text-slate-500 py-3">
+                    <span className="w-4 h-4 border-2 border-slate-200 border-t-indigo-600 rounded-full animate-spin" />
+                    AI đang phân tích công việc…
+                  </div>
+                )}
+                {!aiLoading && aiUpgrade && (
+                  <UpgradePanel
+                    title="Phân tích task bằng AI là tính năng Premium"
+                    message="Nâng cấp Premium để AI tóm tắt nội dung và gợi ý việc cần làm cho từng task."
+                    perks={['Phân tích & tóm tắt task bằng AI', 'Tóm tắt công việc trên Dashboard', 'Password Vault bảo mật']}
+                  />
+                )}
+                {!aiLoading && !aiUpgrade && aiError && (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl text-sm">{aiError}</div>
+                )}
+                {!aiLoading && !aiUpgrade && !aiError && aiText && (
+                  <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{renderMarkdownLite(aiText)}</div>
+                )}
+              </div>
+            )}
+          </div>
+
           <h4 className="font-bold text-slate-700 flex items-center gap-2 mb-4">
             <MessageSquare size={16} /> Bình luận ({comments.length})
           </h4>

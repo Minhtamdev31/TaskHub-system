@@ -11,6 +11,7 @@ public sealed class DashboardStatsDto
     public int CompletedTasks { get; set; }
     public int InProgressTasks { get; set; }
     public int Productivity { get; set; } // % hoàn thành (Done / Total)
+    public int OverdueTasks { get; set; } // task đã quá hạn (dueDate < hiện tại) mà chưa Done
 
     // So sánh với cùng thời điểm tuần trước (đơn vị: % thay đổi tương đối)
     public int TotalChangePct { get; set; }

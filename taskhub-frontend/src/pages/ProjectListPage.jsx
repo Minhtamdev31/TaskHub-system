@@ -25,10 +25,10 @@ const accentFor = (key) => {
 
 // Nhãn trạng thái dự án sang tiếng Việt (màu badge lấy theo tông của thẻ).
 const STATUS_LABEL = {
-  Active: 'Đang hoạt động', Planning: 'Lên kế hoạch', InProgress: 'Đang thực hiện',
+  Planning: 'Lên kế hoạch', InProgress: 'Đang thực hiện', Active: 'Đang thực hiện',
   OnHold: 'Tạm dừng', Completed: 'Hoàn thành', Archived: 'Đã lưu trữ',
 };
-const statusLabel = (s) => STATUS_LABEL[s] || s || 'Hoạt động';
+const statusLabel = (s) => STATUS_LABEL[s] || s || 'Lên kế hoạch';
 
 const ProjectListPage = () => {
   const [projects, setProjects] = useState([]);
