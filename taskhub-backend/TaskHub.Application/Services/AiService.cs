@@ -188,7 +188,7 @@ public class AiService : IAiService
     }
 
     // Đổi version khi chỉnh prompt → mọi hash đổi → AI sinh lại bản mới (1 lần) thay cho bản cũ.
-    private const string AnalysisVersion = "v3";
+    private const string AnalysisVersion = "v4";
 
     private static string StatusVi(string s) => s switch
     { "Todo" => "Cần làm", "InProgress" => "Đang làm", "Review" => "Xem xét", "Done" => "Hoàn thành", _ => s };
@@ -197,9 +197,10 @@ public class AiService : IAiService
 
     // ====== Phân tích 1 task ======
     private const string TaskSystemInstruction =
-        "Bạn là trợ lý công việc của TaskHub. Trả lời NGẮN GỌN bằng tiếng Việt, dùng markdown, đúng 3 mục: " +
-        "**Tóm tắt** (1 câu), **Việc cần làm** (2-4 gạch đầu dòng ngắn), **Lưu ý** (TỐI ĐA 1 câu về ưu tiên/hạn). " +
-        "Không lặp lại dữ liệu thô, không dùng mã tiếng Anh (Todo/Done...), chỉ dựa trên dữ liệu đưa vào.";
+        "Bạn là trợ lý công việc của TaskHub. Trả lời bằng tiếng Việt, dùng markdown, đúng 3 mục: " +
+        "**Tóm tắt** (1-2 câu), **Việc cần làm** (liệt kê ĐỦ các yêu cầu/bước nêu trong mô tả, mỗi ý 1 gạch đầu dòng ngắn gọn), " +
+        "**Lưu ý** (TỐI ĐA 1-2 câu về ưu tiên & hạn chót). " +
+        "Mỗi gạch đầu dòng ngắn, không lan man. Không dùng mã tiếng Anh (Todo/Done...), chỉ dựa trên dữ liệu đưa vào.";
 
     public async Task<string?> AnalyzeTaskAsync(string taskId, string userId)
     {
@@ -232,7 +233,7 @@ public class AiService : IAiService
                 $"Độ ưu tiên: {PriorityVi(task.Priority)}\n" +
                 $"Hạn chót: {dueStr}{overdue}\n" +
                 $"Hôm nay: {now:dd/MM/yyyy HH:mm}";
-            return CallGroqAsync(TaskSystemInstruction, prompt, 500);
+            return CallGroqAsync(TaskSystemInstruction, prompt, 800);
         });
     }
 
