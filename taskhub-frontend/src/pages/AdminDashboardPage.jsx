@@ -125,11 +125,6 @@ const SystemTab = () => {
           </div>
           <div className="flex-1">
             <h3 className="text-lg font-extrabold text-slate-900">Chống ngủ đông (Keep-alive)</h3>
-            <p className="text-sm text-slate-500 mt-1">
-              Khi bật, hệ thống tự “cựa mình” vài phút một lần để máy chủ luôn thức.
-              Nhờ vậy người dùng mở web là vào được ngay, không phải chờ máy chủ khởi động lại
-              (thường mất nửa phút đến một phút sau một thời gian dài không ai truy cập).
-            </p>
           </div>
           {enabled === null ? (
             <span className="text-sm text-slate-400 shrink-0">Đang tải...</span>
