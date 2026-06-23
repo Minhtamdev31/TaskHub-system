@@ -81,17 +81,19 @@ public class TaskService : ITaskService
         }
 
         var createdAt = DateTime.UtcNow;
+        // Cho phép tạo thẳng vào 1 cột (trạng thái) cụ thể; mặc định "Todo".
+        var status = ValidStatuses.Contains(dto.Status, StringComparer.OrdinalIgnoreCase) ? dto.Status : "Todo";
         var task = new TaskItem
         {
             Title = dto.Title.Trim(),
             Description = dto.Description?.Trim() ?? string.Empty,
-            Status = "Todo",
+            Status = status,
             Priority = ValidPriorities.Contains(dto.Priority, StringComparer.OrdinalIgnoreCase) ? dto.Priority : "Medium",
             DueDate = dto.DueDate,
             UserId = userId,
             ProjectId = dto.ProjectId.Trim(),
             CreatedAt = createdAt,
-            StatusHistory = new List<StatusChange> { new() { Status = "Todo", ChangedAt = createdAt } }
+            StatusHistory = new List<StatusChange> { new() { Status = status, ChangedAt = createdAt } }
         };
 
         await _taskRepository.CreateAsync(task);

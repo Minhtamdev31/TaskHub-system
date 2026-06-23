@@ -12,11 +12,13 @@ import {
   ChevronRight,
   ChevronDown,
   Sparkles,
+  X,
 } from 'lucide-react';
 import { authService, taskService } from '../services/api';
 import NotificationBell from '../components/NotificationBell';
 import UpgradePanel from '../components/UpgradePanel';
 import { MarkdownLite } from '../utils/markdownLite';
+import { PageSkeleton } from '../components/Skeleton';
 
 // --- Helpers ---------------------------------------------------------------
 
@@ -91,6 +93,7 @@ const DashboardPage = () => {
   const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false); // cụm thẻ chỉ số: mặc định thu gọn
+  const [deadlinesOpen, setDeadlinesOpen] = useState(false); // "Sắp đến hạn": bấm mới hiện
   const [isPremium, setIsPremium] = useState(false);
   const [serverStats, setServerStats] = useState(null); // số liệu thống kê từ backend
   const searchRef = useRef(null);
@@ -98,10 +101,17 @@ const DashboardPage = () => {
   const [now] = useState(() => Date.now());
 
   // Tóm tắt công việc bằng AI (Premium, có cache phía server)
+  const [aiOpen, setAiOpen] = useState(false);
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
   const [aiUpgrade, setAiUpgrade] = useState(false);
+
+  // Mở popup AI; lần đầu (chưa có nội dung) thì gọi tạo tóm tắt luôn.
+  const openAi = () => {
+    setAiOpen(true);
+    if (!aiText && !aiLoading) handleAiSummary();
+  };
 
   const handleAiSummary = async () => {
     setAiLoading(true);
@@ -206,7 +216,7 @@ const DashboardPage = () => {
   }, [tasks]);
 
   if (loading) {
-    return <div className="p-8 text-slate-500">Đang tải tổng quan...</div>;
+    return <PageSkeleton />;
   }
 
   return (
@@ -276,9 +286,12 @@ const DashboardPage = () => {
               <Sparkles size={16} /> Nâng cấp
             </Link>
           )}
-          <Link to="/projects" className="bg-blue-600 text-white font-bold text-sm px-5 py-2.5 rounded-full flex items-center gap-2 shadow-sm shadow-blue-600/20 hover:bg-blue-700 transition-colors">
-            <Plus size={16} /> Thêm việc
-          </Link>
+          <button
+            onClick={openAi}
+            className="bg-brand-gradient text-white font-bold text-sm px-5 py-2.5 rounded-full flex items-center gap-2 shadow-md shadow-indigo-500/25 hover:opacity-90 active:scale-95 transition-all"
+          >
+            <Sparkles size={16} /> Tóm tắt AI
+          </button>
         </div>
       </div>
 
@@ -321,7 +334,7 @@ const DashboardPage = () => {
         </button>
 
         {statsOpen && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4 animate-pop">
             <StatCard label="Tổng công việc" value={stats.total} trend={tasks.length ? stats.trends.total : null} icon={ListChecks} tint="bg-blue-50 text-blue-600" />
             <StatCard label="Hoàn thành" value={stats.done} trend={tasks.length ? stats.trends.done : null} icon={CheckCircle2} tint="bg-emerald-50 text-emerald-600" />
             <StatCard label="Đang làm" value={stats.inProgress} trend={tasks.length ? stats.trends.inProgress : null} icon={Clock} tint="bg-amber-50 text-amber-600" />
@@ -338,14 +351,14 @@ const DashboardPage = () => {
 
       {/* Main grid: weekly chart + side column */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Left column: biểu đồ + hoạt động gần đây */}
-        <div className="lg:col-span-2 space-y-6">
+        {/* Left column: biểu đồ (chiều cao CỐ ĐỊNH) */}
+        <div className="lg:col-span-2">
         {/* Weekly progress */}
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
           <h3 className="text-xl font-extrabold text-slate-900">Tiến độ tuần này</h3>
           <p className="text-slate-500 text-sm mt-0.5">Công việc hoàn thành trong tuần</p>
 
-          <div className="relative flex items-end justify-between gap-3 h-44 mt-6">
+          <div className="relative flex items-end justify-between gap-3 h-[400px] mt-6">
             {weeklyEmpty && (
               <div className="absolute inset-x-0 top-0 bottom-8 flex items-center justify-center pointer-events-none">
                 <p className="text-slate-400 text-sm">Chưa có công việc hoàn thành trong tuần này.</p>
@@ -365,120 +378,146 @@ const DashboardPage = () => {
             ))}
           </div>
         </div>
+        </div>
 
-          {/* Recent activity */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-            <h3 className="text-xl font-extrabold text-slate-900 mb-4">Hoạt động gần đây</h3>
+        {/* Side column */}
+        <div className="space-y-6">
+          {/* Kho mật khẩu — đưa lên đầu, card gradient nổi bật */}
+          <Link to="/vault" className="flex items-center justify-between bg-gradient-to-br from-indigo-600 to-violet-600 p-5 rounded-3xl shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-white/20 text-white flex items-center justify-center">
+                <ShieldCheck size={22} />
+              </div>
+              <div>
+                <p className="font-bold text-white text-sm">Kho mật khẩu</p>
+                <p className="text-xs text-indigo-100">Lưu trữ &amp; mở khoá an toàn</p>
+              </div>
+            </div>
+            <ChevronRight size={18} className="text-white/70 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
+          </Link>
+
+          {/* Sắp đến hạn — thu gọn, bấm để hiện */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <button
+              onClick={() => setDeadlinesOpen((o) => !o)}
+              className="w-full flex items-center justify-between gap-3 px-6 py-4 hover:bg-slate-50 transition-colors"
+            >
+              <span className="flex items-center gap-2.5 font-extrabold text-slate-900">
+                <span className="w-8 h-8 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center"><Clock size={18} /></span>
+                Sắp đến hạn
+                {upcoming.length > 0 && (
+                  <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">{upcoming.length}</span>
+                )}
+              </span>
+              <ChevronDown size={18} className={`text-slate-400 transition-transform ${deadlinesOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {deadlinesOpen && (
+              <div className="px-6 pb-5 animate-pop">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-slate-400 text-xs">7 ngày tới</p>
+                  <Link to="/projects" className="text-xs font-semibold text-blue-600 hover:underline">Xem tất cả</Link>
+                </div>
+                {upcoming.length === 0 ? (
+                  <p className="text-slate-400 text-sm py-2">Không có công việc nào sắp đến hạn.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {upcoming.map((t) => {
+                      const { day, time } = formatDue(t.dueDate);
+                      return (
+                        <Link
+                          key={t.id}
+                          to={`/projects/${t.projectId}?task=${t.id}`}
+                          className="block border border-slate-200 rounded-2xl p-4 hover:border-indigo-300 hover:shadow-sm transition-all group"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-bold text-slate-900 text-sm leading-snug group-hover:text-indigo-600 transition-colors">{t.title}</p>
+                            <span className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full ${PRIORITY_BADGE[t.priority] || PRIORITY_BADGE.Medium}`}>
+                              {PRIORITY_LABEL[t.priority] || 'Trung bình'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-1">{projectName[t.id] || 'Dự án'}</p>
+                          <div className="flex items-center justify-between mt-3 text-xs text-slate-500 font-medium">
+                            <span className="flex items-center gap-4">
+                              <span>{day}</span>
+                              <span className="flex items-center gap-1"><Clock size={13} /> {time}</span>
+                            </span>
+                            <span className="text-indigo-500 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">Mở →</span>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Hoạt động gần đây — luôn hiện, tối đa 4 mục */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+            <h3 className="flex items-center gap-2.5 font-extrabold text-slate-900 mb-4">
+              <span className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><Clock size={18} /></span>
+              Hoạt động gần đây
+            </h3>
             {recent.length === 0 ? (
-              <p className="text-slate-400 text-sm">Chưa có hoạt động nào.</p>
+              <p className="text-slate-400 text-sm py-2">Chưa có hoạt động nào.</p>
             ) : (
               <div className="space-y-4">
                 {recent.map((r) => (
-                  <div key={r.id} className="flex items-center gap-4">
-                    <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
-                    <p className="text-sm text-slate-700 flex-1">{r.text}</p>
-                    <span className="text-xs text-slate-400 font-medium shrink-0">{timeAgo(r.when, now)}</span>
+                  <div key={r.id} className="flex items-start gap-3">
+                    <span className="mt-1.5 w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-slate-700 leading-snug">{r.text}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{timeAgo(r.when, now)}</p>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
         </div>
+      </div>
 
-        {/* Side column */}
-        <div className="space-y-6">
-          {/* AI summary */}
-          <div className="bg-gradient-to-br from-indigo-50 to-violet-50 p-6 rounded-3xl border border-indigo-100 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
+      {/* Popup Tóm tắt AI */}
+      {aiOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setAiOpen(false)}>
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl relative max-h-[85vh] flex flex-col animate-pop" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                <Sparkles size={18} className="text-indigo-600" /> Tóm tắt bằng AI
+                <span className="w-8 h-8 rounded-lg bg-brand-gradient flex items-center justify-center text-white"><Sparkles size={16} /></span>
+                Tóm tắt công việc bằng AI
               </h3>
-              {(aiText || aiError) && !aiLoading && !aiUpgrade && (
-                <button onClick={handleAiSummary} className="text-xs font-bold text-slate-500 hover:text-indigo-600">Làm mới</button>
+              <div className="flex items-center gap-1">
+                {(aiText || aiError) && !aiLoading && !aiUpgrade && (
+                  <button onClick={handleAiSummary} className="text-xs font-bold text-slate-500 hover:text-indigo-600 px-2 py-1 rounded-lg hover:bg-slate-100">Làm mới</button>
+                )}
+                <button onClick={() => setAiOpen(false)} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100"><X size={18} /></button>
+              </div>
+            </div>
+
+            <div className="px-6 py-5 overflow-y-auto">
+              {aiLoading && (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <span className="w-8 h-8 border-2 border-slate-200 border-t-indigo-600 rounded-full animate-spin mb-4" />
+                  <p className="text-slate-500 text-sm">AI đang đọc công việc của bạn…</p>
+                </div>
+              )}
+              {!aiLoading && aiUpgrade && (
+                <UpgradePanel
+                  title="Tóm tắt AI là tính năng Premium"
+                  message="Nâng cấp Premium để AI tóm tắt công việc và gợi ý ưu tiên mỗi ngày."
+                  perks={['Tóm tắt công việc bằng AI', 'Phân tích từng task bằng AI', 'Password Vault bảo mật']}
+                />
+              )}
+              {!aiLoading && !aiUpgrade && aiError && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl text-sm">{aiError}</div>
+              )}
+              {!aiLoading && !aiUpgrade && !aiError && aiText && (
+                <MarkdownLite text={aiText} />
               )}
             </div>
-
-            {!aiText && !aiLoading && !aiUpgrade && !aiError && (
-              <>
-                <p className="text-sm text-slate-500 mb-4">Để AI tóm tắt khối lượng công việc và gợi ý việc cần ưu tiên hôm nay.</p>
-                <button
-                  onClick={handleAiSummary}
-                  className="w-full bg-brand-gradient text-white px-4 py-3 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 ring-1 ring-white/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                >
-                  <Sparkles size={18} className="animate-pulse" /> Tóm tắt công việc của tôi
-                </button>
-              </>
-            )}
-            {aiLoading && (
-              <div className="flex items-center gap-2 text-sm text-slate-500 py-3">
-                <span className="w-4 h-4 border-2 border-slate-200 border-t-indigo-600 rounded-full animate-spin" />
-                AI đang đọc công việc của bạn…
-              </div>
-            )}
-            {!aiLoading && aiUpgrade && (
-              <UpgradePanel
-                title="Tóm tắt AI là tính năng Premium"
-                message="Nâng cấp Premium để AI tóm tắt công việc và gợi ý ưu tiên mỗi ngày."
-                perks={['Tóm tắt công việc bằng AI', 'Phân tích từng task bằng AI', 'Password Vault bảo mật']}
-              />
-            )}
-            {!aiLoading && !aiUpgrade && aiError && (
-              <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl text-sm">{aiError}</div>
-            )}
-            {!aiLoading && !aiUpgrade && !aiError && aiText && (
-              <MarkdownLite text={aiText} />
-            )}
           </div>
-
-          {/* Upcoming deadlines */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="text-lg font-extrabold text-slate-900">Sắp đến hạn</h3>
-              <Link to="/projects" className="text-sm font-semibold text-blue-600 hover:underline">Xem tất cả</Link>
-            </div>
-            <p className="text-slate-400 text-xs mb-4">7 ngày tới</p>
-
-            {upcoming.length === 0 ? (
-              <p className="text-slate-400 text-sm py-4">Không có công việc nào sắp đến hạn.</p>
-            ) : (
-              <div className="space-y-3">
-                {upcoming.map((t) => {
-                  const { day, time } = formatDue(t.dueDate);
-                  return (
-                    <div key={t.id} className="border border-slate-200 rounded-2xl p-4 hover:border-slate-300 transition-colors">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="font-bold text-slate-900 text-sm leading-snug">{t.title}</p>
-                        <span className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full ${PRIORITY_BADGE[t.priority] || PRIORITY_BADGE.Medium}`}>
-                          {PRIORITY_LABEL[t.priority] || 'Trung bình'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-400 mt-1">{projectName[t.id] || 'Dự án'}</p>
-                      <div className="flex items-center gap-4 mt-3 text-xs text-slate-500 font-medium">
-                        <span>{day}</span>
-                        <span className="flex items-center gap-1"><Clock size={13} /> {time}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Secure vault */}
-          <Link to="/vault" className="flex items-center justify-between bg-white p-5 rounded-3xl border border-slate-200 shadow-sm hover:border-slate-300 transition-colors group">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-                <ShieldCheck size={20} />
-              </div>
-              <div>
-                <p className="font-bold text-slate-900 text-sm">Kho mật khẩu</p>
-                <p className="text-xs text-slate-400">Lưu trữ &amp; mở khoá mật khẩu an toàn</p>
-              </div>
-            </div>
-            <ChevronRight size={18} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
-          </Link>
         </div>
-      </div>
+      )}
     </div>
   );
 };

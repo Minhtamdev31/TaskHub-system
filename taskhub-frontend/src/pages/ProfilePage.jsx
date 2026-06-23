@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, Briefcase, Crown, Pencil, FolderKanban, CheckSquare, CalendarDays } from 'lucide-react';
 import { authService, projectService, taskService } from '../services/api';
+import { PageSkeleton } from '../components/Skeleton';
 
 const initials = (name) =>
   (name || '?').split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
@@ -50,7 +51,7 @@ const ProfilePage = () => {
     return () => { cancelled = true; };
   }, []);
 
-  if (loading) return <div className="p-8 text-slate-500">Đang tải hồ sơ...</div>;
+  if (loading) return <PageSkeleton />;
   if (!user) return <div className="p-8 text-slate-500">Không tải được hồ sơ.</div>;
 
   const name = user.profile?.fullName || user.username || 'Người dùng';

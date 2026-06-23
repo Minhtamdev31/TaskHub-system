@@ -4,6 +4,8 @@ import { notificationService, invitationService } from '../services/api';
 import { toast } from '../components/Toast';
 import { Bell, CheckCheck, FolderKanban, ListTodo, Clock, Mail, Check, X } from 'lucide-react';
 
+import { Skeleton } from '../components/Skeleton';
+
 const notiTarget = (n) => n.link || (n.type === 'Project' && n.referenceId ? `/projects/${n.referenceId}` : null);
 
 const typeIcons = {
@@ -85,7 +87,25 @@ const NotificationsPage = () => {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   if (loading) {
-    return <div className="p-8 text-slate-500">Đang tải thông báo...</div>;
+    return (
+      <div className="space-y-5">
+        <div className="space-y-2.5">
+          <Skeleton className="h-9 w-48" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <div className="bg-white border border-slate-200 rounded-3xl divide-y divide-slate-100 overflow-hidden">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-6 py-5">
+              <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (

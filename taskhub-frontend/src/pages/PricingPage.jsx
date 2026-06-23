@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Crown, Check, Loader2 } from 'lucide-react';
 import { subscriptionService, paymentService, authService } from '../services/api';
 import { toast } from '../components/Toast';
+import { PageSkeleton } from '../components/Skeleton';
 
 const PREMIUM_PERKS = [
   'Password Vault bảo mật',
@@ -99,7 +100,7 @@ const PricingPage = () => {
     }
   };
 
-  if (loading) return <div className="p-8 text-slate-500">Đang tải bảng giá...</div>;
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="space-y-10">

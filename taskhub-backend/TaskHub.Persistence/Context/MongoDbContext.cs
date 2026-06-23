@@ -54,6 +54,9 @@ namespace TaskHub.Persistence.Context
 
             // Cache phân tích AI: tra cứu nhanh theo cacheKey (mỗi đối tượng 1 bản ghi).
             await CreateIndexAsync("AiAnalysis", new BsonDocument("cacheKey", 1), unique: true);
+
+            // TTL: tự xóa thông báo cũ hơn 30 ngày (giữ collection gọn, query nhẹ).
+            await CreateTtlIndexAsync("Notification", "createdAt", TimeSpan.FromDays(30));
         }
 
         private async Task CreateIndexAsync(string collectionName, BsonDocument keys, bool unique = false)
@@ -71,14 +74,16 @@ namespace TaskHub.Persistence.Context
             }
         }
 
-        private async Task CreateTtlIndexAsync(string collectionName, string dateField)
+        // expireAfter = null → xóa ngay khi tới mốc dateField (vd OtpRecord.ExpiryTime).
+        // expireAfter = TimeSpan → xóa sau khoảng đó tính từ dateField (vd Notification.createdAt + 30 ngày).
+        private async Task CreateTtlIndexAsync(string collectionName, string dateField, TimeSpan? expireAfter = null)
         {
             try
             {
                 var collection = _database.GetCollection<BsonDocument>(collectionName);
                 var model = new CreateIndexModel<BsonDocument>(
                     new BsonDocument(dateField, 1),
-                    new CreateIndexOptions { ExpireAfter = TimeSpan.Zero });
+                    new CreateIndexOptions { ExpireAfter = expireAfter ?? TimeSpan.Zero });
                 await collection.Indexes.CreateOneAsync(model);
             }
             catch (Exception ex)

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Folder, Users, ArrowRight, X, Search, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { toast } from '../components/Toast';
 import Avatar from '../components/Avatar';
+import { ListSkeleton } from '../components/Skeleton';
 
 const PAGE_SIZE = 6;
 
@@ -120,7 +121,7 @@ const ProjectListPage = () => {
     }
   };
 
-  if (loading) return <div className="p-8 text-slate-500">Đang tải dự án...</div>;
+  if (loading) return <ListSkeleton />;
 
   return (
     <div className="space-y-8">

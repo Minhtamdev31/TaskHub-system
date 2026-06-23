@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import MainLayout from './components/MainLayout.jsx';
 import AdminRoute from './components/AdminRoute.jsx';
 import { ToastContainer } from './components/Toast.jsx';
@@ -19,10 +19,12 @@ import CalendarPage from './pages/CalendarPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import MyTasksPage from './pages/MyTasksPage.jsx';
 
-const ProtectedRoute = ({ children }) => {
+// Layout dùng chung cho các trang đã đăng nhập. MainLayout (gồm Sidebar) giữ nguyên,
+// chỉ phần <Outlet/> đổi khi chuyển trang → Sidebar KHÔNG remount (mượt, không tải lại hồ sơ).
+const ProtectedLayout = () => {
   const token = localStorage.getItem('token');
   if (!token) return <Navigate to="/login" replace />;
-  return <MainLayout>{children}</MainLayout>;
+  return <MainLayout><Outlet /></MainLayout>;
 };
 
 function App() {
@@ -36,16 +38,20 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
         <Route path="/" element={<LandingPage />} />
-        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-        <Route path="/my-tasks" element={<ProtectedRoute><MyTasksPage /></ProtectedRoute>} />
-        <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-        <Route path="/projects" element={<ProtectedRoute><ProjectListPage /></ProtectedRoute>} />
-        <Route path="/projects/:id" element={<ProtectedRoute><ProjectBoardPage /></ProtectedRoute>} />
-        <Route path="/vault" element={<ProtectedRoute><PasswordVaultPage /></ProtectedRoute>} />
-        <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-        <Route path="/pricing" element={<ProtectedRoute><PricingPage /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+
+        <Route element={<ProtectedLayout />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/my-tasks" element={<MyTasksPage />} />
+          <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/projects" element={<ProjectListPage />} />
+          <Route path="/projects/:id" element={<ProjectBoardPage />} />
+          <Route path="/vault" element={<PasswordVaultPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Route>
+
         <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

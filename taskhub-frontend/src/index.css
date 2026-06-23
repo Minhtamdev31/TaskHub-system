@@ -107,3 +107,12 @@
 .thin-scroll::-webkit-scrollbar-track { background: transparent; }
 .thin-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
 .thin-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ============================================================
+   Animation khi bảng/panel xuất hiện (fade + trượt nhẹ).
+   ============================================================ */
+@keyframes th-pop {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-pop { animation: th-pop 0.2s ease-out; }

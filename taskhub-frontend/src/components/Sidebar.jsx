@@ -32,15 +32,23 @@ const Sidebar = () => {
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
-    authService.getCurrentUser()
-      .then((res) => {
-        setUser(res.data);
-        setIsAdmin((res.data?.role || '').toLowerCase() === 'admin');
-      })
-      .catch(() => {});
+    const loadUser = (force = false) => {
+      authService.getCurrentUser(force)
+        .then((res) => {
+          setUser(res.data);
+          setIsAdmin((res.data?.role || '').toLowerCase() === 'admin');
+        })
+        .catch(() => {});
+    };
+    loadUser();
     const onThemeChange = (e) => setThemeState(e.detail);
+    const onProfileUpdated = () => loadUser(true); // sửa hồ sơ → tải lại avatar/tên
     window.addEventListener('themechange', onThemeChange);
-    return () => window.removeEventListener('themechange', onThemeChange);
+    window.addEventListener('profile-updated', onProfileUpdated);
+    return () => {
+      window.removeEventListener('themechange', onThemeChange);
+      window.removeEventListener('profile-updated', onProfileUpdated);
+    };
   }, []);
 
   // Badge thông báo: gộp thông báo chưa đọc + lời mời dự án đang chờ.

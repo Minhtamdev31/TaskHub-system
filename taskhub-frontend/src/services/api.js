@@ -37,6 +37,13 @@ apiClient.interceptors.response.use(
   }
 );
 
+// Cache /users/me phía client: dedup + TTL ngắn → chuyển trang không phải tải lại hồ sơ.
+let _meCache = null;
+let _meCacheTs = 0;
+let _mePromise = null;
+const ME_TTL = 60_000; // 60s
+export const clearMeCache = () => { _meCache = null; _meCacheTs = 0; _mePromise = null; };
+
 /**
  * Auth Service: Handles all authentication & identity
  */
@@ -44,7 +51,17 @@ export const authService = {
   login: (credentials) => apiClient.post('/auth/login', credentials),
   register: (userData) => apiClient.post('/auth/register', userData),
   googleLogin: (idToken) => apiClient.post('/auth/google-login', { idToken }),
-  getCurrentUser: () => apiClient.get('/users/me'),
+  // force=true để bỏ qua cache (vd sau khi cập nhật hồ sơ).
+  getCurrentUser: (force = false) => {
+    if (!force && _meCache && Date.now() - _meCacheTs < ME_TTL) {
+      return Promise.resolve({ data: _meCache });
+    }
+    if (_mePromise) return _mePromise;
+    _mePromise = apiClient.get('/users/me')
+      .then((res) => { _meCache = res.data; _meCacheTs = Date.now(); _mePromise = null; return res; })
+      .catch((e) => { _mePromise = null; throw e; });
+    return _mePromise;
+  },
   verifyRegisterOtp: (data) => apiClient.post('/auth/verify-register-otp', data),
   forgotPassword: (email) => apiClient.post('/auth/forgot-password', { email }),
   verifyResetOtp: (data) => apiClient.post('/auth/verify-reset-otp', data),

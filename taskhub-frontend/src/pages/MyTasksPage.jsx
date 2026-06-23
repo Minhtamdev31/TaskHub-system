@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckSquare, Clock, FolderKanban } from 'lucide-react';
 import { projectService, taskService } from '../services/api';
+import { ListSkeleton } from '../components/Skeleton';
 
 const STATUS_TABS = [
   { key: 'All', label: 'Tất cả' },
@@ -76,7 +77,7 @@ const MyTasksPage = () => {
     });
   }, [tasks, tab]);
 
-  if (loading) return <div className="p-8 text-slate-500">Đang tải công việc...</div>;
+  if (loading) return <ListSkeleton />;
 
   return (
     <div className="space-y-8">

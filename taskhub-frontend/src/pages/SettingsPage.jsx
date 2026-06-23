@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { User, Shield, Bell, Moon, Crown, Check, Lock, KeyRound } from 'lucide-react';
-import { userService, authService, paymentService, passwordVaultService } from '../services/api';
+import { userService, authService, paymentService, passwordVaultService, clearMeCache } from '../services/api';
+import { PageSkeleton } from '../components/Skeleton';
 import { toast } from '../components/Toast';
 import { setTheme as applyAppTheme, getStoredTheme } from '../theme';
 import OtpChangeModal from '../components/OtpChangeModal';
@@ -121,6 +122,8 @@ const SettingsPage = () => {
         phoneNumber: profile.phoneNumber,
         avatarUrl: profile.avatarUrl,
       });
+      clearMeCache();
+      window.dispatchEvent(new Event('profile-updated')); // Sidebar cập nhật avatar/tên ngay
       toast.success('Cập nhật hồ sơ thành công!');
     } catch {
       toast.error('Cập nhật thất bại.');
@@ -153,7 +156,7 @@ const SettingsPage = () => {
   };
 
   if (loading) {
-    return <div className="p-8 text-slate-500">Đang tải cài đặt...</div>;
+    return <PageSkeleton />;
   }
 
   const inputClass = "w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none";

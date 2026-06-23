@@ -7,6 +7,7 @@ import {
 import { adminService } from '../services/api';
 import { toast } from '../components/Toast';
 import { confirm } from '../components/ConfirmDialog';
+import { Skeleton } from '../components/Skeleton';
 
 // Thanh phân trang dùng chung — hiện tổng số + nút trước/sau. Ẩn nếu chỉ có 1 trang.
 const Pager = ({ page, totalPages, total, onChange }) => {
@@ -173,7 +174,7 @@ const OverviewTab = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-slate-500">Đang tải...</div>;
+  if (loading) return <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>;
   if (!data) return null;
 
   const cards = [
@@ -271,7 +272,7 @@ const UsersTab = () => {
     catch { toast.error('Xóa thất bại.'); }
   };
 
-  if (loading) return <div className="text-slate-500">Đang tải...</div>;
+  if (loading) return <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>;
 
   return (
     <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-x-auto">
@@ -383,7 +384,7 @@ const PlansTab = () => {
     catch { toast.error('Xóa thất bại.'); }
   };
 
-  if (loading) return <div className="text-slate-500">Đang tải...</div>;
+  if (loading) return <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>;
 
   return (
     <div className="space-y-4">
@@ -477,7 +478,7 @@ const OrdersTab = () => {
       .finally(() => setLoading(false));
   }, [page]);
 
-  if (loading) return <div className="text-slate-500">Đang tải...</div>;
+  if (loading) return <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>;
 
   return (
     <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-x-auto">

@@ -46,8 +46,8 @@ public class NotificationService : INotificationService
 
     public async Task<List<Notification>> GetNotificationsByUserIdAsync(string userId)
     {
-        var all = await _notificationRepository.GetAllAsync();
-        return all.Where(n => n.UserId == userId).OrderByDescending(n => n.CreatedAt).ToList();
+        // Lọc theo index userId, sắp mới-nhất-trước (_id desc ≈ createdAt desc), chỉ lấy 50 tin gần nhất.
+        return await _notificationRepository.FindPagedAsync(n => n.UserId == userId, 0, 50);
     }
 
     public async Task<bool> MarkAsReadAsync(string notificationId)

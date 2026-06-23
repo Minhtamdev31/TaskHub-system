@@ -4,6 +4,7 @@ import { Eye, EyeOff, Plus, Trash2, ShieldCheck, KeyRound, Lock } from 'lucide-r
 import { toast } from '../components/Toast';
 import { confirm } from '../components/ConfirmDialog';
 import UpgradePanel from '../components/UpgradePanel';
+import { Skeleton } from '../components/Skeleton';
 
 // --- Quản lý token mở khóa vault (lớp xác thực 2) trong sessionStorage ---
 const VAULT_TOKEN_KEY = 'vaultToken';
@@ -230,7 +231,9 @@ const PasswordVaultPage = () => {
       </div>
 
       {status === 'loading' ? (
-        <div className="p-8 text-slate-500">Đang tải kho mật khẩu...</div>
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}
+        </div>
       ) : status === 'upgrade' ? (
         <UpgradePanel
           title="Kho mật khẩu là tính năng Premium"

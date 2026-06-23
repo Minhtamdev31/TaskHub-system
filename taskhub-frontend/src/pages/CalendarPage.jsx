@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Clock, CalendarDays } from 'lucide-react';
 import { taskService } from '../services/api';
+import { PageSkeleton } from '../components/Skeleton';
 
 const WEEKDAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const MONTHS = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
@@ -86,7 +87,7 @@ const CalendarPage = () => {
   const moveMonth = (delta) => setCursor((c) => new Date(c.getFullYear(), c.getMonth() + delta, 1));
   const goToday = () => { setCursor(new Date()); setSelected(new Date()); };
 
-  if (loading) return <div className="p-8 text-slate-500">Đang tải lịch...</div>;
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="space-y-5">
