@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { taskService, projectService, commentService, invitationService, userService, authService } from '../services/api';
 import { toast } from '../components/Toast';
 import { confirm } from '../components/ConfirmDialog';
@@ -155,6 +155,7 @@ const CommentText = ({ content, members, displayName }) => {
 
 const ProjectBoardPage = () => {
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [userMap, setUserMap] = useState({}); // userId -> { username, fullName }
@@ -285,6 +286,20 @@ const ProjectBoardPage = () => {
     })();
     return () => { cancelled = true; };
   }, [id, loadUserNames]);
+
+  // Mở sẵn task khi vào từ thông báo (URL có ?task={id}); mở xong xoá param để khỏi mở lại.
+  useEffect(() => {
+    const taskParam = searchParams.get('task');
+    if (!taskParam || tasks.length === 0) return;
+    const found = tasks.find((t) => t.id === taskParam);
+    if (found) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedTask(found);
+      const sp = new URLSearchParams(searchParams);
+      sp.delete('task');
+      setSearchParams(sp, { replace: true });
+    }
+  }, [searchParams, tasks, setSearchParams]);
 
   // Tải lại danh sách task (dùng cho cập nhật real-time).
   const reloadTasks = useCallback(async () => {

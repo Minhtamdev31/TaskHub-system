@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Bell, Check, X, Users, Calendar, ShieldCheck, KeyRound, ListTodo } from 'lucide-react';
 import { notificationService } from '../services/api';
 
@@ -23,11 +23,15 @@ const timeAgo = (date, now) => {
   return `${Math.round(hours / 24)} ngày trước`;
 };
 
+// URL điều hướng khi bấm thông báo: ưu tiên link lưu sẵn, fallback theo loại.
+const notiTarget = (n) => n.link || (n.type === 'Project' && n.referenceId ? `/projects/${n.referenceId}` : null);
+
 const NotificationBell = () => {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [now, setNow] = useState(() => Date.now());
   const ref = useRef(null);
+  const navigate = useNavigate();
 
   const load = async () => {
     try {
@@ -84,6 +88,14 @@ const NotificationBell = () => {
     window.dispatchEvent(new Event('notifications-updated'));
   };
 
+  // Bấm thông báo → đánh dấu đã đọc + chuyển tới đối tượng liên quan (task/dự án).
+  const handleClick = (n) => {
+    markRead(n.id);
+    setOpen(false);
+    const to = notiTarget(n);
+    if (to) navigate(to);
+  };
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -134,8 +146,8 @@ const NotificationBell = () => {
                 return (
                   <button
                     key={n.id}
-                    onClick={() => markRead(n.id)}
-                    className={`w-full text-left flex gap-3 px-5 py-4 transition-colors hover:bg-slate-50 ${n.isRead ? '' : 'bg-blue-50/40'}`}
+                    onClick={() => handleClick(n)}
+                    className={`w-full text-left flex gap-3 px-5 py-4 transition-colors hover:bg-slate-50 ${n.isRead ? '' : 'bg-blue-50/40'} ${notiTarget(n) ? 'cursor-pointer' : ''}`}
                   >
                     {!n.isRead && <span className="mt-2 w-2 h-2 rounded-full bg-blue-600 shrink-0" />}
                     {n.isRead && <span className="mt-2 w-2 h-2 shrink-0" />}

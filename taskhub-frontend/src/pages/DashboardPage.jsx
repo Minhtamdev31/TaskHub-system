@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   ShieldCheck,
   ChevronRight,
+  ChevronDown,
   Sparkles,
 } from 'lucide-react';
 import { authService, taskService } from '../services/api';
@@ -89,6 +90,7 @@ const DashboardPage = () => {
   const [projectName, setProjectName] = useState({}); // taskId -> project name
   const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false); // cụm thẻ chỉ số: mặc định thu gọn
   const [isPremium, setIsPremium] = useState(false);
   const [serverStats, setServerStats] = useState(null); // số liệu thống kê từ backend
   const searchRef = useRef(null);
@@ -298,18 +300,40 @@ const DashboardPage = () => {
         </div>
       )}
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Tổng công việc" value={stats.total} trend={tasks.length ? stats.trends.total : null} icon={ListChecks} tint="bg-blue-50 text-blue-600" />
-        <StatCard label="Hoàn thành" value={stats.done} trend={tasks.length ? stats.trends.done : null} icon={CheckCircle2} tint="bg-emerald-50 text-emerald-600" />
-        <StatCard label="Đang làm" value={stats.inProgress} trend={tasks.length ? stats.trends.inProgress : null} icon={Clock} tint="bg-amber-50 text-amber-600" />
-        <StatCard
-          label="Quá hạn"
-          value={stats.overdue}
-          trend={tasks.length ? (stats.overdue > 0 ? { text: 'Cần xử lý gấp', up: false } : { text: 'Không có việc trễ hạn', up: true }) : null}
-          icon={AlertTriangle}
-          tint={stats.overdue > 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}
-        />
+      {/* Stat cards (thu gọn / mở ra) */}
+      <div>
+        <button
+          onClick={() => setStatsOpen((o) => !o)}
+          className="w-full flex items-center justify-between gap-3 bg-white border border-slate-200 rounded-2xl px-5 py-3 shadow-sm hover:border-slate-300 transition-colors"
+        >
+          <span className="flex items-center gap-2 font-bold text-slate-800">
+            <ListChecks size={18} className="text-blue-600" /> Chỉ số tổng quan
+          </span>
+          <span className="flex items-center gap-3">
+            {!statsOpen && (
+              <span className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-400">
+                <span>Tổng {stats.total}</span>·<span>Xong {stats.done}</span>·
+                <span className={stats.overdue > 0 ? 'text-rose-500' : ''}>Quá hạn {stats.overdue}</span>
+              </span>
+            )}
+            <ChevronDown size={18} className={`text-slate-400 transition-transform ${statsOpen ? 'rotate-180' : ''}`} />
+          </span>
+        </button>
+
+        {statsOpen && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+            <StatCard label="Tổng công việc" value={stats.total} trend={tasks.length ? stats.trends.total : null} icon={ListChecks} tint="bg-blue-50 text-blue-600" />
+            <StatCard label="Hoàn thành" value={stats.done} trend={tasks.length ? stats.trends.done : null} icon={CheckCircle2} tint="bg-emerald-50 text-emerald-600" />
+            <StatCard label="Đang làm" value={stats.inProgress} trend={tasks.length ? stats.trends.inProgress : null} icon={Clock} tint="bg-amber-50 text-amber-600" />
+            <StatCard
+              label="Quá hạn"
+              value={stats.overdue}
+              trend={tasks.length ? (stats.overdue > 0 ? { text: 'Cần xử lý gấp', up: false } : { text: 'Không có việc trễ hạn', up: true }) : null}
+              icon={AlertTriangle}
+              tint={stats.overdue > 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}
+            />
+          </div>
+        )}
       </div>
 
       {/* Main grid: weekly chart + side column */}
@@ -364,7 +388,7 @@ const DashboardPage = () => {
         {/* Side column */}
         <div className="space-y-6">
           {/* AI summary */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <div className="bg-gradient-to-br from-indigo-50 to-violet-50 p-6 rounded-3xl border border-indigo-100 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
                 <Sparkles size={18} className="text-indigo-600" /> Tóm tắt bằng AI
@@ -379,9 +403,9 @@ const DashboardPage = () => {
                 <p className="text-sm text-slate-500 mb-4">Để AI tóm tắt khối lượng công việc và gợi ý việc cần ưu tiên hôm nay.</p>
                 <button
                   onClick={handleAiSummary}
-                  className="w-full bg-brand-gradient text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  className="w-full bg-brand-gradient text-white px-4 py-3 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 ring-1 ring-white/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                 >
-                  <Sparkles size={16} /> Tóm tắt công việc của tôi
+                  <Sparkles size={18} className="animate-pulse" /> Tóm tắt công việc của tôi
                 </button>
               </>
             )}

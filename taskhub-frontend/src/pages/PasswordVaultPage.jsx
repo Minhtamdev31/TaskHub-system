@@ -233,7 +233,7 @@ const PasswordVaultPage = () => {
         <div className="p-8 text-slate-500">Đang tải kho mật khẩu...</div>
       ) : status === 'upgrade' ? (
         <UpgradePanel
-          title="Password Vault là tính năng Premium"
+          title="Kho mật khẩu là tính năng Premium"
           message="Lưu trữ và quản lý thông tin đăng nhập của bạn một cách an toàn. Nâng cấp Premium để mở khóa."
         />
       ) : status === 'setup' || status === 'locked' ? (
@@ -243,10 +243,10 @@ const PasswordVaultPage = () => {
         <table className="min-w-full divide-y divide-slate-100">
           <thead className="bg-slate-50/70">
             <tr>
-              <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">Service / Title</th>
-              <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">Username</th>
-              <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">Password</th>
-              <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+              <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">Dịch vụ / Tiêu đề</th>
+              <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">Tên đăng nhập</th>
+              <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">Mật khẩu</th>
+              <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Hành động</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
@@ -254,7 +254,7 @@ const PasswordVaultPage = () => {
               <tr key={cred.id} className="hover:bg-slate-50/50 transition-colors group">
                 <td className="px-8 py-6">
                   <div className="font-bold text-slate-900">{cred.title}</div>
-                  <div className="text-xs text-slate-400 font-medium">{cred.url || 'No URL'}</div>
+                  <div className="text-xs text-slate-400 font-medium">{cred.url || 'Không có URL'}</div>
                 </td>
                 <td className="px-8 py-6 text-slate-600 font-mono text-sm">{cred.username}</td>
                 <td className="px-8 py-6">
@@ -285,8 +285,8 @@ const PasswordVaultPage = () => {
         {credentials.length === 0 && (
           <div className="text-center py-20 text-slate-400 border-t border-slate-100">
              <KeyRound size={48} className="mx-auto mb-4 opacity-20" />
-             <p className="text-lg font-medium">No credentials found</p>
-             <p className="text-sm">Start by adding sensitive project keys or passwords.</p>
+             <p className="text-lg font-medium">Chưa có thông tin nào</p>
+             <p className="text-sm">Bắt đầu bằng cách thêm khoá hoặc mật khẩu quan trọng của dự án.</p>
           </div>
         )}
       </div>
@@ -295,35 +295,35 @@ const PasswordVaultPage = () => {
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <form onSubmit={handleAddCredential} className="bg-white rounded-2xl w-full max-w-md p-8 shadow-2xl">
-            <h3 className="text-2xl font-bold mb-4">Add Credential</h3>
+            <h3 className="text-2xl font-bold mb-4">Thêm thông tin đăng nhập</h3>
             <div className="space-y-4">
-              <input 
-                type="text" placeholder="Service Name (e.g. AWS, GitHub)" 
+              <input
+                type="text" placeholder="Tên dịch vụ (vd: AWS, GitHub)"
                 className="w-full p-2 border rounded outline-none focus:ring-2 focus:ring-blue-500"
                 value={newCred.title} onChange={e => setNewCred({...newCred, title: e.target.value})} required
               />
-              <input 
-                type="text" placeholder="Username/Email" 
+              <input
+                type="text" placeholder="Tên đăng nhập / Email"
                 className="w-full p-2 border rounded outline-none focus:ring-2 focus:ring-blue-500"
                 value={newCred.username} onChange={e => setNewCred({...newCred, username: e.target.value})} required
               />
               <div>
                 <input
-                  type="password" placeholder="Password"
+                  type="password" placeholder="Mật khẩu"
                   className="w-full p-2 border rounded outline-none focus:ring-2 focus:ring-blue-500"
                   value={newCred.password} onChange={e => setNewCred({...newCred, password: e.target.value})} required
                 />
                 <PasswordStrengthMeter password={newCred.password} />
               </div>
               <input
-                type="text" placeholder="URL (Optional)" 
+                type="text" placeholder="URL (không bắt buộc)"
                 className="w-full p-2 border rounded outline-none focus:ring-2 focus:ring-blue-500"
                 value={newCred.url} onChange={e => setNewCred({...newCred, url: e.target.value})}
               />
             </div>
             <div className="flex justify-end gap-3 mt-6">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-500 font-medium px-4">Cancel</button>
-              <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700">Save</button>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-500 font-medium px-4">Hủy</button>
+              <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700">Lưu</button>
             </div>
           </form>
         </div>

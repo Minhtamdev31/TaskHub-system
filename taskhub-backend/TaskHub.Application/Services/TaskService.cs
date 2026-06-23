@@ -158,7 +158,8 @@ public class TaskService : ITaskService
                     project.OwnerId,
                     $"Công việc \"{existingTask.Title}\" chuyển từ {StatusLabel(oldStatus)} sang {StatusLabel(normalizedStatus)}",
                     "Task",
-                    taskId);
+                    taskId,
+                    link: $"/projects/{existingTask.ProjectId}?task={taskId}");
             }
         }
 
@@ -250,12 +251,13 @@ public class TaskService : ITaskService
         existingTask.UpdatedAt = DateTime.UtcNow;
         await _taskRepository.UpdateAsync(taskId, existingTask);
 
-        // Trigger Notification
+        // Trigger Notification — kèm link tới đúng task trong bảng dự án.
         await _notificationService.CreateAndSendNotificationAsync(
-            targetUserId, 
+            targetUserId,
             $"Bạn được giao công việc: {existingTask.Title}",
             "Task",
-            taskId);
+            taskId,
+            link: $"/projects/{existingTask.ProjectId}?task={taskId}");
 
         await _realtime.ProjectChangedAsync(existingTask.ProjectId, "taskAssigned", new { taskId });
 

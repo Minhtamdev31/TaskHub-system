@@ -19,7 +19,7 @@ public class NotificationService : INotificationService
         _emailService = emailService;
     }
 
-    public async Task CreateAndSendNotificationAsync(string userId, string message, string type, string referenceId, bool sendEmail = true)
+    public async Task CreateAndSendNotificationAsync(string userId, string message, string type, string referenceId, bool sendEmail = true, string? link = null)
     {
         var notification = new Notification
         {
@@ -27,6 +27,7 @@ public class NotificationService : INotificationService
             Message = message,
             Type = type,
             ReferenceId = referenceId,
+            Link = link ?? string.Empty,
             CreatedAt = DateTime.UtcNow
         };
 

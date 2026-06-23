@@ -26,6 +26,9 @@ public class Notification
     [BsonElement("referenceId")]
     public string ReferenceId { get; set; } = string.Empty; // ProjectId or TaskId
 
+    [BsonElement("link")]
+    public string Link { get; set; } = string.Empty; // URL điều hướng khi bấm vào thông báo (vd "/projects/{id}?task={id}")
+
     [BsonElement("createdAt")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

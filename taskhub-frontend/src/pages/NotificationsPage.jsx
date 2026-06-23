@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { notificationService, invitationService } from '../services/api';
 import { toast } from '../components/Toast';
 import { Bell, CheckCheck, FolderKanban, ListTodo, Clock, Mail, Check, X } from 'lucide-react';
+
+const notiTarget = (n) => n.link || (n.type === 'Project' && n.referenceId ? `/projects/${n.referenceId}` : null);
 
 const typeIcons = {
   Project: FolderKanban,
@@ -20,6 +23,13 @@ const NotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  const handleOpen = (n) => {
+    if (!n.isRead) handleMarkRead(n.id);
+    const to = notiTarget(n);
+    if (to) navigate(to);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -152,7 +162,12 @@ const NotificationsPage = () => {
                 <div className={`p-2.5 rounded-xl ${notification.isRead ? 'bg-slate-100 text-slate-400' : 'bg-indigo-100 text-indigo-600'}`}>
                   <Icon size={20} />
                 </div>
-                <div className="flex-1 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => handleOpen(notification)}
+                  disabled={!notiTarget(notification)}
+                  className={`flex-1 min-w-0 text-left ${notiTarget(notification) ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+                >
                   <p className={`text-sm ${notification.isRead ? 'text-slate-600' : 'text-slate-900 font-semibold'}`}>
                     {notification.message}
                   </p>
@@ -161,8 +176,9 @@ const NotificationsPage = () => {
                     {notification.type && (
                       <span className="ml-2 uppercase tracking-wider font-bold">{typeLabels[notification.type] || notification.type}</span>
                     )}
+                    {notiTarget(notification) && <span className="ml-2 text-indigo-500 font-semibold normal-case">· Mở →</span>}
                   </p>
-                </div>
+                </button>
                 {!notification.isRead && (
                   <button
                     onClick={() => handleMarkRead(notification.id)}
