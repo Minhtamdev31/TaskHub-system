@@ -25,7 +25,7 @@ const initials = (name) =>
 const isValidImageSrc = (s) =>
   typeof s === 'string' && /^(data:image\/|https?:\/\/|\/)/i.test(s.trim());
 
-const Sidebar = () => {
+const Sidebar = ({ open = false, onClose = () => {} }) => {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [theme, setThemeState] = useState(getStoredTheme());
@@ -104,9 +104,13 @@ const Sidebar = () => {
   const avatar = user?.profile?.avatarUrl;
 
   return (
-    <aside className="w-64 bg-white text-slate-800 h-screen fixed left-0 top-0 flex flex-col border-r border-slate-200 z-50">
+    <aside
+      className={`w-64 bg-white text-slate-800 h-[100dvh] fixed left-0 top-0 flex flex-col border-r border-slate-200 z-50
+        transition-transform duration-300 ease-out will-change-transform
+        ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+    >
       {/* Brand */}
-      <NavLink to="/dashboard" className="px-6 pt-6 pb-5 flex items-center gap-2.5 hover:opacity-90 transition-opacity">
+      <NavLink to="/dashboard" onClick={onClose} className="px-6 pt-6 pb-5 flex items-center gap-2.5 hover:opacity-90 transition-opacity">
         <img src="/TaskHubLogo.png" alt="TaskHub" className="w-9 h-9 rounded-xl object-contain shrink-0" />
         <h1 className="text-2xl font-black text-blue-600 tracking-tight">TaskHub</h1>
       </NavLink>
@@ -118,6 +122,7 @@ const Sidebar = () => {
             key={item.path}
             to={item.path}
             end={!item.matchPrefix}
+            onClick={onClose}
             className={({ isActive }) => `
               flex items-center gap-3 px-4 py-3 rounded-full transition-all font-semibold text-sm
               ${isActive
@@ -146,7 +151,7 @@ const Sidebar = () => {
           <span>{theme === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'}</span>
         </button>
 
-        <NavLink to="/profile" className="flex items-center gap-3 px-2 py-1 rounded-xl hover:bg-slate-100 transition-colors">
+        <NavLink to="/profile" onClick={onClose} className="flex items-center gap-3 px-2 py-1 rounded-xl hover:bg-slate-100 transition-colors">
           {isValidImageSrc(avatar) ? (
             <img src={avatar} alt={name} className="w-10 h-10 rounded-full object-cover shrink-0" />
           ) : (
