@@ -43,6 +43,15 @@ public class Project
     [BsonElement("members")]
     public List<ProjectMember> Members { get; set; } = new();
 
+    /// <summary>
+    /// Tổng ngân sách được cấp cho dự án (VND). Chỉ Owner/Leader đặt được.
+    /// Số đã chi được tính từ các BudgetRequest đã duyệt, không lưu sẵn ở đây
+    /// để tránh lệch số liệu.
+    /// </summary>
+    [BsonElement("budget")]
+    [BsonRepresentation(BsonType.Decimal128)]
+    public decimal Budget { get; set; }
+
     [BsonElement("createdAt")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

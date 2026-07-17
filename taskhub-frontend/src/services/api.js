@@ -89,6 +89,19 @@ export const projectService = {
 };
 
 /**
+ * Budget Service: Quản lý chi tiêu dự án (Premium, xét theo chủ dự án).
+ */
+export const budgetService = {
+  get: (projectId) => apiClient.get(`/projects/${projectId}/budget`),
+  setBudget: (projectId, budget) => apiClient.put(`/projects/${projectId}/budget`, { budget }),
+  createRequest: (projectId, data) => apiClient.post(`/projects/${projectId}/budget-requests`, data),
+  approve: (projectId, requestId) =>
+    apiClient.post(`/projects/${projectId}/budget-requests/${requestId}/approve`),
+  reject: (projectId, requestId, reason) =>
+    apiClient.post(`/projects/${projectId}/budget-requests/${requestId}/reject`, { reason }),
+};
+
+/**
  * Task Service: Operations within projects
  */
 export const taskService = {

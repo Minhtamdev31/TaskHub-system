@@ -48,6 +48,10 @@ namespace TaskHub.Persistence.Context
             await CreateIndexAsync("Notification", new BsonDocument("userId", 1));
             await CreateIndexAsync("Comment", new BsonDocument("taskId", 1));
 
+            // Yêu cầu chi tiêu: tra theo dự án (bảng ngân sách) và theo task (ô yêu cầu trong task).
+            await CreateIndexAsync("BudgetRequest", new BsonDocument("projectId", 1));
+            await CreateIndexAsync("BudgetRequest", new BsonDocument("taskId", 1));
+
             await CreateIndexAsync("OtpRecord", new BsonDocument { { "Email", 1 }, { "Type", 1 } });
             // TTL: Mongo tự xóa OTP khi ExpiryTime đã qua (giữ collection sạch, query nhẹ).
             await CreateTtlIndexAsync("OtpRecord", "ExpiryTime");

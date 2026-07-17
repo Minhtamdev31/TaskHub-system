@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { taskService, projectService, commentService, invitationService, userService, authService } from '../services/api';
+import { taskService, projectService, commentService, invitationService, userService, authService, budgetService } from '../services/api';
+import { BudgetPanel, BudgetUpgradeNotice, TaskBudgetSection } from '../components/ProjectBudget';
 import { toast } from '../components/Toast';
 import { confirm } from '../components/ConfirmDialog';
 import UserProfileModal from '../components/UserProfileModal';
@@ -193,6 +194,10 @@ const ProjectBoardPage = () => {
 
   const [selectedTask, setSelectedTask] = useState(null);
 
+  // Ngân sách dự án (Premium). budgetUpgrade = chủ dự án chưa có Premium.
+  const [budget, setBudget] = useState(null);
+  const [budgetUpgrade, setBudgetUpgrade] = useState(false);
+
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
 
@@ -294,6 +299,23 @@ const ProjectBoardPage = () => {
     }
   }, []);
 
+  // Tải ngân sách. 403 kèm requiresUpgrade = chủ dự án chưa Premium → hiện gợi ý nâng cấp
+  // thay vì báo lỗi; các lỗi khác thì ẩn hẳn khối ngân sách.
+  const fetchBudget = useCallback(async () => {
+    try {
+      const res = await budgetService.get(id);
+      return { data: res.data, upgrade: false };
+    } catch (err) {
+      return { data: null, upgrade: !!err.response?.data?.requiresUpgrade };
+    }
+  }, [id]);
+
+  const refreshBudget = useCallback(async () => {
+    const { data, upgrade } = await fetchBudget();
+    setBudget(data);
+    setBudgetUpgrade(upgrade);
+  }, [fetchBudget]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -315,6 +337,66 @@ const ProjectBoardPage = () => {
     })();
     return () => { cancelled = true; };
   }, [id, loadUserNames]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, upgrade } = await fetchBudget();
+      if (cancelled) return;
+      setBudget(data);
+      setBudgetUpgrade(upgrade);
+    })();
+    return () => { cancelled = true; };
+  }, [fetchBudget]);
+
+  const handleSetBudget = async (value) => {
+    try {
+      await budgetService.setBudget(id, value);
+      toast.success('Đã cập nhật ngân sách dự án.');
+      await refreshBudget();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không cập nhật được ngân sách.');
+      throw err;
+    }
+  };
+
+  const handleCreateBudgetRequest = async (payload) => {
+    try {
+      await budgetService.createRequest(id, payload);
+      toast.success('Đã gửi yêu cầu chi tiền tới trưởng dự án.');
+      await refreshBudget();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không gửi được yêu cầu.');
+      throw err;
+    }
+  };
+
+  const handleApproveBudget = async (r) => {
+    try {
+      await budgetService.approve(id, r.id);
+      toast.success('Đã duyệt yêu cầu chi tiền.');
+      await refreshBudget();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không duyệt được yêu cầu.');
+      throw err;
+    }
+  };
+
+  const handleRejectBudget = async (r, reason) => {
+    try {
+      await budgetService.reject(id, r.id, reason);
+      toast.success('Đã từ chối yêu cầu.');
+      await refreshBudget();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không từ chối được yêu cầu.');
+      throw err;
+    }
+  };
+
+  const taskTitleById = useCallback(
+    (taskId) => tasks.find((t) => String(t.id) === String(taskId))?.title || 'Công việc đã xóa',
+    [tasks],
+  );
 
   // Mở sẵn task khi vào từ thông báo (URL có ?task={id}); mở xong xoá param để khỏi mở lại.
   useEffect(() => {
@@ -732,6 +814,22 @@ const ProjectBoardPage = () => {
         ))}
       </div>
 
+      {/* Ngân sách & yêu cầu chi tiền (Premium) */}
+      <div className="pb-6">
+        {budgetUpgrade ? (
+          <BudgetUpgradeNotice />
+        ) : budget ? (
+          <BudgetPanel
+            data={budget}
+            displayName={displayName}
+            taskTitle={taskTitleById}
+            onSetBudget={handleSetBudget}
+            onApprove={handleApproveBudget}
+            onReject={handleRejectBudget}
+          />
+        ) : null}
+      </div>
+
       {/* Delete Project Confirm Modal */}
       {deleteOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -922,6 +1020,9 @@ const ProjectBoardPage = () => {
           realtimeTick={realtimeTick}
           members={project.members || []}
           displayName={displayName}
+          currentUserId={currentUserId}
+          budget={budget}
+          onCreateBudgetRequest={handleCreateBudgetRequest}
           onClose={() => setSelectedTask(null)}
           onStatusChange={handleUpdateStatus}
           onPriorityChange={handleUpdatePriority}
@@ -934,7 +1035,7 @@ const ProjectBoardPage = () => {
   );
 };
 
-const TaskDetailModal = ({ task, realtimeTick, members, displayName, onClose, onStatusChange, onPriorityChange, onDueDateChange, onAssign, onDelete }) => {
+const TaskDetailModal = ({ task, realtimeTick, members, displayName, currentUserId, budget, onCreateBudgetRequest, onClose, onStatusChange, onPriorityChange, onDueDateChange, onAssign, onDelete }) => {
   const [comments, setComments] = useState([]);
   const [loadingComments, setLoadingComments] = useState(true);
   const [newComment, setNewComment] = useState('');
@@ -1161,6 +1262,14 @@ const TaskDetailModal = ({ task, realtimeTick, members, displayName, onClose, on
         </div>
 
         <div className="flex-1 overflow-y-auto p-8 pt-5">
+          {/* Yêu cầu chi tiền từ ngân sách dự án (Premium) */}
+          <TaskBudgetSection
+            task={task}
+            currentUserId={currentUserId}
+            data={budget}
+            onCreateRequest={onCreateBudgetRequest}
+          />
+
           {/* Phân tích AI */}
           <div className="mb-6">
             {!aiOpen ? (
