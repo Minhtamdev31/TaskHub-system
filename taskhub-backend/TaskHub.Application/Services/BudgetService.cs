@@ -97,12 +97,15 @@ public class BudgetService : IBudgetService
             : all.Where(r => r.RequesterId.Equals(userId, StringComparison.OrdinalIgnoreCase)).ToList();
 
         var spent = all.Where(r => r.Status == BudgetRequestStatus.Approved).Sum(r => r.Amount);
+        var total = project.Budget + project.AddedBudget;
 
         return (new ProjectBudgetResponse
         {
-            Budget = project.Budget,
+            Planned = project.Budget,
+            Added = project.AddedBudget,
+            Budget = total,
             Spent = spent,
-            Remaining = project.Budget - spent,
+            Remaining = total - spent,
             CanManage = manage,
             Requests = visible
                 .OrderByDescending(r => r.CreatedAt)
@@ -122,6 +125,23 @@ public class BudgetService : IBudgetService
             return BudgetOperationResult.Deny("Chỉ chủ dự án hoặc trưởng nhóm mới được đặt ngân sách.");
 
         project.Budget = budget;
+        project.UpdatedAt = DateTime.UtcNow;
+        await _projects.UpdateAsync(project.Id, project);
+
+        return BudgetOperationResult.Ok();
+    }
+
+    public async Task<BudgetOperationResult> AddBudgetAsync(string projectId, string userId, decimal amount)
+    {
+        if (amount <= 0) return BudgetOperationResult.Fail("Số tiền thêm phải lớn hơn 0.");
+
+        var (project, error) = await LoadAsync(projectId, userId);
+        if (project is null) return error!;
+
+        if (!CanManage(project, userId))
+            return BudgetOperationResult.Deny("Chỉ chủ dự án hoặc trưởng nhóm mới được thêm tiền.");
+
+        project.AddedBudget += amount;
         project.UpdatedAt = DateTime.UtcNow;
         await _projects.UpdateAsync(project.Id, project);
 
@@ -200,7 +220,7 @@ public class BudgetService : IBudgetService
         request.RejectionReason = null;
         await _requests.UpdateAsync(request.Id, request);
 
-        var remaining = project.Budget - await SpentAsync(projectId);
+        var remaining = project.Budget + project.AddedBudget - await SpentAsync(projectId);
         await NotifyDecisionAsync(request, approved: true, reason: null, remaining: remaining);
 
         return BudgetOperationResult.Ok(request);

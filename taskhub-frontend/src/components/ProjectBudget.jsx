@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Wallet, Crown, Check, X, AlertTriangle, Send, Pencil } from 'lucide-react';
+import { Wallet, Crown, Check, X, AlertTriangle, Send, Pencil, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from './Toast';
 import { formatVnd, IMPORTANCE, importanceMeta, STATUS_META } from '../utils/budget';
@@ -68,17 +68,24 @@ export const BudgetPanel = ({
   taskTitle,
   displayName,
   onSetBudget,
+  onAddBudget,
   onApprove,
   onReject,
 }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [addDraft, setAddDraft] = useState('');
+  const [addingSaving, setAddingSaving] = useState(false);
   const [rejectingId, setRejectingId] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [busyId, setBusyId] = useState(null);
 
-  const { budget = 0, spent = 0, remaining = 0, canManage = false, requests = [] } = data || {};
+  const {
+    budget = 0, planned = 0, added = 0, spent = 0, remaining = 0,
+    canManage = false, requests = [],
+  } = data || {};
   const pending = requests.filter((r) => r.status === 'Pending');
   const decided = requests.filter((r) => r.status !== 'Pending');
   const usedPct = budget > 0 ? Math.min(100, Math.round((spent / budget) * 100)) : 0;
@@ -94,6 +101,19 @@ export const BudgetPanel = ({
       setEditing(false);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const saveAdd = async () => {
+    const value = Number(addDraft);
+    if (!Number.isFinite(value) || value <= 0) { toast.error('Số tiền thêm phải lớn hơn 0.'); return; }
+    setAddingSaving(true);
+    try {
+      await onAddBudget(value);
+      setAdding(false);
+      setAddDraft('');
+    } finally {
+      setAddingSaving(false);
     }
   };
 
@@ -213,13 +233,23 @@ export const BudgetPanel = ({
         <h3 className="font-black text-slate-900 flex items-center gap-2">
           <Wallet size={18} className="text-indigo-600" /> Ngân sách dự án
         </h3>
-        {canManage && !editing && (
-          <button
-            onClick={startEdit}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-700"
-          >
-            <Pencil size={13} /> {budget > 0 ? 'Sửa ngân sách' : 'Đặt ngân sách'}
-          </button>
+        {canManage && !editing && !adding && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={startEdit}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-700"
+            >
+              <Pencil size={13} /> {planned > 0 ? 'Sửa dự kiến' : 'Đặt ngân sách'}
+            </button>
+            {planned > 0 && (
+              <button
+                onClick={() => { setAddDraft(''); setAdding(true); }}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700"
+              >
+                <Plus size={13} /> Thêm tiền
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -231,7 +261,7 @@ export const BudgetPanel = ({
             min="0"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Nhập tổng ngân sách (VND)"
+            placeholder="Ngân sách dự kiến (VND)"
             className="flex-1 min-w-[180px] px-3 py-2 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <button
@@ -245,11 +275,41 @@ export const BudgetPanel = ({
             Hủy
           </button>
         </div>
+      ) : adding ? (
+        <div className="mt-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              autoFocus
+              type="number"
+              min="0"
+              value={addDraft}
+              onChange={(e) => setAddDraft(e.target.value)}
+              placeholder="Số tiền cần thêm (VND)"
+              className="flex-1 min-w-[180px] px-3 py-2 border border-emerald-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            <button
+              onClick={saveAdd}
+              disabled={addingSaving}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 rounded-xl disabled:opacity-60"
+            >
+              Thêm
+            </button>
+            <button onClick={() => setAdding(false)} className="text-sm font-bold text-slate-500 px-3 py-2">
+              Hủy
+            </button>
+          </div>
+          {Number(addDraft) > 0 && (
+            <p className="text-xs text-slate-500 mt-2">
+              Sau khi thêm, tổng ngân sách sẽ là {formatVnd(budget + Number(addDraft))}
+              {' '}(vượt mốc dự kiến {formatVnd(added + Number(addDraft))}).
+            </p>
+          )}
+        </div>
       ) : (
         <>
           <div className="grid grid-cols-3 gap-4 mt-4">
             <div>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tổng</p>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tổng ngân sách</p>
               <p className="text-lg font-black text-slate-900 mt-0.5 break-words">{formatVnd(budget)}</p>
             </div>
             <div>
@@ -262,6 +322,18 @@ export const BudgetPanel = ({
                 {formatVnd(remaining)}
               </p>
             </div>
+          </div>
+
+          {/* Chi tiết: dự kiến vs đã thêm ngoài mốc */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-xs">
+            <span className="text-slate-500">
+              Dự kiến: <span className="font-bold text-slate-700">{formatVnd(planned)}</span>
+            </span>
+            {added > 0 && (
+              <span className="inline-flex items-center gap-1 font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                <Plus size={11} /> Đã thêm ngoài dự kiến: {formatVnd(added)}
+              </span>
+            )}
           </div>
 
           <div className="mt-3 h-2 rounded-full bg-slate-200 overflow-hidden">

@@ -44,13 +44,22 @@ public class Project
     public List<ProjectMember> Members { get; set; } = new();
 
     /// <summary>
-    /// Tổng ngân sách được cấp cho dự án (VND). Chỉ Owner/Leader đặt được.
+    /// Ngân sách DỰ KIẾN (mốc ban đầu) của dự án (VND). Chỉ Owner/Leader đặt được.
     /// Số đã chi được tính từ các BudgetRequest đã duyệt, không lưu sẵn ở đây
     /// để tránh lệch số liệu.
     /// </summary>
     [BsonElement("budget")]
     [BsonRepresentation(BsonType.Decimal128)]
     public decimal Budget { get; set; }
+
+    /// <summary>
+    /// Tiền ĐÃ THÊM ngoài mốc dự kiến (VND). Cộng dồn mỗi lần Owner/Leader bơm thêm
+    /// khi ngân sách dự kiến không đủ. Tổng ngân sách khả dụng = Budget + AddedBudget.
+    /// Giúp biết dự án đã vượt mốc dự kiến bao nhiêu.
+    /// </summary>
+    [BsonElement("addedBudget")]
+    [BsonRepresentation(BsonType.Decimal128)]
+    public decimal AddedBudget { get; set; }
 
     [BsonElement("createdAt")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

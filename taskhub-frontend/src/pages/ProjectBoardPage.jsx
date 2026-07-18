@@ -360,6 +360,17 @@ const ProjectBoardPage = () => {
     }
   };
 
+  const handleAddBudget = async (amount) => {
+    try {
+      await budgetService.addBudget(id, amount);
+      toast.success('Đã thêm tiền vào ngân sách dự án.');
+      await refreshBudget();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không thêm được tiền.');
+      throw err;
+    }
+  };
+
   const handleCreateBudgetRequest = async (payload) => {
     try {
       await budgetService.createRequest(id, payload);
@@ -824,6 +835,7 @@ const ProjectBoardPage = () => {
             displayName={displayName}
             taskTitle={taskTitleById}
             onSetBudget={handleSetBudget}
+            onAddBudget={handleAddBudget}
             onApprove={handleApproveBudget}
             onReject={handleRejectBudget}
           />

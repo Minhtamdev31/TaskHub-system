@@ -94,6 +94,7 @@ export const projectService = {
 export const budgetService = {
   get: (projectId) => apiClient.get(`/projects/${projectId}/budget`),
   setBudget: (projectId, budget) => apiClient.put(`/projects/${projectId}/budget`, { budget }),
+  addBudget: (projectId, amount) => apiClient.post(`/projects/${projectId}/budget/add`, { amount }),
   createRequest: (projectId, data) => apiClient.post(`/projects/${projectId}/budget-requests`, data),
   approve: (projectId, requestId) =>
     apiClient.post(`/projects/${projectId}/budget-requests/${requestId}/approve`),

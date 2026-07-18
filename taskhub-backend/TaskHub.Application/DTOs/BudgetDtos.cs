@@ -2,10 +2,16 @@ using TaskHub.Domain.Entities;
 
 namespace TaskHub.Application.DTOs;
 
-/// <summary>Owner/Leader đặt tổng ngân sách cho dự án.</summary>
+/// <summary>Owner/Leader đặt ngân sách DỰ KIẾN (mốc ban đầu) cho dự án.</summary>
 public sealed class SetBudgetDto
 {
     public decimal Budget { get; set; }
+}
+
+/// <summary>Owner/Leader bơm THÊM tiền ngoài mốc dự kiến khi ngân sách không đủ.</summary>
+public sealed class AddBudgetDto
+{
+    public decimal Amount { get; set; }
 }
 
 /// <summary>Thành viên gửi yêu cầu chi tiền từ một task được giao.</summary>
@@ -62,6 +68,11 @@ public sealed class BudgetRequestResponse
 /// <summary>Toàn cảnh ngân sách của dự án cho màn hình bảng dự án.</summary>
 public sealed class ProjectBudgetResponse
 {
+    /// <summary>Ngân sách dự kiến (mốc ban đầu).</summary>
+    public decimal Planned { get; set; }
+    /// <summary>Tiền đã thêm ngoài dự kiến (vượt mốc).</summary>
+    public decimal Added { get; set; }
+    /// <summary>Tổng ngân sách khả dụng = Planned + Added.</summary>
     public decimal Budget { get; set; }
     /// <summary>Tổng các yêu cầu đã duyệt.</summary>
     public decimal Spent { get; set; }

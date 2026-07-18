@@ -57,6 +57,16 @@ public class ProjectBudgetController : ControllerBase
         return ToResult(await _budgetService.SetBudgetAsync(projectId, userId, dto.Budget));
     }
 
+    [HttpPost("budget/add")]
+    public async Task<IActionResult> AddBudget(string projectId, [FromBody] AddBudgetDto dto)
+    {
+        var userId = CurrentUserId;
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+        if (dto is null) return BadRequest(new { message = "Dữ liệu không hợp lệ." });
+
+        return ToResult(await _budgetService.AddBudgetAsync(projectId, userId, dto.Amount));
+    }
+
     [HttpPost("budget-requests")]
     public async Task<IActionResult> CreateRequest(string projectId, [FromBody] CreateBudgetRequestDto dto)
     {
