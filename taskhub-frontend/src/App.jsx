@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import MainLayout from './components/MainLayout.jsx';
 import AdminRoute from './components/AdminRoute.jsx';
 import { ToastContainer } from './components/Toast.jsx';
@@ -56,6 +57,7 @@ function App() {
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
+      <Analytics />
     </Router>
   );
 }
