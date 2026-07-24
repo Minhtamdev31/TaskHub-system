@@ -17,7 +17,7 @@ public sealed class AuthResponse
         Username = user.Username ?? string.Empty;
         Email = user.Email ?? string.Empty;
         Subscription = user.Subscription ?? SubscriptionInfo.FreeActive;
-        Role = string.IsNullOrWhiteSpace(user.Role) ? "User" : user.Role;
+        Role = string.IsNullOrWhiteSpace(user.Role) ? "Member" : user.Role;
         Profile = user.Profile ?? new User.UserProfile();
         Settings = user.Settings ?? new User.UserSettings();
         Token = null;

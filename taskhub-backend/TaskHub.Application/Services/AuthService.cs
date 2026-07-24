@@ -60,7 +60,9 @@ public class AuthService : IAuthService
                     Username = uniqueUsername,
                     Email = email,
                     PasswordHash = string.Empty,
-                    Role = "User",
+                    // Dùng chung "Member" với đăng ký bằng email/mật khẩu (UserService).
+                    // Trước đây chỗ này gán "User" nên cùng một loại tài khoản lại có 2 tên vai trò.
+                    Role = "Member",
                     Subscription = SubscriptionInfo.FreeActive,
                     Profile = new User.UserProfile
                     {
