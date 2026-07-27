@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, KeyRound, ArrowLeft } from 'lucide-react';
 import { authService } from '../services/api';
 import { toast } from '../components/Toast';
+import AuthLayout from '../components/AuthLayout';
 
 const getError = (err, fallback) =>
   typeof err.response?.data === 'string'
@@ -55,7 +56,7 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
+    <AuthLayout>
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-8">
           <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
@@ -147,7 +148,7 @@ const ForgotPasswordPage = () => {
           </Link>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 

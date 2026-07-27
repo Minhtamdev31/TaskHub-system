@@ -13,7 +13,7 @@ const MainLayout = ({ children }) => {
   }, [sidebarOpen]);
 
   return (
-    <div className="bg-slate-50 min-h-[100dvh] font-sans tracking-tight text-slate-800 overflow-x-hidden">
+    <div className="app-bg min-h-[100dvh] font-sans tracking-tight text-slate-800 overflow-x-hidden">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Lớp phủ khi mở drawer trên mobile */}

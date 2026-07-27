@@ -4,6 +4,7 @@ import ReCAPTCHA from "react-google-recaptcha";
 import { authService } from '../services/api';
 import { toast } from '../components/Toast';
 import GoogleLoginButton from '../components/GoogleLoginButton';
+import AuthLayout from '../components/AuthLayout';
 
 const getError = (err, fallback) =>
   typeof err.response?.data === 'string'
@@ -59,10 +60,10 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
+    <AuthLayout>
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-8">
-          <img src="/TaskHubLogo.png" alt="TaskHub" className="h-20 w-auto mx-auto mb-4" />
+          <img src="/TaskHubLogo.png" alt="TaskHub" className="h-16 w-auto mx-auto mb-4 lg:hidden" />
           <h2 className="text-3xl font-extrabold text-slate-900">
             {step === 1 ? 'Tạo tài khoản' : 'Xác minh email'}
           </h2>
@@ -178,7 +179,7 @@ const RegisterPage = () => {
           </p>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 

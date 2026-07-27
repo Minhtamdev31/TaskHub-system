@@ -355,7 +355,7 @@ export const BudgetPanel = ({
           <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
             Chờ duyệt ({pending.length})
           </h4>
-          <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 items-start">
             {pending.map((r) => <RequestRow key={r.id} r={r} />)}
           </div>
         </div>
@@ -364,7 +364,7 @@ export const BudgetPanel = ({
       {decided.length > 0 && (
         <div className="mt-6">
           <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Đã xử lý</h4>
-          <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 items-start">
             {decided.map((r) => <RequestRow key={r.id} r={r} />)}
           </div>
         </div>
@@ -471,7 +471,7 @@ export const TaskBudgetSection = ({ task, currentUserId, data, onCreateRequest }
       ) : (
         <form onSubmit={submit} className="mt-4 space-y-3 animate-pop">
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Số tiền (VND)</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Số tiền (VND)</label>
             <input
               autoFocus
               type="number"
@@ -490,7 +490,7 @@ export const TaskBudgetSection = ({ task, currentUserId, data, onCreateRequest }
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Lý do</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Lý do</label>
             <input
               type="text"
               value={reason}
@@ -501,7 +501,7 @@ export const TaskBudgetSection = ({ task, currentUserId, data, onCreateRequest }
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Mục đích sử dụng</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Mục đích sử dụng</label>
             <textarea
               rows={2}
               value={purpose}
@@ -512,7 +512,7 @@ export const TaskBudgetSection = ({ task, currentUserId, data, onCreateRequest }
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               Mức độ quan trọng
             </label>
             <ImportanceBar value={importance} onChange={setImportance} />

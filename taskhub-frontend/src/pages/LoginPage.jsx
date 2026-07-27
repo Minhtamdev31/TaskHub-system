@@ -1,12 +1,15 @@
 import { useCallback, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import ReCAPTCHA from "react-google-recaptcha";
 import { authService } from '../services/api';
 import GoogleLoginButton from '../components/GoogleLoginButton';
+import AuthLayout from '../components/AuthLayout';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -52,10 +55,10 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
+    <AuthLayout>
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-8">
-          <img src="/TaskHubLogo.png" alt="TaskHub" className="h-20 w-auto mx-auto mb-4" />
+          <img src="/TaskHubLogo.png" alt="TaskHub" className="h-16 w-auto mx-auto mb-4 lg:hidden" />
           <h2 className="text-3xl font-extrabold text-slate-900">Chào mừng trở lại</h2>
           <p className="text-slate-500 mt-2">Đăng nhập để quản lý dự án của bạn</p>
         </div>
@@ -64,26 +67,43 @@ const LoginPage = () => {
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Địa chỉ email</label>
-            <input
-              type="email"
-              required
-              disabled={loading}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-50"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Địa chỉ email</label>
+            <div className="relative">
+              <Mail size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                type="email"
+                required
+                disabled={loading}
+                placeholder="ban@congty.vn"
+                className="w-full pl-11 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition disabled:bg-slate-50"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Mật khẩu</label>
-            <input
-              type="password"
-              required
-              disabled={loading}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-50"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Mật khẩu</label>
+            <div className="relative">
+              <Lock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                disabled={loading}
+                placeholder="••••••••"
+                className="w-full pl-11 pr-11 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition disabled:bg-slate-50"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                tabIndex={-1}
+                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           <div className="flex justify-end -mt-2">
@@ -138,7 +158,7 @@ const LoginPage = () => {
           </p>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 

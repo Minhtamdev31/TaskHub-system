@@ -12,6 +12,7 @@ import {
   ChevronRight,
   ChevronDown,
   Sparkles,
+  BarChart3,
   X,
 } from 'lucide-react';
 import { authService, taskService } from '../services/api';
@@ -66,12 +67,15 @@ const timeAgo = (date, now) => {
 
 // --- Small presentational pieces ------------------------------------------
 
-const StatCard = ({ label, value, trend, icon: Icon, tint }) => (
-  <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-sm transition-all hover:shadow-md">
+// Thẻ chỉ số: nền trắng (an toàn dark-mode) + dải gradient trên đỉnh và chip
+// icon gradient để "có màu" mà chữ vẫn đọc tốt ở cả sáng lẫn tối.
+const StatCard = ({ label, value, trend, icon: Icon, accent }) => (
+  <div className="relative bg-white border border-slate-200/80 p-4 pt-5 rounded-2xl shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 overflow-hidden">
+    <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} />
     <div className="flex items-center justify-between">
       <p className="text-sm font-semibold text-slate-500">{label}</p>
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${tint}`}>
-        <Icon size={16} />
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white bg-gradient-to-br ${accent} shadow-sm`}>
+        <Icon size={17} />
       </div>
     </div>
     <p className="text-3xl font-black text-slate-900 mt-1.5 tracking-tight">{value}</p>
@@ -225,7 +229,7 @@ const DashboardPage = () => {
       <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
-            Chào mừng trở lại, {userName}! <span className="inline-block">👋</span>
+            Chào mừng trở lại, <span className="text-brand-gradient">{userName}</span>! <span className="inline-block">👋</span>
           </h1>
           <p className="text-slate-500 text-sm mt-0.5">Đây là tổng quan công việc của bạn hôm nay</p>
         </div>
@@ -335,15 +339,15 @@ const DashboardPage = () => {
 
         {statsOpen && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4 animate-pop">
-            <StatCard label="Tổng công việc" value={stats.total} trend={tasks.length ? stats.trends.total : null} icon={ListChecks} tint="bg-blue-50 text-blue-600" />
-            <StatCard label="Hoàn thành" value={stats.done} trend={tasks.length ? stats.trends.done : null} icon={CheckCircle2} tint="bg-emerald-50 text-emerald-600" />
-            <StatCard label="Đang làm" value={stats.inProgress} trend={tasks.length ? stats.trends.inProgress : null} icon={Clock} tint="bg-amber-50 text-amber-600" />
+            <StatCard label="Tổng công việc" value={stats.total} trend={tasks.length ? stats.trends.total : null} icon={ListChecks} accent="from-blue-500 to-indigo-500" />
+            <StatCard label="Hoàn thành" value={stats.done} trend={tasks.length ? stats.trends.done : null} icon={CheckCircle2} accent="from-emerald-500 to-teal-500" />
+            <StatCard label="Đang làm" value={stats.inProgress} trend={tasks.length ? stats.trends.inProgress : null} icon={Clock} accent="from-amber-500 to-orange-500" />
             <StatCard
               label="Quá hạn"
               value={stats.overdue}
               trend={tasks.length ? (stats.overdue > 0 ? { text: 'Cần xử lý gấp', up: false } : { text: 'Không có việc trễ hạn', up: true }) : null}
               icon={AlertTriangle}
-              tint={stats.overdue > 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}
+              accent={stats.overdue > 0 ? 'from-rose-500 to-pink-500' : 'from-emerald-500 to-teal-500'}
             />
           </div>
         )}
@@ -358,24 +362,33 @@ const DashboardPage = () => {
           <h3 className="text-xl font-extrabold text-slate-900">Tiến độ tuần này</h3>
           <p className="text-slate-500 text-sm mt-0.5">Công việc hoàn thành trong tuần</p>
 
-          <div className="relative flex items-end justify-between gap-3 h-[400px] mt-6">
+          <div className="relative flex items-end justify-between gap-3 h-[320px] mt-6">
             {weeklyEmpty && (
-              <div className="absolute inset-x-0 top-0 bottom-8 flex items-center justify-center pointer-events-none">
-                <p className="text-slate-400 text-sm">Chưa có công việc hoàn thành trong tuần này.</p>
+              <div className="absolute inset-0 bottom-10 flex flex-col items-center justify-center gap-2 pointer-events-none">
+                <span className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center">
+                  <BarChart3 size={24} />
+                </span>
+                <p className="text-slate-600 text-sm font-semibold">Chưa có công việc hoàn thành tuần này</p>
+                <p className="text-slate-400 text-xs">Hoàn thành một việc để thấy tiến độ hiện ở đây.</p>
               </div>
             )}
-            {weekly.map((count, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center justify-end h-full gap-3">
-                <div className="w-full flex items-end justify-center h-full">
-                  <div
-                    className="w-full max-w-[52px] bg-blue-600 rounded-t-xl transition-all hover:bg-blue-700"
-                    style={{ height: `${(count / weeklyMax) * 100}%`, minHeight: count > 0 ? 8 : 2 }}
-                    title={`${count} công việc`}
-                  />
+            {weekly.map((count, i) => {
+              // Khi chưa có dữ liệu: cột mờ giả lập để khối trông như biểu đồ đang chờ, không trống trơn.
+              const ghost = [42, 66, 30, 54, 46, 72, 36];
+              const heightPct = weeklyEmpty ? ghost[i] : (count / weeklyMax) * 100;
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center justify-end h-full gap-3">
+                  <div className="w-full flex items-end justify-center h-full">
+                    <div
+                      className={`w-full max-w-[52px] rounded-t-xl transition-all ${weeklyEmpty ? 'bg-slate-100' : 'bar-brand-gradient hover:opacity-90'}`}
+                      style={{ height: `${heightPct}%`, minHeight: weeklyEmpty ? undefined : count > 0 ? 8 : 2 }}
+                      title={weeklyEmpty ? undefined : `${count} công việc`}
+                    />
+                  </div>
+                  <span className="text-sm font-medium text-slate-500">{WEEKDAYS[i]}</span>
                 </div>
-                <span className="text-sm font-medium text-slate-500">{WEEKDAYS[i]}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
         </div>

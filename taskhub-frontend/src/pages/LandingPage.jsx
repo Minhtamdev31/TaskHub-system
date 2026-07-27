@@ -8,8 +8,6 @@ import {
   LineChart,
   ShieldCheck,
   Lock,
-  History,
-  UserMinus,
   Eye,
   ArrowRight,
   Check,
@@ -69,35 +67,6 @@ function Reveal({ children, className = '', delay = 0 }) {
   );
 }
 
-// Khách hàng minh họa: tên bối cảnh VN + monogram SVG (logo-only, không nhãn ngành).
-const clients = [
-  { name: 'Sao Bắc Media', mono: 'SB' },
-  { name: 'Tầm Nhìn Digital', mono: 'TN' },
-  { name: 'Minh Long Co.', mono: 'ML' },
-  { name: 'Hạo Group', mono: 'HG' },
-  { name: 'Vũ Studio', mono: 'VS' },
-];
-
-const ClientMark = ({ mono, name }) => (
-  <div className="flex items-center gap-2.5 text-slate-400" title={name}>
-    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true" className="shrink-0">
-      <circle cx="17" cy="17" r="16" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <text
-        x="17"
-        y="22"
-        textAnchor="middle"
-        fontSize="12"
-        fontWeight="700"
-        fill="currentColor"
-        fontFamily="ui-sans-serif, system-ui"
-      >
-        {mono}
-      </text>
-    </svg>
-    <span className="text-sm font-semibold whitespace-nowrap">{name}</span>
-  </div>
-);
-
 const bentoFeatures = [
   {
     icon: FolderKanban,
@@ -105,11 +74,12 @@ const bentoFeatures = [
     desc: 'Kéo-thả công việc qua từng cột, đặt độ ưu tiên và hạn chót rõ ràng cho cả đội.',
     span: 'md:col-span-4',
     tone: 'light',
+    accent: 'from-blue-500 to-indigo-500',
   },
   {
     icon: KeyRound,
-    title: 'Kho tài khoản chia sẻ',
-    desc: 'Chia sẻ thông tin đăng nhập chung mà thành viên không nhìn thấy mật khẩu gốc.',
+    title: 'Kho mật khẩu mã hoá',
+    desc: 'Lưu thông tin đăng nhập quan trọng, mã hoá và mở khoá bằng mã PIN riêng của bạn.',
     span: 'md:col-span-2',
     tone: 'brand',
   },
@@ -119,6 +89,7 @@ const bentoFeatures = [
     desc: 'Chủ sở hữu, quản trị, thành viên, khách. Mỗi người thấy đúng phần của mình.',
     span: 'md:col-span-2',
     tone: 'light',
+    accent: 'from-violet-500 to-fuchsia-500',
   },
   {
     icon: LineChart,
@@ -133,31 +104,35 @@ const bentoFeatures = [
     desc: 'Báo ngay khi được giao việc, được nhắc tên hay có bình luận mới.',
     span: 'md:col-span-2',
     tone: 'light',
+    accent: 'from-amber-500 to-orange-500',
   },
 ];
 
 const securityPillars = [
   {
     icon: Lock,
-    title: 'Mã hóa khi lưu trữ',
-    desc: 'Mật khẩu được mã hóa và bảo vệ thêm bằng mã PIN riêng cho từng người.',
+    title: 'Mã hoá khi lưu trữ',
+    desc: 'Thông tin đăng nhập được mã hoá trước khi lưu, không để ở dạng văn bản thường.',
+    tint: 'bg-emerald-50 text-emerald-600',
   },
   {
-    icon: UserMinus,
-    title: 'Thu hồi quyền tức thì',
-    desc: 'Nhân viên nghỉ việc, gỡ quyền truy cập tài khoản chung chỉ trong một thao tác.',
+    icon: KeyRound,
+    title: 'Khoá bằng mã PIN',
+    desc: 'Kho được bảo vệ thêm bằng mã PIN riêng; phiên mở khoá tự hết hạn sau 15 phút.',
+    tint: 'bg-blue-50 text-blue-600',
   },
   {
-    icon: History,
-    title: 'Nhật ký kiểm toán',
-    desc: 'Biết rõ ai đã xem, dùng hay thay đổi tài khoản nào, vào lúc nào.',
+    icon: ShieldCheck,
+    title: 'Riêng tư cho từng người',
+    desc: 'Mỗi tài khoản có kho riêng — chỉ bạn mới xem được thông tin của mình.',
+    tint: 'bg-violet-50 text-violet-600',
   },
 ];
 
 const steps = [
   { num: '1', title: 'Tạo không gian làm việc', desc: 'Đăng ký bằng email hoặc Google, lập dự án đầu tiên trong vài giây.' },
-  { num: '2', title: 'Mời nhóm & phân quyền', desc: 'Thêm thành viên, gán vai trò và chia sẻ tài khoản chung an toàn.' },
-  { num: '3', title: 'Vận hành & kiểm soát', desc: 'Giao việc, theo dõi tiến độ và nắm toàn quyền kiểm soát truy cập.' },
+  { num: '2', title: 'Mời nhóm & phân quyền', desc: 'Thêm thành viên vào dự án, gán vai trò và giao việc rõ ràng.' },
+  { num: '3', title: 'Vận hành & theo dõi', desc: 'Giao việc, theo dõi tiến độ và nắm rõ toàn cảnh dự án.' },
 ];
 
 const LandingPage = () => {
@@ -211,11 +186,11 @@ const LandingPage = () => {
               Dành cho đội nhóm và doanh nghiệp
             </span>
             <h1 className="text-4xl sm:text-5xl font-extrabold leading-[1.1] tracking-tight">
-              Quản lý công việc và{' '}
-              <span className="text-brand-gradient">chia sẻ tài khoản</span> cho cả đội
+              Việc nhóm trên Kanban,{' '}
+              <span className="text-brand-gradient">mật khẩu</span> trong kho riêng
             </h1>
             <p className="text-lg text-slate-600 mt-6 max-w-xl leading-relaxed">
-              Kanban trực quan kết hợp kho mật khẩu mã hóa. Chia sẻ tài khoản chung cho nhóm mà không bao giờ để lộ mật khẩu.
+              Bảng Kanban trực quan để giao việc và theo dõi tiến độ cho cả đội, kèm kho mật khẩu mã hoá — mở khoá bằng mã PIN riêng cho thông tin đăng nhập quan trọng của bạn.
             </p>
             <div className="flex flex-wrap gap-3 mt-8">
               <Link
@@ -233,7 +208,7 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* Preview thật: thẻ tài khoản chia sẻ trong kho mật khẩu của TaskHub */}
+          {/* Preview: một mục trong kho mật khẩu cá nhân của TaskHub */}
           <Reveal delay={120}>
             <div className="relative">
               <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6">
@@ -243,8 +218,8 @@ const LandingPage = () => {
                       <KeyRound size={18} strokeWidth={2} />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-slate-800">Facebook Ads - Team Marketing</div>
-                      <div className="text-xs text-slate-400">Tài khoản dùng chung</div>
+                      <div className="text-sm font-bold text-slate-800">Tài khoản quảng cáo</div>
+                      <div className="text-xs text-slate-400">Trong kho mật khẩu của bạn</div>
                     </div>
                   </div>
                   <Lock size={16} strokeWidth={2} className="text-emerald-500" />
@@ -264,32 +239,19 @@ const LandingPage = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between mt-5 pt-4 border-t border-slate-100">
-                  <div className="flex items-center">
-                    {['NH', 'TL', 'PA'].map((m, i) => (
-                      <div
-                        key={m}
-                        className="w-8 h-8 rounded-full bg-brand-gradient text-white text-[11px] font-bold flex items-center justify-center ring-2 ring-white"
-                        style={{ marginLeft: i === 0 ? 0 : -8 }}
-                      >
-                        {m}
-                      </div>
-                    ))}
-                    <span className="ml-3 text-xs text-slate-500">Chia sẻ với 3 thành viên</span>
-                  </div>
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md">
-                    <UserMinus size={13} strokeWidth={2} /> Thu hồi
-                  </span>
+                <div className="flex items-center gap-2 mt-5 pt-4 border-t border-slate-100 text-xs text-slate-500">
+                  <ShieldCheck size={14} strokeWidth={2} className="text-emerald-500 shrink-0" />
+                  Được mã hoá và bảo vệ bằng mã PIN riêng
                 </div>
               </div>
 
               <div className="absolute -bottom-5 -left-4 bg-white rounded-xl shadow-xl border border-slate-100 px-4 py-3 flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-slate-900 flex items-center justify-center text-white">
-                  <History size={17} strokeWidth={2} />
+                  <Lock size={17} strokeWidth={2} />
                 </div>
                 <div>
-                  <div className="text-xs text-slate-400">Nhật ký truy cập</div>
-                  <div className="text-sm font-semibold text-slate-800">Phương An đã xem, 2 phút trước</div>
+                  <div className="text-xs text-slate-400">Lớp bảo vệ thứ 2</div>
+                  <div className="text-sm font-semibold text-slate-800">Mở khoá bằng mã PIN</div>
                 </div>
               </div>
             </div>
@@ -297,21 +259,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Logo wall - dưới hero, chỉ logo */}
-      <section className="border-y border-slate-100 bg-slate-50/50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
-          <p className="text-center text-sm font-medium text-slate-500 mb-7">
-            Được tin dùng bởi các đội nhóm đang tăng trưởng
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-5">
-            {clients.map((c) => (
-              <ClientMark key={c.name} mono={c.mono} name={c.name} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Khác biệt cốt lõi - split text + visual nhật ký kiểm soát */}
+      {/* Khác biệt cốt lõi - split text + visual */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           <Reveal>
@@ -319,16 +267,16 @@ const LandingPage = () => {
               Khác biệt của TaskHub
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
-              Chia sẻ tài khoản chung, giữ trọn quyền kiểm soát
+              Việc nhóm và mật khẩu, gọn trong một nơi
             </h2>
             <p className="text-slate-600 mt-5 leading-relaxed max-w-xl">
-              Các công cụ quản lý việc khác bắt bạn dán mật khẩu vào ghi chú hay nhắn qua chat. TaskHub gom việc và tài khoản chung vào một nơi, có kiểm soát thật sự.
+              Đa số công cụ quản lý việc không có chỗ cất mật khẩu; còn trình quản lý mật khẩu thì không lo được việc. TaskHub gộp cả hai, vừa đủ cho một đội nhỏ.
             </p>
             <ul className="mt-7 space-y-3">
               {[
-                'Thành viên dùng được tài khoản mà không thấy mật khẩu gốc',
-                'Gỡ quyền tức thì khi có người rời nhóm',
-                'Mọi lượt truy cập đều được ghi lại để kiểm toán',
+                'Bảng Kanban kéo-thả để giao việc và theo dõi tiến độ',
+                'Kho mật khẩu mã hoá, mở khoá bằng mã PIN riêng',
+                'Mời thành viên, phân quyền, bình luận và nhắc deadline',
               ].map((t) => (
                 <li key={t} className="flex items-start gap-3 text-slate-700">
                   <span className="mt-0.5 w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
@@ -343,28 +291,24 @@ const LandingPage = () => {
           <Reveal delay={120}>
             <div className="bg-slate-900 rounded-3xl p-7 shadow-2xl">
               <div className="flex items-center gap-2 text-slate-400 text-xs font-medium mb-5">
-                <History size={15} strokeWidth={2} /> Nhật ký kiểm toán
+                <FolderKanban size={15} strokeWidth={2} /> Bảng công việc
               </div>
               <div className="space-y-3">
                 {[
-                  { who: 'Ngọc Hân', act: 'đã xem mật khẩu CRM', time: 'Vừa xong' },
-                  { who: 'Tuấn Lê', act: 'được cấp quyền Canva Pro', time: '14:02' },
-                  { who: 'Phương An', act: 'bị thu hồi quyền Facebook Ads', time: 'Hôm qua' },
-                  { who: 'Minh Long', act: 'cập nhật mật khẩu hosting', time: 'Hôm qua' },
+                  { title: 'Thiết kế banner chiến dịch', status: 'Đang làm', dot: 'bg-blue-400' },
+                  { title: 'Viết nội dung trang giới thiệu', status: 'Cần làm', dot: 'bg-slate-400' },
+                  { title: 'Kiểm thử luồng thanh toán', status: 'Xem xét', dot: 'bg-amber-400' },
+                  { title: 'Lên lịch đăng bài mạng xã hội', status: 'Hoàn thành', dot: 'bg-emerald-400' },
                 ].map((row) => (
                   <div
-                    key={row.who + row.act}
+                    key={row.title}
                     className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3"
                   >
-                    <div className="w-8 h-8 rounded-full bg-brand-gradient text-white text-[11px] font-bold flex items-center justify-center shrink-0">
-                      {row.who.split(' ').slice(-1)[0][0]}
-                    </div>
+                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${row.dot}`} />
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm text-slate-200 truncate">
-                        <span className="font-semibold text-white">{row.who}</span> {row.act}
-                      </div>
+                      <div className="text-sm text-slate-200 truncate">{row.title}</div>
                     </div>
-                    <span className="text-xs text-slate-500 shrink-0">{row.time}</span>
+                    <span className="text-xs text-slate-500 shrink-0">{row.status}</span>
                   </div>
                 ))}
               </div>
@@ -378,7 +322,7 @@ const LandingPage = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="max-w-2xl mb-14">
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
-              Một nền tảng cho cả công việc lẫn tài khoản đội nhóm
+              Một nền tảng cho việc nhóm và mật khẩu của bạn
             </h2>
             <p className="text-slate-600 mt-4 leading-relaxed">
               Thay vì ghép Trello với một trình quản lý mật khẩu rời rạc, mọi thứ nằm gọn trong TaskHub.
@@ -397,7 +341,7 @@ const LandingPage = () => {
                 f.tone === 'light' ? 'text-slate-600' : 'text-white/80';
               const iconWrap =
                 f.tone === 'light'
-                  ? 'bg-brand-gradient text-white'
+                  ? `bg-gradient-to-br ${f.accent} text-white`
                   : 'bg-white/15 text-white';
               return (
                 <Reveal key={f.title} delay={i * 60} className={f.span}>
@@ -425,7 +369,7 @@ const LandingPage = () => {
         <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100 rounded-2xl border border-slate-100 overflow-hidden">
           {securityPillars.map((p) => (
             <div key={p.title} className="p-8">
-              <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${p.tint}`}>
                 <p.icon size={21} strokeWidth={2} />
               </div>
               <h3 className="text-lg font-bold mb-2">{p.title}</h3>
@@ -461,7 +405,7 @@ const LandingPage = () => {
         <div className="bg-brand-gradient rounded-3xl px-8 py-16 text-center text-white shadow-2xl">
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Sẵn sàng đưa đội nhóm vào một nơi an toàn?</h2>
           <p className="text-white/90 mt-4 max-w-xl mx-auto leading-relaxed">
-            Bắt đầu miễn phí, không cần thẻ tín dụng. Nâng cấp theo số thành viên khi đội của bạn lớn lên.
+            Bắt đầu miễn phí, không cần thẻ tín dụng. Nâng cấp Premium khi cần thêm tính năng.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
             <Link

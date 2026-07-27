@@ -771,12 +771,17 @@ const ProjectBoardPage = () => {
               onDragOver={(e) => { e.preventDefault(); if (dragOverColumn !== column) setDragOverColumn(column); }}
               onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverColumn(null); }}
               onDrop={() => handleDrop(column)}
-              className={`flex-1 space-y-4 min-h-[300px] max-h-[calc(100vh-13rem)] overflow-y-auto p-2 rounded-3xl border transition-colors ${
+              className={`flex-1 space-y-3 min-h-[120px] max-h-[calc(100vh-13rem)] overflow-y-auto p-2 rounded-3xl border transition-colors ${
                 dragOverColumn === column
                   ? 'bg-indigo-50 border-indigo-300 border-dashed'
                   : 'bg-slate-100/50 border-slate-200/50'
               }`}
             >
+              {visibleTasks.filter((t) => t.status === column).length === 0 && (
+                <div className="flex items-center justify-center h-20 text-xs font-medium text-slate-400 select-none">
+                  Kéo thẻ vào đây
+                </div>
+              )}
               {visibleTasks.filter((t) => t.status === column).map((task) => (
                 <div
                   key={task.id}
@@ -784,7 +789,7 @@ const ProjectBoardPage = () => {
                   onDragStart={() => handleDragStart(task.id)}
                   onDragEnd={handleDragEnd}
                   onClick={() => setSelectedTask(task)}
-                  className={`bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:border-indigo-300 transition-all cursor-grab active:cursor-grabbing group ${
+                  className={`bg-white p-4 rounded-2xl shadow-sm border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all cursor-grab active:cursor-grabbing group ${
                     draggedTaskId === task.id ? 'opacity-40' : ''
                   }`}
                 >
@@ -942,28 +947,36 @@ const ProjectBoardPage = () => {
       {/* Create Task Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <form onSubmit={handleCreateTask} className="bg-white rounded-2xl w-full max-w-md p-8 shadow-2xl relative">
-            <button type="button" onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
-              <X size={20} />
-            </button>
-            <h3 className="text-2xl font-bold mb-6 flex items-center gap-2 flex-wrap">
-              Tạo công việc
-              {newTask.status && newTask.status !== 'Todo' && (
-                <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full">vào cột "{statusLabel(newTask.status)}"</span>
-              )}
-            </h3>
-            <div className="space-y-4">
+          <form onSubmit={handleCreateTask} className="bg-white rounded-2xl w-full max-w-md shadow-2xl relative animate-pop">
+            {/* Header gọn — không dải màu, không chip icon */}
+            <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4">
+              <div className="min-w-0">
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 flex-wrap">
+                  Tạo công việc
+                  {newTask.status && newTask.status !== 'Todo' && (
+                    <span className="text-[11px] font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">cột "{statusLabel(newTask.status)}"</span>
+                  )}
+                </h3>
+                <p className="text-sm text-slate-500 mt-0.5">Thêm một việc mới vào bảng.</p>
+              </div>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="shrink-0 -mr-1 text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Tiêu đề</label>
-                <input type="text" required className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={newTask.title} onChange={(e) => setNewTask({ ...newTask, title: e.target.value })} />
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Tiêu đề</label>
+                <input type="text" required autoFocus placeholder="Ví dụ: Thiết kế trang chủ" className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition" value={newTask.title} onChange={(e) => setNewTask({ ...newTask, title: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Mô tả</label>
-                <textarea rows={3} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={newTask.description} onChange={(e) => setNewTask({ ...newTask, description: e.target.value })} />
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Mô tả</label>
+                <textarea rows={3} placeholder="Mô tả chi tiết (không bắt buộc)" className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition resize-none" value={newTask.description} onChange={(e) => setNewTask({ ...newTask, description: e.target.value })} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Độ ưu tiên</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Độ ưu tiên</label>
                   <Select
                     value={newTask.priority}
                     onChange={(v) => setNewTask({ ...newTask, priority: v })}
@@ -972,15 +985,21 @@ const ProjectBoardPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Hạn chót</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Hạn chót</label>
                   <DateTimePicker value={newTask.dueDate} onChange={(v) => setNewTask({ ...newTask, dueDate: v })} />
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-500 font-medium px-4">Hủy</button>
-              <button type="submit" disabled={creating} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 disabled:opacity-50">
-                {creating ? 'Đang tạo...' : 'Tạo công việc'}
+
+            {/* Footer */}
+            <div className="flex justify-end gap-2 px-6 py-4 mt-4 border-t border-slate-100">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-600 font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-slate-100 transition-colors">Hủy</button>
+              <button type="submit" disabled={creating || !newTask.title.trim()} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                {creating ? (
+                  <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Đang tạo...</>
+                ) : (
+                  'Tạo công việc'
+                )}
               </button>
             </div>
           </form>
@@ -1227,7 +1246,7 @@ const TaskDetailModal = ({ task, realtimeTick, members, displayName, currentUser
 
           <div className="grid grid-cols-3 gap-4 mt-5">
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Trạng thái</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Trạng thái</label>
               <Select
                 value={task.status}
                 onChange={(v) => onStatusChange(task.id, v)}
@@ -1235,7 +1254,7 @@ const TaskDetailModal = ({ task, realtimeTick, members, displayName, currentUser
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Độ ưu tiên</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Độ ưu tiên</label>
               <Select
                 value={task.priority || 'Medium'}
                 onChange={(v) => onPriorityChange(task.id, v)}
@@ -1243,7 +1262,7 @@ const TaskDetailModal = ({ task, realtimeTick, members, displayName, currentUser
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Người nhận</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Người nhận</label>
               <Select
                 value={task.userId || ''}
                 onChange={(v) => onAssign(task.id, v)}
@@ -1253,7 +1272,7 @@ const TaskDetailModal = ({ task, realtimeTick, members, displayName, currentUser
             </div>
           </div>
           <div className="mt-4">
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Hạn chót</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Hạn chót</label>
             <div className="flex items-center gap-2">
               <DateTimePicker
                 value={toDateTimeLocal(task.dueDate)}

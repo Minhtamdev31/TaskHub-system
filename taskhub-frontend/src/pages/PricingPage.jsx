@@ -105,7 +105,7 @@ const PricingPage = () => {
   return (
     <div className="space-y-10">
       <div className="text-center max-w-2xl mx-auto">
-        <h2 className="text-4xl font-black text-slate-900 tracking-tight">Chọn gói phù hợp</h2>
+        <h2 className="text-4xl font-black text-slate-900 tracking-tight">Chọn gói <span className="text-brand-gradient">phù hợp</span></h2>
         <p className="text-slate-500 mt-2 text-lg">Nâng cấp Premium để mở khóa toàn bộ sức mạnh của TaskHub.</p>
         {isPremium && (
           <div className="inline-flex items-center gap-2 mt-4 bg-green-50 text-green-700 px-4 py-2 rounded-full text-sm font-bold border border-green-200">
@@ -138,10 +138,15 @@ const PricingPage = () => {
             Chưa có gói Premium nào khả dụng. Vui lòng quay lại sau.
           </div>
         ) : (
-          plans.map((plan) => (
-            <div key={plan.id} className="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-3xl p-8 shadow-xl shadow-indigo-600/20 relative overflow-hidden">
+          plans.map((plan, idx) => (
+            <div
+              key={plan.id}
+              className={`bg-brand-gradient text-white rounded-3xl p-8 shadow-glow-blue relative overflow-hidden transition-transform hover:-translate-y-1 ${idx === 0 ? 'md:scale-[1.03] ring-2 ring-white/60' : ''}`}
+            >
+              {/* Đốm sáng trang trí góc */}
+              <div className="absolute -top-16 -right-10 w-40 h-40 rounded-full bg-white/15 blur-2xl pointer-events-none" />
               <div className="absolute top-4 right-4 bg-white/20 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                <Crown size={12} /> Premium
+                <Crown size={12} /> {idx === 0 ? 'Phổ biến nhất' : 'Premium'}
               </div>
               <h3 className="text-xl font-black">{plan.title || plan.name}</h3>
               <p className="text-3xl font-black mt-3">
