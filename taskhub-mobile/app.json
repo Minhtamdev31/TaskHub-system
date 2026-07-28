@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "TaskHub",
+    "slug": "taskhub-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "android": {
+      "package": "com.taskhub.mobile"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.taskhub.mobile"
+    }
+  }
+}
