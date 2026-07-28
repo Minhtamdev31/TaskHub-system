@@ -92,10 +92,16 @@ namespace TaskHub.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
+            // App di động (React Native) không chạy được reCAPTCHA của web. Client mobile
+            // gửi header "X-Client-Type: mobile" để bỏ qua bước captcha; rate limiter ("auth",
+            // 10 req/phút/IP) vẫn là lớp chống brute-force cho luồng này.
+            bool isMobileClient = string.Equals(
+                Request.Headers["X-Client-Type"].ToString(), "mobile", StringComparison.OrdinalIgnoreCase);
+
             // Kiểm tra xem máy này đã xác thực reCAPTCHA trong 30 phút qua chưa
             bool isRecentlyVerified = Request.Cookies.TryGetValue("Captcha_Verified", out string? verified) && verified == "true";
 
-            if (!isRecentlyVerified)
+            if (!isMobileClient && !isRecentlyVerified)
             {
                 if (!await _recaptchaService.VerifyTokenAsync(request.CaptchaToken))
                 {
