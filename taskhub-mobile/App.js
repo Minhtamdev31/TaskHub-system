@@ -3,23 +3,29 @@ import { View, ActivityIndicator, StyleSheet, BackHandler } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { getToken, clearToken, authService } from './src/api';
 import { colors } from './src/theme';
+import TabBar from './src/components/TabBar';
 import LoginScreen from './src/screens/LoginScreen';
 import ProjectsScreen from './src/screens/ProjectsScreen';
 import BoardScreen from './src/screens/BoardScreen';
 import TaskDetailScreen from './src/screens/TaskDetailScreen';
+import MyTasksScreen from './src/screens/MyTasksScreen';
+import DashboardScreen from './src/screens/DashboardScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
 
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
 
-  // Ngăn xếp điều hướng đơn giản bằng state (không cần thư viện navigation).
-  const [stack, setStack] = useState([{ name: 'projects' }]);
+  // Tab đang chọn + ngăn xếp drill-down (Board/Task) nằm trên tab đó.
+  const [tab, setTab] = useState('projects');
+  const [stack, setStack] = useState([]);
+
   const nav = useMemo(() => ({
     push: (screen) => setStack((s) => [...s, screen]),
-    pop: () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s)),
-    reset: () => setStack([{ name: 'projects' }]),
+    pop: () => setStack((s) => s.slice(0, -1)),
   }), []);
-  const current = stack[stack.length - 1];
+
+  const switchTab = (t) => { setTab(t); setStack([]); };
 
   const loadProfile = async () => {
     try {
@@ -37,10 +43,10 @@ export default function App() {
     (async () => { await loadProfile(); setLoading(false); })();
   }, []);
 
-  // Nút back cứng của Android: quay lại màn trước nếu còn trong ngăn xếp.
+  // Nút back cứng Android: quay lại nếu đang ở màn drill-down.
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (user && stack.length > 1) { nav.pop(); return true; }
+      if (user && stack.length > 0) { nav.pop(); return true; }
       return false;
     });
     return () => sub.remove();
@@ -49,14 +55,16 @@ export default function App() {
   const handleLoggedIn = async () => {
     setLoading(true);
     await loadProfile();
-    nav.reset();
+    setTab('projects');
+    setStack([]);
     setLoading(false);
   };
 
   const handleLogout = async () => {
     await clearToken();
     setUser(null);
-    nav.reset();
+    setTab('projects');
+    setStack([]);
   };
 
   if (loading) {
@@ -77,20 +85,29 @@ export default function App() {
     );
   }
 
-  let screen;
-  if (current.name === 'board') {
-    screen = <BoardScreen route={current} nav={nav} />;
-  } else if (current.name === 'task') {
-    screen = <TaskDetailScreen route={current} nav={nav} />;
+  const drilled = stack.length > 0;
+  let content;
+  if (drilled) {
+    const top = stack[stack.length - 1];
+    content = top.name === 'board'
+      ? <BoardScreen route={top} nav={nav} />
+      : <TaskDetailScreen route={top} nav={nav} />;
+  } else if (tab === 'mytasks') {
+    content = <MyTasksScreen user={user} nav={nav} />;
+  } else if (tab === 'dashboard') {
+    content = <DashboardScreen user={user} nav={nav} />;
+  } else if (tab === 'profile') {
+    content = <ProfileScreen user={user} onLogout={handleLogout} />;
   } else {
-    screen = <ProjectsScreen user={user} onLogout={handleLogout} nav={nav} />;
+    content = <ProjectsScreen user={user} nav={nav} />;
   }
 
   return (
-    <>
-      {screen}
+    <View style={{ flex: 1, backgroundColor: colors.slate50 }}>
+      {content}
+      {!drilled ? <TabBar active={tab} onChange={switchTab} /> : null}
       <StatusBar style="dark" />
-    </>
+    </View>
   );
 }
 

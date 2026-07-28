@@ -33,15 +33,7 @@ export default function ProjectsScreen({ user, onLogout, nav }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.slate50 }}>
-      <Header
-        title={`Chào, ${name}`}
-        subtitle="Dự án của bạn"
-        right={(
-          <TouchableOpacity onPress={onLogout}>
-            <Text style={styles.logout}>Đăng xuất</Text>
-          </TouchableOpacity>
-        )}
-      />
+      <Header title="Dự án" subtitle={`Chào, ${name}`} />
 
       {loading ? (
         <View style={styles.center}><ActivityIndicator color={colors.brandBlue} size="large" /></View>

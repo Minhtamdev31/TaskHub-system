@@ -42,6 +42,9 @@ export const projectService = {
 export const taskService = {
   getByProject: (projectId) => api.get(`/tasks/project/${projectId}`),
   update: (id, data) => api.put(`/tasks/${id}`, data),
+  // Tất cả task trong các dự án của tôi (kèm projectName) — dùng cho My Tasks & Dashboard.
+  getWorkspace: () => api.get('/tasks/workspace'),
+  getDashboardStats: () => api.get('/tasks/stats'),
 };
 
 export default api;
