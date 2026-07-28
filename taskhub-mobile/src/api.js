@@ -34,4 +34,14 @@ export const authService = {
   me: () => api.get('/users/me'),
 };
 
+export const projectService = {
+  getAll: () => api.get('/projects'),
+  getById: (id) => api.get(`/projects/${id}`),
+};
+
+export const taskService = {
+  getByProject: (projectId) => api.get(`/tasks/project/${projectId}`),
+  update: (id, data) => api.put(`/tasks/${id}`, data),
+};
+
 export default api;
