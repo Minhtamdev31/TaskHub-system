@@ -47,4 +47,21 @@ export const taskService = {
   getDashboardStats: () => api.get('/tasks/stats'),
 };
 
+// --- Kho mật khẩu (lớp bảo vệ 2 bằng PIN) ---
+// Token mở khoá vault chỉ giữ trong bộ nhớ (hết phiên/app là mất, phải mở lại bằng PIN).
+let vaultToken = null;
+export const setVaultToken = (t) => { vaultToken = t; };
+export const clearVaultToken = () => { vaultToken = null; };
+export const hasVaultToken = () => !!vaultToken;
+const vaultHeader = () => (vaultToken ? { headers: { 'X-Vault-Token': vaultToken } } : {});
+
+export const vaultService = {
+  pinStatus: () => api.get('/passwordvault/pin/status'),
+  setupPin: (pin) => api.post('/passwordvault/pin/setup', { pin }),
+  unlock: (pin) => api.post('/passwordvault/unlock', { pin }),
+  getAll: () => api.get('/passwordvault', vaultHeader()),
+  create: (data) => api.post('/passwordvault', data, vaultHeader()),
+  remove: (id) => api.delete(`/passwordvault/${id}`, vaultHeader()),
+};
+
 export default api;

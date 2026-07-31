@@ -10,6 +10,7 @@ import BoardScreen from './src/screens/BoardScreen';
 import TaskDetailScreen from './src/screens/TaskDetailScreen';
 import MyTasksScreen from './src/screens/MyTasksScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
+import VaultScreen from './src/screens/VaultScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 
 export default function App() {
@@ -96,6 +97,8 @@ export default function App() {
     content = <MyTasksScreen user={user} nav={nav} />;
   } else if (tab === 'dashboard') {
     content = <DashboardScreen user={user} nav={nav} />;
+  } else if (tab === 'vault') {
+    content = <VaultScreen />;
   } else if (tab === 'profile') {
     content = <ProfileScreen user={user} onLogout={handleLogout} />;
   } else {
