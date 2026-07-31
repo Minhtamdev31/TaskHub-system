@@ -47,6 +47,11 @@ export const taskService = {
   getDashboardStats: () => api.get('/tasks/stats'),
 };
 
+export const notificationService = {
+  getAll: () => api.get('/notifications'),
+  markRead: (id) => api.put(`/notifications/${id}/read`),
+};
+
 // --- Kho mật khẩu (lớp bảo vệ 2 bằng PIN) ---
 // Token mở khoá vault chỉ giữ trong bộ nhớ (hết phiên/app là mất, phải mở lại bằng PIN).
 let vaultToken = null;

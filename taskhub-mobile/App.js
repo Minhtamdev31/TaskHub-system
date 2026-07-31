@@ -11,6 +11,7 @@ import TaskDetailScreen from './src/screens/TaskDetailScreen';
 import MyTasksScreen from './src/screens/MyTasksScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import VaultScreen from './src/screens/VaultScreen';
+import NotificationsScreen from './src/screens/NotificationsScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 
 export default function App() {
@@ -90,9 +91,9 @@ export default function App() {
   let content;
   if (drilled) {
     const top = stack[stack.length - 1];
-    content = top.name === 'board'
-      ? <BoardScreen route={top} nav={nav} />
-      : <TaskDetailScreen route={top} nav={nav} />;
+    if (top.name === 'board') content = <BoardScreen route={top} nav={nav} />;
+    else if (top.name === 'notifications') content = <NotificationsScreen nav={nav} />;
+    else content = <TaskDetailScreen route={top} nav={nav} />;
   } else if (tab === 'mytasks') {
     content = <MyTasksScreen user={user} nav={nav} />;
   } else if (tab === 'dashboard') {

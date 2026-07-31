@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native';
+// (chuông thông báo dùng emoji, không cần thư viện icon)
 import Header from '../components/Header';
 import { taskService } from '../api';
 import { colors } from '../theme';
@@ -54,7 +55,15 @@ export default function DashboardScreen({ user, nav }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.slate50 }}>
-      <Header title={`Chào, ${name}`} subtitle="Tổng quan công việc" />
+      <Header
+        title={`Chào, ${name}`}
+        subtitle="Tổng quan công việc"
+        right={(
+          <TouchableOpacity onPress={() => nav.push({ name: 'notifications' })} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Text style={{ fontSize: 22 }}>🔔</Text>
+          </TouchableOpacity>
+        )}
+      />
 
       {loading ? (
         <View style={styles.center}><ActivityIndicator color={colors.brandBlue} size="large" /></View>
