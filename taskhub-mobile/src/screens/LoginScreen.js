@@ -6,7 +6,7 @@ import {
 import { authService, saveToken } from '../api';
 import { colors } from '../theme';
 
-export default function LoginScreen({ onLoggedIn }) {
+export default function LoginScreen({ onLoggedIn, onGoRegister, onGoForgot }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -88,6 +88,14 @@ export default function LoginScreen({ onLoggedIn }) {
         <Text style={styles.hint}>
           Lần đăng nhập đầu có thể mất 30–60 giây nếu server vừa khởi động lại.
         </Text>
+
+        <TouchableOpacity onPress={onGoForgot} style={{ marginTop: 18 }}>
+          <Text style={styles.forgot}>Quên mật khẩu?</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={onGoRegister} style={{ marginTop: 14 }}>
+          <Text style={styles.bottomLink}>Chưa có tài khoản? <Text style={styles.bottomLinkStrong}>Đăng ký</Text></Text>
+        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -122,4 +130,8 @@ const styles = StyleSheet.create({
   },
   buttonText: { color: colors.white, fontSize: 16, fontWeight: '700' },
   hint: { fontSize: 12, color: colors.slate400, textAlign: 'center', marginTop: 14 },
+  forgot: { textAlign: 'center', color: colors.brandBlue, fontWeight: '600', fontSize: 14 },
+  bottomLink: { textAlign: 'center', color: colors.slate500, fontSize: 14 },
+  bottomLinkStrong: { color: colors.brandBlue, fontWeight: '700' },
 });
+

@@ -1,11 +1,18 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import Header from '../components/Header';
 import { colors } from '../theme';
 
 const initials = (name) =>
   (name || '?').split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
 
-export default function ProfileScreen({ user, onLogout, nav }) {
+export default function ProfileScreen({ user, onLogout, nav, onRefresh }) {
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    if (!onRefresh) return;
+    setRefreshing(true);
+    try { await onRefresh(); } finally { setRefreshing(false); }
+  };
   const name = user?.profile?.fullName || user?.username || user?.email || 'Người dùng';
   const isPremium = !!user?.subscription?.isPremium;
 
@@ -13,7 +20,10 @@ export default function ProfileScreen({ user, onLogout, nav }) {
     <View style={{ flex: 1, backgroundColor: colors.slate50 }}>
       <Header title="Hồ sơ" />
 
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 16 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.brandBlue} />}
+      >
         <View style={styles.hero}>
           <View style={styles.avatar}><Text style={styles.avatarText}>{initials(name)}</Text></View>
           <Text style={styles.name}>{name}</Text>

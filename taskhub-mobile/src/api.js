@@ -32,6 +32,12 @@ export const authService = {
   login: (email, password) => api.post('/auth/login', { email, password }),
   googleLogin: (idToken) => api.post('/auth/google-login', { idToken }),
   me: () => api.get('/users/me'),
+  // Đăng ký: bước 1 gửi OTP, bước 2 xác minh OTP để hoàn tất.
+  register: (data) => api.post('/auth/register', data),
+  verifyRegisterOtp: (data) => api.post('/auth/verify-register-otp', data),
+  // Quên mật khẩu: gửi OTP rồi đặt lại mật khẩu.
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (data) => api.post('/auth/reset-password', data),
 };
 
 export const projectService = {

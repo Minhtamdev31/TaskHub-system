@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Linking,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import Header from '../components/Header';
 import { subscriptionService, paymentService, API_BASE } from '../api';
@@ -30,12 +30,12 @@ export default function PricingScreen({ user, nav }) {
     try {
       const res = await paymentService.checkoutPayOS({
         planId: plan.id,
-        returnUrl: `${API_BASE}/`,
-        cancelUrl: `${API_BASE}/`,
+        returnUrl: `${API_BASE}/?status=success`,
+        cancelUrl: `${API_BASE}/?status=cancel`,
       });
       const url = res.data?.checkoutUrl;
       if (url) {
-        await Linking.openURL(url); // mở trang thanh toán PayOS trong trình duyệt
+        nav.push({ name: 'checkout', url }); // mở màn QR thanh toán ngay trong app
       } else {
         setError('Không tạo được liên kết thanh toán.');
       }
@@ -89,7 +89,7 @@ export default function PricingScreen({ user, nav }) {
           )}
 
           <Text style={styles.note}>
-            Bấm "Nâng cấp ngay" sẽ mở trang thanh toán PayOS trong trình duyệt. Sau khi thanh toán xong, quay lại app và kéo làm mới ở tab Hồ sơ để thấy trạng thái Premium.
+            Bấm "Nâng cấp ngay" sẽ mở màn thanh toán có mã QR ngay trong app — quét bằng app ngân hàng để trả. Xong xuôi, vào tab Hồ sơ kéo xuống làm mới để thấy trạng thái Premium.
           </Text>
           <View style={{ height: 24 }} />
         </ScrollView>
