@@ -9,6 +9,7 @@
     "ios": "expo start --ios"
   },
   "dependencies": {
+    "@microsoft/signalr": "^8.0.7",
     "axios": "^1.7.7",
     "babel-preset-expo": "~54.0.10",
     "expo": "54.0.0",

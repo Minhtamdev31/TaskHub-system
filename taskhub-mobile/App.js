@@ -8,10 +8,14 @@ import LoginScreen from './src/screens/LoginScreen';
 import ProjectsScreen from './src/screens/ProjectsScreen';
 import BoardScreen from './src/screens/BoardScreen';
 import TaskDetailScreen from './src/screens/TaskDetailScreen';
+import CreateTaskScreen from './src/screens/CreateTaskScreen';
 import MyTasksScreen from './src/screens/MyTasksScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import VaultScreen from './src/screens/VaultScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
+import BudgetScreen from './src/screens/BudgetScreen';
+import PricingScreen from './src/screens/PricingScreen';
+import AdminScreen from './src/screens/AdminScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 
 export default function App() {
@@ -93,6 +97,10 @@ export default function App() {
     const top = stack[stack.length - 1];
     if (top.name === 'board') content = <BoardScreen route={top} nav={nav} />;
     else if (top.name === 'notifications') content = <NotificationsScreen nav={nav} />;
+    else if (top.name === 'createTask') content = <CreateTaskScreen route={top} nav={nav} />;
+    else if (top.name === 'budget') content = <BudgetScreen route={top} nav={nav} />;
+    else if (top.name === 'pricing') content = <PricingScreen user={user} nav={nav} />;
+    else if (top.name === 'admin') content = <AdminScreen nav={nav} />;
     else content = <TaskDetailScreen route={top} nav={nav} />;
   } else if (tab === 'mytasks') {
     content = <MyTasksScreen user={user} nav={nav} />;
@@ -101,7 +109,7 @@ export default function App() {
   } else if (tab === 'vault') {
     content = <VaultScreen />;
   } else if (tab === 'profile') {
-    content = <ProfileScreen user={user} onLogout={handleLogout} />;
+    content = <ProfileScreen user={user} onLogout={handleLogout} nav={nav} />;
   } else {
     content = <ProjectsScreen user={user} nav={nav} />;
   }

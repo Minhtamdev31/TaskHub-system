@@ -41,6 +41,7 @@ export const projectService = {
 
 export const taskService = {
   getByProject: (projectId) => api.get(`/tasks/project/${projectId}`),
+  create: (data) => api.post('/tasks', data),
   update: (id, data) => api.put(`/tasks/${id}`, data),
   // Tất cả task trong các dự án của tôi (kèm projectName) — dùng cho My Tasks & Dashboard.
   getWorkspace: () => api.get('/tasks/workspace'),
@@ -50,6 +51,27 @@ export const taskService = {
 export const notificationService = {
   getAll: () => api.get('/notifications'),
   markRead: (id) => api.put(`/notifications/${id}/read`),
+};
+
+export const budgetService = {
+  get: (projectId) => api.get(`/projects/${projectId}/budget`),
+  approve: (projectId, requestId) => api.post(`/projects/${projectId}/budget-requests/${requestId}/approve`),
+  reject: (projectId, requestId, reason) => api.post(`/projects/${projectId}/budget-requests/${requestId}/reject`, { reason }),
+};
+
+export const subscriptionService = {
+  getPlans: () => api.get('/subscriptionplans'),
+};
+
+export const paymentService = {
+  checkoutPayOS: (data) => api.post('/payments/checkout/payos', data),
+};
+
+// Chỉ dùng cho tài khoản Admin (bản mobile chỉ xem, không thao tác xoá/cấp quyền).
+export const adminService = {
+  getDashboard: () => api.get('/payments/admin/dashboard'),
+  getOrders: (page = 1, pageSize = 20) => api.get('/payments/admin/orders', { params: { page, pageSize } }),
+  getUsers: (page = 1, pageSize = 20) => api.get('/users', { params: { page, pageSize } }),
 };
 
 // --- Kho mật khẩu (lớp bảo vệ 2 bằng PIN) ---

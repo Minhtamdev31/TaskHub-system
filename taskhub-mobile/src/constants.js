@@ -17,6 +17,24 @@ export const priorityMeta = {
   Critical: { label: 'Khẩn cấp', bg: '#ffe4e6', text: '#be123c' },
 };
 
+// Định dạng tiền VND thủ công (Hermes có thể thiếu Intl currency): "50.000 ₫".
+export const formatVnd = (n) => `${(Number(n) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} ₫`;
+
+// Mức độ quan trọng của yêu cầu chi tiền.
+export const importanceMeta = (v) => ({
+  Low: { label: 'Thấp', bg: colors.slate100, text: colors.slate600 },
+  Medium: { label: 'Trung bình', bg: '#e0f2fe', text: '#0369a1' },
+  High: { label: 'Cao', bg: '#fef3c7', text: '#b45309' },
+  Critical: { label: 'Rất cao', bg: '#ffe4e6', text: '#be123c' },
+}[v] || { label: 'Trung bình', bg: '#e0f2fe', text: '#0369a1' });
+
+// Trạng thái yêu cầu chi tiền.
+export const reqStatusMeta = (s) => ({
+  Pending: { label: 'Chờ duyệt', bg: '#fef3c7', text: '#b45309' },
+  Approved: { label: 'Đã duyệt', bg: '#d1fae5', text: '#047857' },
+  Rejected: { label: 'Không duyệt', bg: colors.slate100, text: colors.slate500 },
+}[s] || { label: s, bg: colors.slate100, text: colors.slate500 });
+
 // Trạng thái dự án -> nhãn tiếng Việt.
 export const projectStatusLabel = (s) => ({
   Planning: 'Lên kế hoạch',

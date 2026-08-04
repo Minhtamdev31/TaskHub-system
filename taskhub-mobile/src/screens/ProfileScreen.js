@@ -5,7 +5,7 @@ import { colors } from '../theme';
 const initials = (name) =>
   (name || '?').split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
 
-export default function ProfileScreen({ user, onLogout }) {
+export default function ProfileScreen({ user, onLogout, nav }) {
   const name = user?.profile?.fullName || user?.username || user?.email || 'Người dùng';
   const isPremium = !!user?.subscription?.isPremium;
 
@@ -29,6 +29,16 @@ export default function ProfileScreen({ user, onLogout }) {
             valueColor={isPremium ? colors.emerald : colors.slate700}
           />
         </View>
+
+        <TouchableOpacity style={styles.upgrade} onPress={() => nav?.push({ name: 'pricing' })} activeOpacity={0.85}>
+          <Text style={styles.upgradeText}>{isPremium ? '👑 Quản lý gói Premium' : '⭐ Nâng cấp Premium'}</Text>
+        </TouchableOpacity>
+
+        {(user?.role || '').toLowerCase() === 'admin' ? (
+          <TouchableOpacity style={styles.admin} onPress={() => nav?.push({ name: 'admin' })} activeOpacity={0.85}>
+            <Text style={styles.adminText}>🛡️  Trang quản trị</Text>
+          </TouchableOpacity>
+        ) : null}
 
         <TouchableOpacity style={styles.logout} onPress={onLogout} activeOpacity={0.85}>
           <Text style={styles.logoutText}>Đăng xuất</Text>
@@ -63,8 +73,18 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 11 },
   rowLabel: { fontSize: 14, color: colors.slate500 },
   rowValue: { fontSize: 14, fontWeight: '700', color: colors.slate900 },
+  upgrade: {
+    marginTop: 20, backgroundColor: colors.brandBlue, borderRadius: 12,
+    paddingVertical: 14, alignItems: 'center',
+  },
+  upgradeText: { color: colors.white, fontWeight: '700', fontSize: 15 },
+  admin: {
+    marginTop: 12, borderWidth: 1, borderColor: colors.slate300, borderRadius: 12,
+    paddingVertical: 14, alignItems: 'center', backgroundColor: colors.white,
+  },
+  adminText: { color: colors.slate700, fontWeight: '700', fontSize: 15 },
   logout: {
-    marginTop: 24, borderWidth: 1, borderColor: colors.slate300, borderRadius: 12,
+    marginTop: 12, borderWidth: 1, borderColor: colors.slate300, borderRadius: 12,
     paddingVertical: 14, alignItems: 'center', backgroundColor: colors.white,
   },
   logoutText: { color: colors.rose, fontWeight: '700', fontSize: 15 },

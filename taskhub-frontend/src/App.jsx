@@ -16,6 +16,7 @@ import ProjectBoardPage from './pages/ProjectBoardPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
 import AdminDashboardPage from './pages/AdminDashboardPage.jsx';
+import RevenueReportPage from './pages/RevenueReportPage.jsx';
 import CalendarPage from './pages/CalendarPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import MyTasksPage from './pages/MyTasksPage.jsx';
@@ -54,6 +55,7 @@ function App() {
         </Route>
 
         <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
+        <Route path="/admin/revenue" element={<AdminRoute><RevenueReportPage /></AdminRoute>} />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

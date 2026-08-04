@@ -2,10 +2,15 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native';
+// nút tạo dùng chữ, không cần thư viện icon
+import { HubConnectionBuilder } from '@microsoft/signalr';
 import Header from '../components/Header';
-import { taskService } from '../api';
+import { taskService, getToken } from '../api';
 import { colors } from '../theme';
 import { TASK_STATUSES, statusMeta, priorityMeta } from '../constants';
+
+// Hub realtime luôn chạy trên Render (kết nối thẳng, không qua /api).
+const HUB_URL = 'https://taskhub-system.onrender.com/hubs/project';
 
 const formatDue = (iso) => {
   if (!iso) return null;
@@ -36,6 +41,26 @@ export default function BoardScreen({ route, nav }) {
     (async () => { await load(); setLoading(false); })();
   }, [load]);
 
+  // Realtime: tự tải lại bảng khi có thay đổi trong dự án (task/comment).
+  // Nếu hub chưa sẵn sàng hoặc lỗi, bảng vẫn dùng được nhờ kéo làm mới.
+  useEffect(() => {
+    let connection;
+    let stopped = false;
+    (async () => {
+      try {
+        connection = new HubConnectionBuilder()
+          .withUrl(HUB_URL, { accessTokenFactory: async () => (await getToken()) || '' })
+          .withAutomaticReconnect()
+          .build();
+        connection.on('projectChanged', () => { load(); });
+        await connection.start();
+        if (!stopped) await connection.invoke('JoinProject', id);
+        connection.onreconnected(() => { connection.invoke('JoinProject', id).catch(() => {}); });
+      } catch { /* im lặng */ }
+    })();
+    return () => { stopped = true; if (connection) connection.stop().catch(() => {}); };
+  }, [id, load]);
+
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
   // Cập nhật 1 task trong danh sách (gọi từ màn chi tiết sau khi đổi trạng thái).
@@ -43,9 +68,23 @@ export default function BoardScreen({ route, nav }) {
     setTasks((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
   };
 
+  // Thêm task mới (gọi từ màn Tạo công việc).
+  const handleCreated = (task) => {
+    if (task) setTasks((prev) => [...prev, task]);
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.slate50 }}>
-      <Header title={projectName || 'Bảng công việc'} subtitle="Công việc theo trạng thái" onBack={nav.pop} />
+      <Header
+        title={projectName || 'Bảng công việc'}
+        subtitle="Công việc theo trạng thái"
+        onBack={nav.pop}
+        right={(
+          <TouchableOpacity onPress={() => nav.push({ name: 'createTask', projectId: id, onCreated: handleCreated })}>
+            <Text style={styles.addBtn}>＋ Tạo</Text>
+          </TouchableOpacity>
+        )}
+      />
 
       {loading ? (
         <View style={styles.center}><ActivityIndicator color={colors.brandBlue} size="large" /></View>
@@ -61,6 +100,15 @@ export default function BoardScreen({ route, nav }) {
           contentContainerStyle={{ padding: 16 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandBlue} />}
         >
+          <TouchableOpacity
+            style={styles.budgetLink}
+            activeOpacity={0.85}
+            onPress={() => nav.push({ name: 'budget', projectId: id, projectName })}
+          >
+            <Text style={styles.budgetText}>💰  Ngân sách dự án</Text>
+            <Text style={styles.budgetChev}>›</Text>
+          </TouchableOpacity>
+
           {TASK_STATUSES.map((status) => {
             const meta = statusMeta[status];
             const items = tasks.filter((t) => t.status === status);
@@ -113,6 +161,14 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   err: { color: colors.rose, textAlign: 'center', marginBottom: 12 },
   retry: { color: colors.brandBlue, fontWeight: '700' },
+  addBtn: { color: colors.brandBlue, fontWeight: '800', fontSize: 15 },
+  budgetLink: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.white, borderRadius: 14, borderWidth: 1, borderColor: colors.slate200,
+    paddingHorizontal: 16, paddingVertical: 14, marginBottom: 20,
+  },
+  budgetText: { fontSize: 15, fontWeight: '700', color: colors.slate700 },
+  budgetChev: { fontSize: 22, color: colors.slate300 },
   section: { marginBottom: 22 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   dot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },

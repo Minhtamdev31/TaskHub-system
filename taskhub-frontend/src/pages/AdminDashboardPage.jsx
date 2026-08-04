@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   LayoutDashboard, Users, CreditCard, Package,
   TrendingUp, ShoppingCart, Crown, Trash2, Plus, X, ShieldCheck, Shield, Server, Zap,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, FileText,
 } from 'lucide-react';
 import { adminService } from '../services/api';
 import { toast } from '../components/Toast';
@@ -190,6 +191,22 @@ const OverviewTab = () => {
           </div>
         ))}
       </div>
+
+      <Link
+        to="/admin/revenue"
+        className="flex items-center justify-between gap-3 bg-white border border-slate-200 rounded-2xl px-6 py-4 shadow-sm hover:border-blue-300 hover:shadow-md transition-all group"
+      >
+        <span className="flex items-center gap-3">
+          <span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <FileText size={20} />
+          </span>
+          <span>
+            <span className="block font-bold text-slate-900">Báo cáo doanh thu</span>
+            <span className="block text-xs text-slate-500">Xem tổng hợp đơn đã bán · xuất CSV · in/lưu PDF</span>
+          </span>
+        </span>
+        <ChevronRight size={18} className="text-slate-400 group-hover:text-blue-600 transition-colors" />
+      </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
