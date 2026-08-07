@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { View, ActivityIndicator, StyleSheet, BackHandler } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { getToken, clearToken, authService } from './src/api';
 import { colors } from './src/theme';
@@ -16,6 +17,7 @@ import DashboardScreen from './src/screens/DashboardScreen';
 import VaultScreen from './src/screens/VaultScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
 import BudgetScreen from './src/screens/BudgetScreen';
+import ProjectDashboardScreen from './src/screens/ProjectDashboardScreen';
 import PricingScreen from './src/screens/PricingScreen';
 import CheckoutScreen from './src/screens/CheckoutScreen';
 import AdminScreen from './src/screens/AdminScreen';
@@ -82,10 +84,12 @@ export default function App() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.brandBlue} />
-        <StatusBar style="dark" />
-      </View>
+      <SafeAreaProvider>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.brandBlue} />
+          <StatusBar style="dark" />
+        </View>
+      </SafeAreaProvider>
     );
   }
 
@@ -105,10 +109,10 @@ export default function App() {
       );
     }
     return (
-      <>
+      <SafeAreaProvider>
         {auth}
         <StatusBar style="dark" />
-      </>
+      </SafeAreaProvider>
     );
   }
 
@@ -120,6 +124,7 @@ export default function App() {
     else if (top.name === 'notifications') content = <NotificationsScreen nav={nav} />;
     else if (top.name === 'createTask') content = <CreateTaskScreen route={top} nav={nav} />;
     else if (top.name === 'budget') content = <BudgetScreen route={top} nav={nav} />;
+    else if (top.name === 'projectDashboard') content = <ProjectDashboardScreen route={top} nav={nav} />;
     else if (top.name === 'pricing') content = <PricingScreen user={user} nav={nav} />;
     else if (top.name === 'checkout') content = <CheckoutScreen route={top} nav={nav} />;
     else if (top.name === 'admin') content = <AdminScreen nav={nav} />;
@@ -137,11 +142,13 @@ export default function App() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.slate50 }}>
-      {content}
-      {!drilled ? <TabBar active={tab} onChange={switchTab} /> : null}
-      <StatusBar style="dark" />
-    </View>
+    <SafeAreaProvider>
+      <View style={{ flex: 1, backgroundColor: colors.slate50 }}>
+        {content}
+        {!drilled ? <TabBar active={tab} onChange={switchTab} /> : null}
+        <StatusBar style="dark" />
+      </View>
+    </SafeAreaProvider>
   );
 }
 

@@ -13,6 +13,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import ProjectBoardPage from './pages/ProjectBoardPage.jsx';
+import ProjectDashboardPage from './pages/ProjectDashboardPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
 import AdminDashboardPage from './pages/AdminDashboardPage.jsx';
@@ -48,6 +49,7 @@ function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/projects" element={<ProjectListPage />} />
           <Route path="/projects/:id" element={<ProjectBoardPage />} />
+          <Route path="/projects/:id/dashboard" element={<ProjectDashboardPage />} />
           <Route path="/vault" element={<PasswordVaultPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/pricing" element={<PricingPage />} />

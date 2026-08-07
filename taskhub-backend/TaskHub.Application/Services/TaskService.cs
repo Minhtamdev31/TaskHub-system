@@ -91,6 +91,7 @@ public class TaskService : ITaskService
             Priority = ValidPriorities.Contains(dto.Priority, StringComparer.OrdinalIgnoreCase) ? dto.Priority : "Medium",
             DueDate = dto.DueDate,
             UserId = userId,
+            CreatedById = userId,
             ProjectId = dto.ProjectId.Trim(),
             CreatedAt = createdAt,
             StatusHistory = new List<StatusChange> { new() { Status = status, ChangedAt = createdAt } }

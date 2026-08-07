@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import Header from '../components/Header';
+import GradientButton from '../components/GradientButton';
 import { subscriptionService, paymentService, API_BASE } from '../api';
 import { colors } from '../theme';
 import { formatVnd } from '../constants';
@@ -74,16 +75,13 @@ export default function PricingScreen({ user, nav }) {
                   <Text style={styles.duration}> / {plan.durationDays} ngày</Text>
                 </Text>
                 {plan.description ? <Text style={styles.desc}>{plan.description}</Text> : null}
-                <TouchableOpacity
-                  style={[styles.btn, busy === plan.id && { opacity: 0.6 }]}
+                <GradientButton
+                  title="Nâng cấp ngay"
                   onPress={() => upgrade(plan)}
+                  loading={busy === plan.id}
                   disabled={!!busy}
-                  activeOpacity={0.85}
-                >
-                  {busy === plan.id
-                    ? <ActivityIndicator color={colors.white} />
-                    : <Text style={styles.btnText}>Nâng cấp ngay</Text>}
-                </TouchableOpacity>
+                  style={{ marginTop: 16 }}
+                />
               </View>
             ))
           )}

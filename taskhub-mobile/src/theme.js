@@ -17,3 +17,13 @@ export const colors = {
   roseBg: '#fff1f2',
   emerald: '#059669',
 };
+
+// Các cặp màu gradient (đồng bộ web). Dùng với expo-linear-gradient.
+export const gradients = {
+  brand: ['#14e1a3', '#2563eb'],
+  blue: ['#3b82f6', '#4f46e5'],
+  emerald: ['#10b981', '#0d9488'],
+  amber: ['#f59e0b', '#f97316'],
+  rose: ['#f43f5e', '#ec4899'],
+  violet: ['#7c3aed', '#4f46e5'],
+};

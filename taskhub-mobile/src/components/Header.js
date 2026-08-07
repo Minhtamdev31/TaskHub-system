@@ -1,10 +1,12 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme';
 
 // Thanh tiêu đề đơn giản: nút quay lại (tuỳ chọn) + tiêu đề + action bên phải (tuỳ chọn).
 export default function Header({ title, subtitle, onBack, right }) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, { paddingTop: insets.top + 10 }]}>
       <View style={styles.row}>
         {onBack ? (
           <TouchableOpacity onPress={onBack} style={styles.back} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -23,7 +25,7 @@ export default function Header({ title, subtitle, onBack, right }) {
 
 const styles = StyleSheet.create({
   wrap: {
-    paddingTop: 56, paddingBottom: 14, paddingHorizontal: 16,
+    paddingBottom: 14, paddingHorizontal: 16,
     backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.slate200,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },

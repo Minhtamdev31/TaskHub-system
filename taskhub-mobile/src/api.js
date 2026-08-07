@@ -43,15 +43,22 @@ export const authService = {
 export const projectService = {
   getAll: () => api.get('/projects'),
   getById: (id) => api.get(`/projects/${id}`),
+  aiSummary: (id) => api.get(`/projects/${id}/ai-summary`),
+  getDashboard: (id) => api.get(`/projects/${id}/dashboard`),
+  memberContributions: (id) => api.get(`/projects/${id}/member-contributions`),
 };
 
 export const taskService = {
   getByProject: (projectId) => api.get(`/tasks/project/${projectId}`),
   create: (data) => api.post('/tasks', data),
   update: (id, data) => api.put(`/tasks/${id}`, data),
+  remove: (id) => api.delete(`/tasks/${id}`),
   // Tất cả task trong các dự án của tôi (kèm projectName) — dùng cho My Tasks & Dashboard.
   getWorkspace: () => api.get('/tasks/workspace'),
   getDashboardStats: () => api.get('/tasks/stats'),
+  // AI (Premium)
+  aiMyWork: () => api.get('/tasks/ai-summary'),
+  aiAnalyze: (id) => api.get(`/tasks/${id}/ai-analysis`),
 };
 
 export const notificationService = {

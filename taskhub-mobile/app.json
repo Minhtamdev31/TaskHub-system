@@ -5,13 +5,23 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [
+      "@react-native-google-signin/google-signin"
+    ],
     "android": {
       "package": "com.taskhub.mobile"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.taskhub.mobile"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "34c9a044-ca60-47fb-a20e-55e29be68d31"
+      }
     }
   }
 }

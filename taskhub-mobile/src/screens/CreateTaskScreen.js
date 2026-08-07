@@ -4,6 +4,7 @@ import {
   ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import Header from '../components/Header';
+import GradientButton from '../components/GradientButton';
 import { taskService } from '../api';
 import { colors } from '../theme';
 import { TASK_STATUSES, statusMeta, priorityMeta } from '../constants';
@@ -96,9 +97,7 @@ export default function CreateTaskScreen({ route, nav }) {
             })}
           </View>
 
-          <TouchableOpacity style={[styles.submit, saving && { opacity: 0.6 }]} onPress={submit} disabled={saving} activeOpacity={0.85}>
-            {saving ? <ActivityIndicator color={colors.white} /> : <Text style={styles.submitText}>Tạo công việc</Text>}
-          </TouchableOpacity>
+          <GradientButton title="Tạo công việc" onPress={submit} loading={saving} style={{ marginTop: 28 }} />
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

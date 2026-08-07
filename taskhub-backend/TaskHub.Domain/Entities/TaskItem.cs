@@ -29,6 +29,11 @@ public class TaskItem
     [BsonRepresentation(BsonType.ObjectId)]
     public string UserId { get; set; } = string.Empty;
 
+    // Người tạo công việc (giữ nguyên kể cả khi giao lại cho người khác).
+    // Lưu dạng chuỗi (không ép ObjectId) để task cũ thiếu trường vẫn an toàn.
+    [BsonElement("createdById")]
+    public string CreatedById { get; set; } = string.Empty;
+
     [BsonElement("projectId")]
     [BsonRepresentation(BsonType.ObjectId)]
     public string ProjectId { get; set; } = string.Empty;

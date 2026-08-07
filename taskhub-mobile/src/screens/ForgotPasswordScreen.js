@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { authService } from '../api';
 import { colors } from '../theme';
+import GradientButton from '../components/GradientButton';
 
 const getErr = (e, fb) =>
   (typeof e.response?.data === 'string' ? e.response.data : e.response?.data?.message) || e.message || fb;
@@ -60,9 +61,7 @@ export default function ForgotPasswordScreen({ onDone, onGoLogin }) {
           <>
             <TextInput style={styles.input} value={email} onChangeText={setEmail}
               placeholder="Email" placeholderTextColor={colors.slate400} autoCapitalize="none" keyboardType="email-address" editable={!loading} />
-            <TouchableOpacity style={[styles.button, loading && { opacity: 0.6 }]} onPress={sendOtp} disabled={loading} activeOpacity={0.85}>
-              {loading ? <ActivityIndicator color={colors.white} /> : <Text style={styles.buttonText}>Gửi mã đặt lại</Text>}
-            </TouchableOpacity>
+            <GradientButton title="Gửi mã đặt lại" onPress={sendOtp} loading={loading} />
           </>
         ) : (
           <>
@@ -72,9 +71,7 @@ export default function ForgotPasswordScreen({ onDone, onGoLogin }) {
               placeholder="Mật khẩu mới (≥ 6 ký tự)" placeholderTextColor={colors.slate400} secureTextEntry editable={!loading} />
             <TextInput style={styles.input} value={confirm} onChangeText={setConfirm}
               placeholder="Nhập lại mật khẩu mới" placeholderTextColor={colors.slate400} secureTextEntry editable={!loading} />
-            <TouchableOpacity style={[styles.button, loading && { opacity: 0.6 }]} onPress={reset} disabled={loading} activeOpacity={0.85}>
-              {loading ? <ActivityIndicator color={colors.white} /> : <Text style={styles.buttonText}>Đặt lại mật khẩu</Text>}
-            </TouchableOpacity>
+            <GradientButton title="Đặt lại mật khẩu" onPress={reset} loading={loading} />
             <TouchableOpacity onPress={() => { setStep(1); setError(''); }}>
               <Text style={styles.link}>Chưa nhận được mã? Thử lại</Text>
             </TouchableOpacity>

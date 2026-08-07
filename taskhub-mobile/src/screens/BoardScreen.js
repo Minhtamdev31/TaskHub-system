@@ -5,7 +5,8 @@ import {
 // nút tạo dùng chữ, không cần thư viện icon
 import { HubConnectionBuilder } from '@microsoft/signalr';
 import Header from '../components/Header';
-import { taskService, getToken } from '../api';
+import AiModal from '../components/AiModal';
+import { taskService, projectService, getToken } from '../api';
 import { colors } from '../theme';
 import { TASK_STATUSES, statusMeta, priorityMeta } from '../constants';
 
@@ -26,6 +27,24 @@ export default function BoardScreen({ route, nav }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+
+  // Tóm tắt AI cho dự án
+  const [aiVisible, setAiVisible] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiText, setAiText] = useState('');
+  const [aiError, setAiError] = useState('');
+  const [aiUpgrade, setAiUpgrade] = useState(false);
+
+  const openAi = async () => {
+    setAiVisible(true); setAiLoading(true); setAiError(''); setAiUpgrade(false); setAiText('');
+    try {
+      const res = await projectService.aiSummary(id);
+      setAiText(res.data?.summary || '');
+    } catch (e) {
+      if (e.response?.data?.requiresUpgrade) setAiUpgrade(true);
+      else setAiError(e.response?.data?.message || e.message || 'Không tạo được tóm tắt.');
+    } finally { setAiLoading(false); }
+  };
 
   const load = useCallback(async () => {
     setError('');
@@ -73,6 +92,11 @@ export default function BoardScreen({ route, nav }) {
     if (task) setTasks((prev) => [...prev, task]);
   };
 
+  // Bỏ task khỏi bảng khi bị xoá ở màn chi tiết.
+  const handleDeleted = (taskId) => {
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.slate50 }}>
       <Header
@@ -80,9 +104,14 @@ export default function BoardScreen({ route, nav }) {
         subtitle="Công việc theo trạng thái"
         onBack={nav.pop}
         right={(
-          <TouchableOpacity onPress={() => nav.push({ name: 'createTask', projectId: id, onCreated: handleCreated })}>
-            <Text style={styles.addBtn}>＋ Tạo</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+            <TouchableOpacity onPress={openAi} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Text style={{ fontSize: 20 }}>✨</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => nav.push({ name: 'createTask', projectId: id, onCreated: handleCreated })}>
+              <Text style={styles.addBtn}>＋ Tạo</Text>
+            </TouchableOpacity>
+          </View>
         )}
       />
 
@@ -100,6 +129,15 @@ export default function BoardScreen({ route, nav }) {
           contentContainerStyle={{ padding: 16 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandBlue} />}
         >
+          <TouchableOpacity
+            style={styles.budgetLink}
+            activeOpacity={0.85}
+            onPress={() => nav.push({ name: 'projectDashboard', id, projectName })}
+          >
+            <Text style={styles.budgetText}>📊  Tổng quan dự án</Text>
+            <Text style={styles.budgetChev}>›</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.budgetLink}
             activeOpacity={0.85}
@@ -131,7 +169,7 @@ export default function BoardScreen({ route, nav }) {
                         key={task.id}
                         style={styles.card}
                         activeOpacity={0.8}
-                        onPress={() => nav.push({ name: 'task', task, onTaskUpdated: handleTaskUpdated })}
+                        onPress={() => nav.push({ name: 'task', task, onTaskUpdated: handleTaskUpdated, onTaskDeleted: handleDeleted })}
                       >
                         <View style={styles.cardTop}>
                           <Text style={styles.cardTitle} numberOfLines={2}>{task.title}</Text>
@@ -153,6 +191,17 @@ export default function BoardScreen({ route, nav }) {
           <View style={{ height: 24 }} />
         </ScrollView>
       )}
+
+      <AiModal
+        visible={aiVisible}
+        title="Tóm tắt dự án bằng AI"
+        loading={aiLoading}
+        text={aiText}
+        error={aiError}
+        upgrade={aiUpgrade}
+        onClose={() => setAiVisible(false)}
+        onRetry={openAi}
+      />
     </View>
   );
 }

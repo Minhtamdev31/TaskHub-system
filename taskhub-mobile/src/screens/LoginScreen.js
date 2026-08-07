@@ -3,8 +3,11 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { authService, saveToken } from '../api';
-import { colors } from '../theme';
+import { colors, gradients } from '../theme';
+import { getGoogleIdToken, statusCodes } from '../google';
+import GradientButton from '../components/GradientButton';
 
 export default function LoginScreen({ onLoggedIn, onGoRegister, onGoForgot }) {
   const [email, setEmail] = useState('');
@@ -12,6 +15,23 @@ export default function LoginScreen({ onLoggedIn, onGoRegister, onGoForgot }) {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const handleGoogle = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const idToken = await getGoogleIdToken();
+      if (!idToken) { setError('Không lấy được Google token.'); return; }
+      const res = await authService.googleLogin(idToken);
+      await saveToken(res.data.token);
+      onLoggedIn();
+    } catch (e) {
+      if (e?.code === statusCodes.SIGN_IN_CANCELLED) { /* người dùng huỷ */ }
+      else setError(e.response?.data?.message || e.message || 'Đăng nhập Google thất bại.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -37,9 +57,9 @@ export default function LoginScreen({ onLoggedIn, onGoRegister, onGoForgot }) {
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.slate50 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.logo}>
+        <LinearGradient colors={gradients.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.logo}>
           <Text style={styles.logoText}>TH</Text>
-        </View>
+        </LinearGradient>
         <Text style={styles.title}>Chào mừng trở lại</Text>
         <Text style={styles.subtitle}>Đăng nhập để quản lý dự án của bạn</Text>
 
@@ -76,13 +96,17 @@ export default function LoginScreen({ onLoggedIn, onGoRegister, onGoForgot }) {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={[styles.button, loading && { opacity: 0.6 }]}
-          onPress={handleLogin}
-          disabled={loading}
-          activeOpacity={0.85}
-        >
-          {loading ? <ActivityIndicator color={colors.white} /> : <Text style={styles.buttonText}>Đăng nhập</Text>}
+        <GradientButton title="Đăng nhập" onPress={handleLogin} loading={loading} />
+
+        <View style={styles.dividerRow}>
+          <View style={styles.divLine} />
+          <Text style={styles.divText}>hoặc</Text>
+          <View style={styles.divLine} />
+        </View>
+
+        <TouchableOpacity style={styles.googleBtn} onPress={handleGoogle} disabled={loading} activeOpacity={0.85}>
+          <Text style={styles.googleG}>G</Text>
+          <Text style={styles.googleText}>Đăng nhập bằng Google</Text>
         </TouchableOpacity>
 
         <Text style={styles.hint}>
@@ -130,6 +154,15 @@ const styles = StyleSheet.create({
   },
   buttonText: { color: colors.white, fontSize: 16, fontWeight: '700' },
   hint: { fontSize: 12, color: colors.slate400, textAlign: 'center', marginTop: 14 },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', marginTop: 18, marginBottom: 14 },
+  divLine: { flex: 1, height: 1, backgroundColor: colors.slate200 },
+  divText: { marginHorizontal: 10, color: colors.slate400, fontSize: 12, fontWeight: '600' },
+  googleBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    borderWidth: 1, borderColor: colors.slate300, borderRadius: 12, paddingVertical: 13, backgroundColor: colors.white,
+  },
+  googleG: { fontSize: 18, fontWeight: '800', color: '#4285F4' },
+  googleText: { fontSize: 15, fontWeight: '700', color: colors.slate700 },
   forgot: { textAlign: 'center', color: colors.brandBlue, fontWeight: '600', fontSize: 14 },
   bottomLink: { textAlign: 'center', color: colors.slate500, fontSize: 14 },
   bottomLinkStrong: { color: colors.brandBlue, fontWeight: '700' },

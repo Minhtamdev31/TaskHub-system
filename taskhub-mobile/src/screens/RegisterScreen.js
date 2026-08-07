@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { authService } from '../api';
 import { colors } from '../theme';
+import GradientButton from '../components/GradientButton';
 
 const getErr = (e, fb) =>
   (typeof e.response?.data === 'string' ? e.response.data : e.response?.data?.message) || e.message || fb;
@@ -68,17 +69,13 @@ export default function RegisterScreen({ onRegistered, onGoLogin }) {
               placeholder="Mật khẩu (≥ 6 ký tự)" placeholderTextColor={colors.slate400} secureTextEntry editable={!loading} />
             <TextInput style={styles.input} value={form.confirm} onChangeText={(v) => setForm({ ...form, confirm: v })}
               placeholder="Nhập lại mật khẩu" placeholderTextColor={colors.slate400} secureTextEntry editable={!loading} />
-            <TouchableOpacity style={[styles.button, loading && { opacity: 0.6 }]} onPress={submitInfo} disabled={loading} activeOpacity={0.85}>
-              {loading ? <ActivityIndicator color={colors.white} /> : <Text style={styles.buttonText}>Gửi mã OTP</Text>}
-            </TouchableOpacity>
+            <GradientButton title="Gửi mã OTP" onPress={submitInfo} loading={loading} />
           </>
         ) : (
           <>
             <TextInput style={[styles.input, styles.otp]} value={otp} onChangeText={(v) => setOtp(v.replace(/\D/g, ''))}
               placeholder="Mã 6 số" placeholderTextColor={colors.slate400} keyboardType="number-pad" maxLength={6} editable={!loading} />
-            <TouchableOpacity style={[styles.button, loading && { opacity: 0.6 }]} onPress={submitOtp} disabled={loading} activeOpacity={0.85}>
-              {loading ? <ActivityIndicator color={colors.white} /> : <Text style={styles.buttonText}>Xác minh & hoàn tất</Text>}
-            </TouchableOpacity>
+            <GradientButton title="Xác minh & hoàn tất" onPress={submitOtp} loading={loading} />
             <TouchableOpacity onPress={() => { setStep(1); setError(''); }}>
               <Text style={styles.link}>Quay lại</Text>
             </TouchableOpacity>

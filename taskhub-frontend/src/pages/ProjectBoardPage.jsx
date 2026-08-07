@@ -10,7 +10,7 @@ import { HubConnectionBuilder } from '@microsoft/signalr';
 
 // Backend (SignalR hub) luôn chạy trên Render. Kết nối thẳng, không qua proxy /api của Vercel.
 const HUB_URL = 'https://taskhub-system.onrender.com/hubs/project';
-import { Plus, MoreHorizontal, Clock, X, ArrowLeft, Trash2, Send, UserPlus, MessageSquare, Search, Paperclip, Download, FileText, Users, Crown, Shield, Sparkles, Move, ChevronDown, Check } from 'lucide-react';
+import { Plus, MoreHorizontal, Clock, X, ArrowLeft, Trash2, Send, UserPlus, MessageSquare, Search, Paperclip, Download, FileText, Users, Crown, Shield, Sparkles, Move, ChevronDown, Check, BarChart3 } from 'lucide-react';
 import Avatar from '../components/Avatar';
 import Select from '../components/Select';
 import DateTimePicker from '../components/DateTimePicker';
@@ -701,6 +701,10 @@ const ProjectBoardPage = () => {
             </button>
             {toolsOpen && (
               <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl py-1.5 z-30">
+                <Link to={`/projects/${id}/dashboard`} onClick={() => setToolsOpen(false)} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                  <BarChart3 size={16} className="text-indigo-600" /> Tổng quan dự án
+                </Link>
+                <div className="my-1 border-t border-slate-100" />
                 <button onClick={() => { setToolsOpen(false); openCreate('Todo'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
                   <Plus size={16} className="text-indigo-600" /> Tạo công việc
                 </button>

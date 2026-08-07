@@ -44,6 +44,10 @@ export default function MyTasksScreen({ user, nav }) {
     setTasks((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
   };
 
+  const handleTaskDeleted = (taskId) => {
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.slate50 }}>
       <Header title="Việc của tôi" subtitle="Công việc được giao cho bạn" />
@@ -72,7 +76,7 @@ export default function MyTasksScreen({ user, nav }) {
               <TouchableOpacity
                 style={styles.card}
                 activeOpacity={0.8}
-                onPress={() => nav.push({ name: 'task', task: item, onTaskUpdated: handleTaskUpdated })}
+                onPress={() => nav.push({ name: 'task', task: item, onTaskUpdated: handleTaskUpdated, onTaskDeleted: handleTaskDeleted })}
               >
                 <View style={styles.top}>
                   <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
