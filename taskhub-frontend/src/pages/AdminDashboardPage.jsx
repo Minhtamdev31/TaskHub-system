@@ -13,6 +13,7 @@ const ORDERS_HUB_URL = 'https://taskhub-system.onrender.com/hubs/project';
 import { toast } from '../components/Toast';
 import { confirm } from '../components/ConfirmDialog';
 import { Skeleton } from '../components/Skeleton';
+import Select from '../components/Select';
 
 // Thanh phân trang dùng chung — hiện tổng số + nút trước/sau. Ẩn nếu chỉ có 1 trang.
 const Pager = ({ page, totalPages, total, onChange }) => {
@@ -146,9 +147,11 @@ const SystemTab = () => {
         </div>
 
         {enabled !== null && (
-          <div className={`mt-5 flex items-center gap-2 text-sm font-semibold ${enabled ? 'text-emerald-600' : 'text-slate-400'}`}>
-            <span className={`w-2 h-2 rounded-full ${enabled ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-            {enabled ? 'Đang bật — dịch vụ được giữ thức.' : 'Đang tắt — dịch vụ có thể ngủ đông.'}
+          <div className="mt-5">
+            <span
+              title={enabled ? 'Đang bật — dịch vụ được giữ thức.' : 'Đang tắt — dịch vụ có thể ngủ đông.'}
+              className={`inline-block w-2.5 h-2.5 rounded-full ${enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+            />
           </div>
         )}
       </div>
@@ -333,8 +336,6 @@ const UsersTab = () => {
   const pageClamped = Math.min(page, totalPages);
   const pageItems = filtered.slice((pageClamped - 1) * USERS_PAGE_SIZE, pageClamped * USERS_PAGE_SIZE);
 
-  const selectCls = 'text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200';
-
   if (loading) return <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>;
 
   return (
@@ -350,16 +351,26 @@ const UsersTab = () => {
             className="w-full text-sm border border-slate-200 rounded-xl pl-9 pr-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
           />
         </div>
-        <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className={selectCls}>
-          <option value="all">Mọi vai trò</option>
-          <option value="admin">Admin</option>
-          <option value="member">Member</option>
-        </select>
-        <select value={planFilter} onChange={(e) => setPlanFilter(e.target.value)} className={selectCls}>
-          <option value="all">Mọi gói</option>
-          <option value="premium">Premium</option>
-          <option value="free">Free</option>
-        </select>
+        <Select
+          value={roleFilter}
+          onChange={setRoleFilter}
+          className="w-40"
+          options={[
+            { value: 'all', label: 'Mọi vai trò' },
+            { value: 'admin', label: 'Admin', dot: 'bg-purple-500' },
+            { value: 'member', label: 'Member', dot: 'bg-slate-400' },
+          ]}
+        />
+        <Select
+          value={planFilter}
+          onChange={setPlanFilter}
+          className="w-36"
+          options={[
+            { value: 'all', label: 'Mọi gói' },
+            { value: 'premium', label: 'Premium', dot: 'bg-indigo-500' },
+            { value: 'free', label: 'Free', dot: 'bg-slate-400' },
+          ]}
+        />
         <span className="text-xs text-slate-400 ml-auto">{filtered.length} người dùng</span>
       </div>
 
@@ -667,10 +678,10 @@ const OrdersTab = () => {
     <>
       <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
         <div className="flex items-center gap-2 px-6 py-3 border-b border-slate-100">
-          <span className={`w-2 h-2 rounded-full ${live ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`} />
-          <span className={`text-xs font-semibold ${live ? 'text-green-600' : 'text-slate-400'}`}>
-            {live ? 'Real-time đang bật' : 'Đang kết nối…'}
-          </span>
+          <span
+            title={live ? 'Real-time đang bật' : 'Đang kết nối…'}
+            className={`w-2.5 h-2.5 rounded-full ${live ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`}
+          />
           <span className="text-xs text-slate-400 ml-auto">Bấm vào một đơn để xem chi tiết</span>
         </div>
         <div className="overflow-x-auto">
