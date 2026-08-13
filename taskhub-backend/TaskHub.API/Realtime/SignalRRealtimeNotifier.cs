@@ -24,4 +24,9 @@ public class SignalRRealtimeNotifier : IRealtimeNotifier
             .Group(ProjectHub.Group(projectId))
             .SendAsync("projectChanged", new { projectId, action, payload });
     }
+
+    public Task OrderChangedAsync(string action, object payload) =>
+        _hub.Clients
+            .Group(ProjectHub.AdminGroup)
+            .SendAsync("orderChanged", new { action, order = payload });
 }

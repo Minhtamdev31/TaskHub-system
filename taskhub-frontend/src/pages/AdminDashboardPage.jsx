@@ -1,11 +1,15 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   LayoutDashboard, Users, CreditCard, Package,
   TrendingUp, ShoppingCart, Crown, Trash2, Plus, X, ShieldCheck, Shield, Server, Zap,
-  ChevronLeft, ChevronRight, FileText,
+  ChevronLeft, ChevronRight, FileText, User, Hash, Clock,
 } from 'lucide-react';
+import { HubConnectionBuilder } from '@microsoft/signalr';
 import { adminService } from '../services/api';
+
+// Hub SignalR (đơn hàng real-time) — cùng hub với dự án, chạy trên Render.
+const ORDERS_HUB_URL = 'https://taskhub-system.onrender.com/hubs/project';
 import { toast } from '../components/Toast';
 import { confirm } from '../components/ConfirmDialog';
 import { Skeleton } from '../components/Skeleton';
@@ -473,11 +477,60 @@ const PlansTab = () => {
 };
 
 /* ---------------- Orders ---------------- */
+
+// Modal chi tiết 1 đơn hàng (bấm vào 1 dòng để mở).
+const DetailRow = ({ icon: Icon, label, children }) => (
+  <div className="flex items-start gap-3 py-3 border-b border-slate-100 last:border-0">
+    <Icon size={16} className="text-slate-400 mt-0.5 shrink-0" />
+    <div className="min-w-0">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+      <div className="text-sm text-slate-800 break-words">{children}</div>
+    </div>
+  </div>
+);
+
+const OrderDetailModal = ({ order, onClose }) => {
+  if (!order) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <h3 className="font-black text-slate-900">Chi tiết đơn hàng</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
+        </div>
+        <div className="px-5 pb-4">
+          <div className="flex items-center justify-between py-4">
+            <span className="text-2xl font-black text-slate-900">{formatPrice(order.amount)}</span>
+            <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${STATUS_STYLE[order.status] || 'bg-slate-100 text-slate-500'}`}>{STATUS_LABEL[order.status] || order.status}</span>
+          </div>
+          <DetailRow icon={User} label="Người mua">
+            <p className="font-semibold">{order.userName || '—'}</p>
+            <p className="text-slate-500 text-xs">{order.userEmail || '—'}</p>
+          </DetailRow>
+          <DetailRow icon={Package} label="Gói">{order.planTitle}</DetailRow>
+          <DetailRow icon={Hash} label="Mã giao dịch"><span className="font-mono">{order.paymentCode}</span></DetailRow>
+          <DetailRow icon={CreditCard} label="Cổng thanh toán">{order.paymentGateway}</DetailRow>
+          <DetailRow icon={Clock} label="Ngày tạo">{new Date(order.createdAt).toLocaleString('vi-VN')}</DetailRow>
+          {order.completedAt && (
+            <DetailRow icon={Clock} label="Ngày hoàn tất">{new Date(order.completedAt).toLocaleString('vi-VN')}</DetailRow>
+          )}
+          <DetailRow icon={FileText} label="Mã đơn (ID)"><span className="font-mono text-xs text-slate-500">{order.id}</span></DetailRow>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const OrdersTab = () => {
   const [orders, setOrders] = useState([]);
   const [page, setPage] = useState(1);
   const [meta, setMeta] = useState({ total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null); // đơn đang mở chi tiết
+  const [flash, setFlash] = useState(() => new Set()); // id đơn vừa đổi → highlight
+  const [live, setLive] = useState(false); // đã kết nối real-time chưa
+  const pageRef = useRef(page);
+  pageRef.current = page;
 
   useEffect(() => {
     setLoading(true);
@@ -490,38 +543,97 @@ const OrdersTab = () => {
       .finally(() => setLoading(false));
   }, [page]);
 
+  // Đánh dấu 1 đơn "vừa thay đổi" để highlight ~2.5 giây.
+  const markFlash = useCallback((id) => {
+    setFlash((prev) => new Set(prev).add(id));
+    setTimeout(() => setFlash((prev) => {
+      const n = new Set(prev); n.delete(id); return n;
+    }), 2500);
+  }, []);
+
+  // Kết nối SignalR 1 lần, nghe 'orderChanged' để cập nhật bảng tức thì.
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return undefined;
+
+    const connection = new HubConnectionBuilder()
+      .withUrl(ORDERS_HUB_URL, { accessTokenFactory: () => localStorage.getItem('token') })
+      .withAutomaticReconnect()
+      .build();
+
+    connection.on('orderChanged', ({ action, order }) => {
+      if (!order) return;
+      if (action === 'created') setMeta((m) => ({ ...m, total: m.total + 1 }));
+      setOrders((prev) => {
+        const exists = prev.some((o) => o.id === order.id);
+        if (exists) return prev.map((o) => (o.id === order.id ? order : o));
+        // Đơn mới: chỉ chèn khi đang xem trang 1 (mới nhất trước), giữ tối đa 20 dòng.
+        if (action !== 'created' || pageRef.current !== 1) return prev;
+        return [order, ...prev].slice(0, 20);
+      });
+      markFlash(order.id);
+    });
+
+    connection.start()
+      .then(() => connection.invoke('JoinAdmin'))
+      .then(() => setLive(true))
+      .catch(() => setLive(false));
+
+    connection.onreconnected(() => { connection.invoke('JoinAdmin').catch(() => {}); });
+    connection.onclose(() => setLive(false));
+
+    return () => { connection.stop(); };
+  }, [markFlash]);
+
   if (loading) return <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>;
 
   return (
-    <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-100">
-        <thead className="bg-slate-50/70">
-          <tr>
-            {['Gói', 'Số tiền', 'Cổng', 'Mã GD', 'Trạng thái', 'Ngày tạo'].map((h) => (
-              <th key={h} className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {orders.map((o) => (
-            <tr key={o.id} className="hover:bg-slate-50/50 text-sm">
-              <td className="px-6 py-4 font-semibold text-slate-800">{o.planTitle}</td>
-              <td className="px-6 py-4 font-bold text-slate-900">{formatPrice(o.amount)}</td>
-              <td className="px-6 py-4 text-slate-500">{o.paymentGateway}</td>
-              <td className="px-6 py-4 text-slate-400 font-mono text-xs">{o.paymentCode}</td>
-              <td className="px-6 py-4">
-                <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${STATUS_STYLE[o.status] || 'bg-slate-100 text-slate-500'}`}>{STATUS_LABEL[o.status] || o.status}</span>
-              </td>
-              <td className="px-6 py-4 text-slate-400 text-xs">{new Date(o.createdAt).toLocaleString('vi-VN')}</td>
-            </tr>
-          ))}
-          {orders.length === 0 && (
-            <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">Chưa có đơn hàng nào.</td></tr>
-          )}
-        </tbody>
-      </table>
-      <Pager page={page} totalPages={meta.totalPages} total={meta.total} onChange={setPage} />
-    </div>
+    <>
+      <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+        <div className="flex items-center gap-2 px-6 py-3 border-b border-slate-100">
+          <span className={`w-2 h-2 rounded-full ${live ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`} />
+          <span className={`text-xs font-semibold ${live ? 'text-green-600' : 'text-slate-400'}`}>
+            {live ? 'Real-time đang bật' : 'Đang kết nối…'}
+          </span>
+          <span className="text-xs text-slate-400 ml-auto">Bấm vào một đơn để xem chi tiết</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-100">
+            <thead className="bg-slate-50/70">
+              <tr>
+                {['Gói', 'Số tiền', 'Cổng', 'Mã GD', 'Trạng thái', 'Ngày tạo'].map((h) => (
+                  <th key={h} className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {orders.map((o) => (
+                <tr
+                  key={o.id}
+                  onClick={() => setSelected(o)}
+                  className={`text-sm cursor-pointer transition-colors ${flash.has(o.id) ? 'bg-teal-50' : 'hover:bg-slate-50/50'}`}
+                >
+                  <td className="px-6 py-4 font-semibold text-slate-800">{o.planTitle}</td>
+                  <td className="px-6 py-4 font-bold text-slate-900">{formatPrice(o.amount)}</td>
+                  <td className="px-6 py-4 text-slate-500">{o.paymentGateway}</td>
+                  <td className="px-6 py-4 text-slate-400 font-mono text-xs">{o.paymentCode}</td>
+                  <td className="px-6 py-4">
+                    <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${STATUS_STYLE[o.status] || 'bg-slate-100 text-slate-500'}`}>{STATUS_LABEL[o.status] || o.status}</span>
+                  </td>
+                  <td className="px-6 py-4 text-slate-400 text-xs">{new Date(o.createdAt).toLocaleString('vi-VN')}</td>
+                </tr>
+              ))}
+              {orders.length === 0 && (
+                <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">Chưa có đơn hàng nào.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <Pager page={page} totalPages={meta.totalPages} total={meta.total} onChange={setPage} />
+      </div>
+
+      <OrderDetailModal order={selected} onClose={() => setSelected(null)} />
+    </>
   );
 };
 

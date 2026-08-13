@@ -19,6 +19,7 @@ public class PaymentService : IPaymentService
     private readonly IUserService _userService;
     private readonly IConfiguration _config;
     private readonly HttpClient _httpClient;
+    private readonly IRealtimeNotifier _realtime;
 
     public PaymentService(
         IMongoRepository<Order> orderRepository,
@@ -26,7 +27,8 @@ public class PaymentService : IPaymentService
         IMongoRepository<User> userRepository,
         IUserService userService,
         IConfiguration config,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        IRealtimeNotifier realtime)
     {
         _orderRepository = orderRepository;
         _planRepository = planRepository;
@@ -34,6 +36,19 @@ public class PaymentService : IPaymentService
         _userService = userService;
         _config = config;
         _httpClient = httpClient;
+        _realtime = realtime;
+    }
+
+    // Phát sự kiện real-time tới nhóm Admin khi đơn được tạo/đổi trạng thái.
+    // Bọc try/catch: real-time chỉ là phụ, tuyệt đối không được làm hỏng luồng thanh toán.
+    private async Task BroadcastOrderAsync(Order order, string action)
+    {
+        try
+        {
+            var user = string.IsNullOrEmpty(order.UserId) ? null : await _userRepository.GetByIdAsync(order.UserId);
+            await _realtime.OrderChangedAsync(action, new AdminOrderResponse(order, user));
+        }
+        catch { /* nuốt lỗi real-time */ }
     }
 
     public async Task<string> CreatePayOSPaymentUrlAsync(string userId, string planId, string returnUrl, string cancelUrl)
@@ -60,6 +75,7 @@ public class PaymentService : IPaymentService
             PaymentGateway = "PayOS"
         };
         await _orderRepository.CreateAsync(order);
+        await BroadcastOrderAsync(order, "created"); // đơn mới → hiện ngay trên bảng admin
 
         var clientId = _config["PayOS:ClientId"];
         var apiKey = _config["PayOS:ApiKey"];
@@ -230,6 +246,7 @@ public class PaymentService : IPaymentService
 
         order.Status = "Cancelled";
         await _orderRepository.UpdateAsync(order.Id, order);
+        await BroadcastOrderAsync(order, "updated"); // người dùng huỷ → cập nhật bảng admin
         return true;
     }
 
@@ -242,6 +259,7 @@ public class PaymentService : IPaymentService
         {
             order.Status = "Cancelled";
             await _orderRepository.UpdateAsync(order.Id, order);
+            await BroadcastOrderAsync(order, "updated"); // đơn treo quá hạn → tự huỷ, báo admin
         }
         return stale.Count;
     }
@@ -258,7 +276,7 @@ public class PaymentService : IPaymentService
         return all.OrderByDescending(o => o.CreatedAt).ToList();
     }
 
-    public async Task<(List<Order> Items, long Total)> GetAllOrdersForAdminPagedAsync(int page, int pageSize)
+    public async Task<(List<AdminOrderResponse> Items, long Total)> GetAllOrdersForAdminPagedAsync(int page, int pageSize)
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 20;
@@ -266,7 +284,20 @@ public class PaymentService : IPaymentService
         // FindPagedAsync sắp theo _id giảm dần (ObjectId mã hoá thời gian tạo) ≈ mới nhất trước.
         var total = await _orderRepository.CountAsync(_ => true);
         var items = await _orderRepository.FindPagedAsync(_ => true, (page - 1) * pageSize, pageSize);
-        return (items, total);
+
+        // Join tên/email người mua. Cache theo UserId để không truy vấn lặp cùng 1 user.
+        var result = new List<AdminOrderResponse>(items.Count);
+        var userCache = new Dictionary<string, User?>();
+        foreach (var o in items)
+        {
+            if (!userCache.TryGetValue(o.UserId, out var user))
+            {
+                user = string.IsNullOrEmpty(o.UserId) ? null : await _userRepository.GetByIdAsync(o.UserId);
+                userCache[o.UserId] = user;
+            }
+            result.Add(new AdminOrderResponse(o, user));
+        }
+        return (result, total);
     }
 
     public async Task<AdminDashboardDto> GetAdminDashboardAnalyticsAsync()
@@ -304,6 +335,7 @@ public class PaymentService : IPaymentService
         order.Status = "Completed";
         order.CompletedAt = DateTime.UtcNow;
         await _orderRepository.UpdateAsync(order.Id, order);
+        await BroadcastOrderAsync(order, "updated"); // thanh toán thành công → đổi trạng thái tức thì
 
         // Update User Subscription
         user.Subscription.Plan = plan.Name;

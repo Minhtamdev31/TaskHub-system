@@ -87,7 +87,7 @@ public class PaymentsController : ControllerBase
         pageSize = Math.Clamp(pageSize, 1, 100);
 
         var (orders, total) = await _paymentService.GetAllOrdersForAdminPagedAsync(page, pageSize);
-        return Ok(new PagedResult<Order>
+        return Ok(new PagedResult<AdminOrderResponse>
         {
             Items = orders,
             Total = total,
