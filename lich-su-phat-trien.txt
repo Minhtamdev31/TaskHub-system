@@ -1,0 +1,116 @@
+2026-08-13 | Minhtamdev31 | add DemoAccount
+2026-08-13 | Minhtamdev31 | fix bug
+2026-08-13 | Minhtamdev31 | App apk
+2026-08-07 | Minhtamdev31 | add thu vien app
+2026-08-07 | Minhtamdev31 | App UI + AI
+2026-08-04 | Minhtamdev31 | fogot pass cho app
+2026-08-04 | Minhtamdev31 | theo dõi danh thu
+2026-07-31 | Minhtamdev31 |  my tasks, dashboard, vault, notifications
+2026-07-31 | Minhtamdev31 | mobile vaulscreen + tabbar
+2026-07-29 | Minhtamdev31 | mobile P2+P3 (du an, bang cong viec, my tasks, dashboard, ho so) + cai thien UI web
+2026-07-29 | Minhtamdev31 | app kanban
+2026-07-28 | Minhtamdev31 | app phone
+2026-07-28 | Minhtamdev31 | auth: mien reCAPTCHA cho client mobile qua header X-Client-Type
+2026-07-27 | Minhtamdev31 | update UI
+2026-07-24 | Minhtamdev31 | change role to member
+2026-07-19 | Minhtamdev31 | vistor
+2026-07-18 | Minhtamdev31 | money manage
+2026-07-17 | Minhtamdev31 | add budget
+2026-07-14 | Minhtamdev31 | phone
+2026-06-23 | Minhtamdev31 | Update AdminDashboardPage.jsx
+2026-06-23 | Minhtamdev31 | Update UI
+2026-06-23 | Minhtamdev31 | add function for notification
+2026-06-21 | Minhtamdev31 | Delete ~$skHub-BaoCao.docx
+2026-06-21 | Minhtamdev31 | report
+2026-06-21 | Minhtamdev31 | Update AiService.cs
+2026-06-21 | Minhtamdev31 | fix ai
+2026-06-21 | Minhtamdev31 | build AI for dashboard and task, update UI
+2026-06-21 | Minhtamdev31 | Update ProjectBoardPage.jsx
+2026-06-21 | Minhtamdev31 | Update TaskResponse.cs
+2026-06-20 | Minhtamdev31 | Update UI
+2026-06-20 | Minhtamdev31 | Update ProjectListPage.jsx
+2026-06-20 | Minhtamdev31 | Update ProjectBoardPage.jsx
+2026-06-20 | Minhtamdev31 | Update ProjectBoardPage.jsx
+2026-06-19 | Minhtamdev31 | Update AdminDashboardPage.jsx
+2026-06-19 | Minhtamdev31 | Update AdminDashboardPage.jsx
+2026-06-19 | Minhtamdev31 | Cancel status for payment
+2026-06-19 | Minhtamdev31 | Update AdminDashboardPage.jsx
+2026-06-19 | Minhtamdev31 | caching user
+2026-06-19 | Minhtamdev31 | caching Pricing
+2026-06-19 | Minhtamdev31 | Big fix
+2026-06-19 | Minhtamdev31 | update dashboard UI
+2026-06-19 | Minhtamdev31 | Update DashboardPage.jsx
+2026-06-17 | Minhtamdev31 | admin account
+2026-06-17 | Minhtamdev31 | appsetting serce
+2026-06-16 | Minhtamdev31 | indexed Mongo queries + startup indexes & OTP TTL
+2026-06-16 | Minhtamdev31 | Update MyTasksPage.jsx
+2026-06-16 | Minhtamdev31 | no sleep render
+2026-06-16 | Minhtamdev31 | Update SettingsPage.jsx
+2026-06-16 | Minhtamdev31 | Update UI, add otp ro resetpass
+2026-06-15 | Minhtamdev31 | Update DashboardPage.jsx
+2026-06-15 | Minhtamdev31 | Dashboard update
+2026-06-15 | Minhtamdev31 | update gitgnore
+2026-06-15 | Minhtamdev31 | fix setting
+2026-06-15 | Minhtamdev31 | fix UI
+2026-06-15 | Minhtamdev31 | Update PaymentService.cs
+2026-06-15 | Minhtamdev31 | PIN for valut
+2026-06-15 | Minhtamdev31 | Update ProjectBoardPage.jsx
+2026-06-15 | Minhtamdev31 | Update PaymentService.cs
+2026-06-15 | Minhtamdev31 | fix bug and real time
+2026-06-15 | Minhtamdev31 | Update SettingsPage.jsx
+2026-06-15 | Minhtamdev31 | Update ProjectBoardPage.jsx
+2026-06-15 | Minhtamdev31 | profile update
+2026-06-15 | Minhtamdev31 | fix payment
+2026-06-14 | Minhtamdev31 | update UI
+2026-06-14 | Minhtamdev31 | Update ProjectBoardPage.jsx
+2026-06-14 | Minhtamdev31 | Change AI to Groq
+2026-06-14 | Minhtamdev31 | fix AI
+2026-06-14 | Minhtamdev31 | Update appsettings.json
+2026-06-14 | Minhtamdev31 | add AI
+2026-06-14 | Minhtamdev31 | Add homepage
+2026-06-14 | Minhtamdev31 | add logo and update UI
+2026-06-14 | Minhtamdev31 | google login
+2026-06-14 | Minhtamdev31 | change to vietnamese
+2026-06-14 | Minhtamdev31 | fix vault
+2026-06-14 | Minhtamdev31 | Add dashboard charts and project member management
+2026-06-14 | Minhtamdev31 | Add task priority, search/filter, dark mode, pagination, attachments & live notifications
+2026-06-14 | Minhtamdev31 | admin
+2026-06-14 | Minhtamdev31 | Add Kanban drag-and-drop and Settings billing tab
+2026-06-14 | Minhtamdev31 | update
+2026-06-14 | Minhtamdev31 | Update EmailService.cs
+2026-06-14 | Minhtamdev31 | Update AuthController.cs
+2026-06-14 | Minhtamdev31 | change to brevo send otp and add subscriptopm to fe
+2026-06-14 | Minhtamdev31 | fix fail reCAPTCHA
+2026-06-13 | Minhtamdev31 | fix bug
+2026-06-13 | Minhtamdev31 | Update AuthController.cs
+2026-06-13 | Minhtamdev31 | Update BE  service logic
+2026-06-12 | Minhtamdev31 | Deploy fe update
+2026-06-12 | Minhtamdev31 | Update UI
+2026-06-12 | Minhtamdev31 | FE basic
+2026-06-12 | Minhtamdev31 | Update Program.cs
+2026-06-12 | Minhtamdev31 | Update Program.cs
+2026-06-12 | Minhtamdev31 | Update Program.cs
+2026-06-11 | ZebraHecker | Merge pull request #1 from Minhtamdev31/FE
+2026-06-11 | HoangNhat2406 | FE
+2026-06-05 | Minhtamdev31 | Recaptcha
+2026-06-05 | Minhtamdev31 | Revert "Recaptcha BE"
+2026-06-05 | Minhtamdev31 | Recaptcha BE
+2026-06-05 | Minhtamdev31 | unique username
+2026-06-03 | Minhtamdev31 | Update PaymentsController.cs
+2026-06-03 | Minhtamdev31 | fix
+2026-06-03 | Minhtamdev31 | fix render bug
+2026-06-03 | Minhtamdev31 | deploy
+2026-06-03 | Minhtamdev31 | payment
+2026-06-02 | Minhtamdev31 | update
+2026-06-02 | Minhtamdev31 | otp, notification
+2026-06-02 | Minhtamdev31 | task
+2026-06-01 | Minhtamdev31 | project
+2026-06-01 | Minhtamdev31 | login google
+2026-05-31 | Minhtamdev31 | connect database, user CRUD, login register
+2026-05-29 | Minhtamdev31 | Connect with mongodb
+2026-05-29 | Minhtamdev31 | add
+2026-05-29 | Minhtamdev31 | BE build
+2026-05-29 | Minhtamdev31 | update gitignore
+2026-05-27 | Minhtamdev31 | Build repository
+2026-05-27 | Minhtamdev31 | Update .gitignore
+2026-05-27 | Minhtamdev31 | Initial commit
