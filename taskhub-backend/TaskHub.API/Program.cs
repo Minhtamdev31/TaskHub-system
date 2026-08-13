@@ -69,7 +69,24 @@ var key = Encoding.ASCII.GetBytes(secret);
 // ==========================================
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    // SignalR gửi kèm credentials (credentials: 'include') → KHÔNG được trả Access-Control-Allow-Origin: *.
+    // Vì vậy phải phản chiếu đúng origin cụ thể + AllowCredentials, thay cho AllowAnyOrigin (wildcard).
+    // Cho phép localhost (dev) và mọi domain *.vercel.app (prod + preview của frontend).
+    options.AddPolicy("AllowFrontend", policy => policy
+        .SetIsOriginAllowed(origin =>
+        {
+            if (string.IsNullOrWhiteSpace(origin)) return false;
+            try
+            {
+                var host = new Uri(origin).Host;
+                return host is "localhost" or "127.0.0.1"
+                    || host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase);
+            }
+            catch { return false; }
+        })
+        .AllowAnyMethod()
+        .AllowAnyHeader()
+        .AllowCredentials());
 });
 
 // ==========================================
@@ -362,7 +379,7 @@ else
 }
 
 app.UseRouting();
-app.UseCors("AllowAll");
+app.UseCors("AllowFrontend");
 app.UseRateLimiter();
 
 app.UseSwagger();
