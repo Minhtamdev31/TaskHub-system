@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notificationService, invitationService } from '../services/api';
 import { toast } from '../components/Toast';
-import { Bell, CheckCheck, FolderKanban, ListTodo, Clock, Mail, Check, X } from 'lucide-react';
+import { Bell, CheckCheck, FolderKanban, ListTodo, Clock, Mail, Check, X, Wallet, AtSign } from 'lucide-react';
 
 import { Skeleton } from '../components/Skeleton';
 
@@ -12,6 +12,8 @@ const typeIcons = {
   Project: FolderKanban,
   Task: ListTodo,
   Deadline: Clock,
+  BudgetRequest: Wallet,
+  Mention: AtSign,
 };
 
 const typeLabels = {
@@ -19,6 +21,7 @@ const typeLabels = {
   Task: 'Công việc',
   Deadline: 'Hạn chót',
   Mention: 'Nhắc đến',
+  BudgetRequest: 'Ngân sách',
 };
 
 const NotificationsPage = () => {

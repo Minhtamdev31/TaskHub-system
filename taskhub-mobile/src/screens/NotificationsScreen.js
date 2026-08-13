@@ -6,8 +6,8 @@ import Header from '../components/Header';
 import { notificationService } from '../api';
 import { colors } from '../theme';
 
-const typeLabel = (t) => ({ Project: 'Dự án', Task: 'Công việc', Deadline: 'Hạn chót' }[t] || 'Thông báo');
-const typeColor = (t) => ({ Project: colors.brandBlue, Task: '#7c3aed', Deadline: colors.rose }[t] || colors.slate400);
+const typeLabel = (t) => ({ Project: 'Dự án', Task: 'Công việc', Deadline: 'Hạn chót', BudgetRequest: 'Ngân sách', Mention: 'Nhắc đến' }[t] || 'Thông báo');
+const typeColor = (t) => ({ Project: colors.brandBlue, Task: '#7c3aed', Deadline: colors.rose, BudgetRequest: colors.emerald, Mention: '#0891b2' }[t] || colors.slate400);
 
 const timeAgo = (iso) => {
   const diff = Date.now() - new Date(iso).getTime();

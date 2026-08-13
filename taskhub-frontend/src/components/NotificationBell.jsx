@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bell, Check, X, Users, Calendar, ShieldCheck, KeyRound, ListTodo } from 'lucide-react';
+import { Bell, Check, X, Users, Calendar, ShieldCheck, KeyRound, ListTodo, Wallet } from 'lucide-react';
 import { notificationService } from '../services/api';
 
 // Icon + màu nền theo loại thông báo (mô phỏng thiết kế Figma).
@@ -10,6 +10,7 @@ const TYPE_STYLE = {
   Security: { icon: ShieldCheck, tint: 'bg-rose-50 text-rose-600' },
   Password: { icon: KeyRound, tint: 'bg-emerald-50 text-emerald-600' },
   Task: { icon: ListTodo, tint: 'bg-violet-50 text-violet-600' },
+  BudgetRequest: { icon: Wallet, tint: 'bg-emerald-50 text-emerald-600' },
 };
 const fallbackStyle = { icon: Bell, tint: 'bg-slate-100 text-slate-500' };
 
