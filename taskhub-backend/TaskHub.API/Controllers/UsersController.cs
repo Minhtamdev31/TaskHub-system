@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using TaskHub.Application.DTOs;
 using TaskHub.Application.Interfaces;
+using TaskHub.Domain.Entities;
 
 namespace TaskHub.API.Controllers;
 
@@ -13,11 +14,23 @@ public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
     private readonly IOtpService _otpService;
+    private readonly IConfiguration _config;
 
-    public UsersController(IUserService userService, IOtpService otpService)
+    public UsersController(IUserService userService, IOtpService otpService, IConfiguration config)
     {
         _userService = userService;
         _otpService = otpService;
+        _config = config;
+    }
+
+    // Tài khoản quản trị GỐC được khoá cứng: không được bỏ quyền admin, không được xoá.
+    // Mặc định admin@taskhub.com; có thể đổi qua cấu hình Admin:Email (env Admin__Email trên Render).
+    private bool IsProtectedAdmin(User? user)
+    {
+        if (user is null) return false;
+        var protectedEmail = _config["Admin:Email"];
+        if (string.IsNullOrWhiteSpace(protectedEmail)) protectedEmail = "admin@taskhub.com";
+        return string.Equals(user.Email, protectedEmail.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
     // Che bớt email: "john@university.edu" -> "j***n@university.edu".
@@ -74,6 +87,17 @@ public class UsersController : ControllerBase
             return BadRequest("Email cannot be empty when provided.");
         }
 
+        // Chặn bỏ quyền admin của tài khoản quản trị GỐC (admin@taskhub.com).
+        if (!string.IsNullOrWhiteSpace(request.Role)
+            && !string.Equals(request.Role, "Admin", StringComparison.OrdinalIgnoreCase))
+        {
+            var target = await _userService.GetByIdAsync(id);
+            if (IsProtectedAdmin(target))
+            {
+                return BadRequest(new { message = "Không thể bỏ quyền admin của tài khoản quản trị gốc (admin@taskhub.com)." });
+            }
+        }
+
         var updatedUser = await _userService.UpdateAsync(id, request);
         if (updatedUser is null)
         {
@@ -87,6 +111,13 @@ public class UsersController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(string id)
     {
+        // Chặn xoá tài khoản quản trị GỐC (admin@taskhub.com).
+        var target = await _userService.GetByIdAsync(id);
+        if (IsProtectedAdmin(target))
+        {
+            return BadRequest(new { message = "Không thể xoá tài khoản quản trị gốc (admin@taskhub.com)." });
+        }
+
         if (!await _userService.DeleteAsync(id))
         {
             return NotFound();

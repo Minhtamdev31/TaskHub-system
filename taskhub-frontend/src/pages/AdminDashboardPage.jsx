@@ -254,6 +254,8 @@ const OverviewTab = () => {
 
 /* ---------------- Users ---------------- */
 const USERS_PAGE_SIZE = 10;
+// Tài khoản quản trị gốc — khoá cứng, không cho bỏ quyền admin hay xoá.
+const PROTECTED_ADMIN_EMAIL = 'admin@taskhub.com';
 
 const UsersTab = () => {
   const [allUsers, setAllUsers] = useState([]);
@@ -312,12 +314,12 @@ const UsersTab = () => {
     }
 
     try { await adminService.updateUser(u.id, { role: newRole }); toast.success(`Đã đổi vai trò ${u.username} → ${newRole}.`); load(); }
-    catch { toast.error('Đổi vai trò thất bại.'); }
+    catch (e) { toast.error(e.response?.data?.message || 'Đổi vai trò thất bại.'); }
   };
   const handleDelete = async (u) => {
     if (!(await confirm({ title: 'Xóa người dùng?', message: `Người dùng "${u.username}" sẽ bị xóa.`, confirmText: 'Xóa', danger: true }))) return;
     try { await adminService.deleteUser(u.id); toast.success('Đã xóa người dùng.'); load(); }
-    catch { toast.error('Xóa thất bại.'); }
+    catch (e) { toast.error(e.response?.data?.message || 'Xóa thất bại.'); }
   };
 
   // Tìm kiếm (tên/email) + lọc theo vai trò & gói — tất cả client-side.
@@ -387,6 +389,7 @@ const UsersTab = () => {
           {pageItems.map((u) => {
             const isAdmin = (u.role || '').toLowerCase() === 'admin';
             const isPremium = u.subscription?.isPremium;
+            const isProtectedAdmin = (u.email || '').toLowerCase() === PROTECTED_ADMIN_EMAIL; // admin gốc → khoá cứng
             return (
               <tr key={u.id} className="hover:bg-slate-50/50">
                 <td className="px-6 py-4">
@@ -420,10 +423,21 @@ const UsersTab = () => {
                     ) : (
                       <button onClick={() => handleGrant(u)} className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 flex items-center gap-1"><Crown size={12} /> Cấp Premium</button>
                     )}
-                    <button onClick={() => handleToggleRole(u)} className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 flex items-center gap-1">
-                      <Shield size={12} /> {isAdmin ? 'Bỏ admin' : 'Cấp admin'}
-                    </button>
-                    <button onClick={() => handleDelete(u)} className="text-slate-300 hover:text-rose-600 p-1.5 hover:bg-rose-50 rounded-lg"><Trash2 size={16} /></button>
+                    {isProtectedAdmin ? (
+                      <span
+                        title="Tài khoản quản trị gốc — không thể bỏ quyền admin hoặc xoá."
+                        className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-slate-50 text-slate-400 flex items-center gap-1 cursor-default"
+                      >
+                        <ShieldCheck size={12} /> Được bảo vệ
+                      </span>
+                    ) : (
+                      <>
+                        <button onClick={() => handleToggleRole(u)} className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 flex items-center gap-1">
+                          <Shield size={12} /> {isAdmin ? 'Bỏ admin' : 'Cấp admin'}
+                        </button>
+                        <button onClick={() => handleDelete(u)} className="text-slate-300 hover:text-rose-600 p-1.5 hover:bg-rose-50 rounded-lg"><Trash2 size={16} /></button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>
