@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 // nút tạo dùng chữ, không cần thư viện icon
 import { HubConnectionBuilder } from '@microsoft/signalr';
+import { Ionicons } from '@expo/vector-icons';
 import Header from '../components/Header';
 import AiModal from '../components/AiModal';
 import { taskService, projectService, getToken } from '../api';
@@ -106,7 +107,7 @@ export default function BoardScreen({ route, nav }) {
         right={(
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
             <TouchableOpacity onPress={openAi} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Text style={{ fontSize: 20 }}>✨</Text>
+              <Ionicons name="sparkles" size={21} color={colors.brandBlue} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => nav.push({ name: 'createTask', projectId: id, onCreated: handleCreated })}>
               <Text style={styles.addBtn}>＋ Tạo</Text>

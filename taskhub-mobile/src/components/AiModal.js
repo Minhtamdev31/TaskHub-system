@@ -1,5 +1,8 @@
 import { Modal, View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
-import { colors } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { colors, gradients } from '../theme';
+import Markdown from './Markdown';
 
 // Modal hiển thị kết quả AI (dùng chung cho Dashboard / Task / Board).
 export default function AiModal({ visible, title, loading, text, error, upgrade, onClose, onRetry }) {
@@ -9,7 +12,9 @@ export default function AiModal({ visible, title, loading, text, error, upgrade,
         <View style={styles.sheet}>
           <View style={styles.head}>
             <View style={styles.titleRow}>
-              <View style={styles.chip}><Text style={styles.chipText}>✨</Text></View>
+              <LinearGradient colors={gradients.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.chip}>
+                <Ionicons name="sparkles" size={17} color={colors.white} />
+              </LinearGradient>
               <Text style={styles.title} numberOfLines={1}>{title}</Text>
             </View>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -31,7 +36,7 @@ export default function AiModal({ visible, title, loading, text, error, upgrade,
             ) : error ? (
               <Text style={styles.err}>{error}</Text>
             ) : (
-              <Text style={styles.body}>{text || 'Không có nội dung.'}</Text>
+              <Markdown text={text || 'Không có nội dung.'} />
             )}
           </ScrollView>
 

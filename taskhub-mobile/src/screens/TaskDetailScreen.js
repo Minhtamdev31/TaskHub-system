@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Header from '../components/Header';
 import AiModal from '../components/AiModal';
 import { taskService } from '../api';
@@ -120,7 +121,8 @@ export default function TaskDetailScreen({ route, nav }) {
         </View>
 
         <TouchableOpacity style={styles.aiBtn} onPress={openAi} activeOpacity={0.85}>
-          <Text style={styles.aiBtnText}>✨ Phân tích bằng AI</Text>
+          <Ionicons name="sparkles" size={16} color="#4338ca" />
+          <Text style={styles.aiBtnText}>Phân tích bằng AI</Text>
         </TouchableOpacity>
 
         {task.description ? (
@@ -224,7 +226,8 @@ const styles = StyleSheet.create({
   err: { color: colors.rose, marginTop: 10, fontSize: 13 },
   aiBtn: {
     marginTop: 16, borderWidth: 1, borderColor: '#c7d2fe', borderRadius: 12,
-    paddingVertical: 13, alignItems: 'center', backgroundColor: '#eef2ff',
+    paddingVertical: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: '#eef2ff',
+    flexDirection: 'row', gap: 8,
   },
   aiBtnText: { color: '#4338ca', fontWeight: '700', fontSize: 15 },
   deleteBtn: {

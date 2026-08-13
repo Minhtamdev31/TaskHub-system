@@ -1,10 +1,15 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, RefreshControl, Image } from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Header from '../components/Header';
 import { colors } from '../theme';
 
 const initials = (name) =>
   (name || '?').split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
+
+// Chỉ nhận URL ảnh hợp lệ (đồng bộ web) để tránh vỡ khi avatarUrl rỗng/sai.
+const isValidImageSrc = (s) =>
+  typeof s === 'string' && /^(data:image\/|https?:\/\/|\/)/i.test(s.trim());
 
 export default function ProfileScreen({ user, onLogout, nav, onRefresh }) {
   const [refreshing, setRefreshing] = useState(false);
@@ -14,6 +19,7 @@ export default function ProfileScreen({ user, onLogout, nav, onRefresh }) {
     try { await onRefresh(); } finally { setRefreshing(false); }
   };
   const name = user?.profile?.fullName || user?.username || user?.email || 'Người dùng';
+  const avatarUrl = user?.profile?.avatarUrl;
   const isPremium = !!user?.subscription?.isPremium;
 
   return (
@@ -25,7 +31,11 @@ export default function ProfileScreen({ user, onLogout, nav, onRefresh }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.brandBlue} />}
       >
         <View style={styles.hero}>
-          <View style={styles.avatar}><Text style={styles.avatarText}>{initials(name)}</Text></View>
+          {isValidImageSrc(avatarUrl) ? (
+            <Image source={{ uri: avatarUrl.trim() }} style={styles.avatarImg} />
+          ) : (
+            <View style={styles.avatar}><Text style={styles.avatarText}>{initials(name)}</Text></View>
+          )}
           <Text style={styles.name}>{name}</Text>
           <Text style={styles.email}>{user?.email || '—'}</Text>
         </View>
@@ -41,12 +51,14 @@ export default function ProfileScreen({ user, onLogout, nav, onRefresh }) {
         </View>
 
         <TouchableOpacity style={styles.upgrade} onPress={() => nav?.push({ name: 'pricing' })} activeOpacity={0.85}>
-          <Text style={styles.upgradeText}>{isPremium ? '👑 Quản lý gói Premium' : '⭐ Nâng cấp Premium'}</Text>
+          <MaterialCommunityIcons name={isPremium ? 'crown' : 'star-four-points'} size={18} color={colors.white} />
+          <Text style={styles.upgradeText}>{isPremium ? 'Quản lý gói Premium' : 'Nâng cấp Premium'}</Text>
         </TouchableOpacity>
 
         {(user?.role || '').toLowerCase() === 'admin' ? (
           <TouchableOpacity style={styles.admin} onPress={() => nav?.push({ name: 'admin' })} activeOpacity={0.85}>
-            <Text style={styles.adminText}>🛡️  Trang quản trị</Text>
+            <Ionicons name="shield-checkmark-outline" size={18} color={colors.slate700} />
+            <Text style={styles.adminText}>Trang quản trị</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -73,6 +85,9 @@ const styles = StyleSheet.create({
     width: 76, height: 76, borderRadius: 38, backgroundColor: colors.brandBlue,
     alignItems: 'center', justifyContent: 'center', marginBottom: 12,
   },
+  avatarImg: {
+    width: 76, height: 76, borderRadius: 38, marginBottom: 12, backgroundColor: colors.slate200,
+  },
   avatarText: { color: colors.white, fontSize: 26, fontWeight: '800' },
   name: { fontSize: 20, fontWeight: '800', color: colors.slate900 },
   email: { fontSize: 14, color: colors.slate500, marginTop: 2 },
@@ -85,12 +100,12 @@ const styles = StyleSheet.create({
   rowValue: { fontSize: 14, fontWeight: '700', color: colors.slate900 },
   upgrade: {
     marginTop: 20, backgroundColor: colors.brandBlue, borderRadius: 12,
-    paddingVertical: 14, alignItems: 'center',
+    paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8,
   },
   upgradeText: { color: colors.white, fontWeight: '700', fontSize: 15 },
   admin: {
     marginTop: 12, borderWidth: 1, borderColor: colors.slate300, borderRadius: 12,
-    paddingVertical: 14, alignItems: 'center', backgroundColor: colors.white,
+    paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, backgroundColor: colors.white,
   },
   adminText: { color: colors.slate700, fontWeight: '700', fontSize: 15 },
   logout: {

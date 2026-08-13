@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 // (chuông thông báo dùng emoji, không cần thư viện icon)
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import Header from '../components/Header';
 import AiModal from '../components/AiModal';
 import { taskService } from '../api';
@@ -88,10 +89,10 @@ export default function DashboardScreen({ user, nav }) {
         right={(
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <TouchableOpacity onPress={openAi} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Text style={{ fontSize: 22 }}>✨</Text>
+              <Ionicons name="sparkles" size={22} color={colors.brandBlue} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => nav.push({ name: 'notifications' })} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Text style={{ fontSize: 22 }}>🔔</Text>
+              <Ionicons name="notifications-outline" size={22} color={colors.slate600} />
             </TouchableOpacity>
           </View>
         )}
