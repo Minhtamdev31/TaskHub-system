@@ -338,4 +338,54 @@ public class UserService : IUserService
 
         return false;
     }
+
+    // Tạo sẵn các tài khoản demo cho giảng viên chấm bài. Idempotent: đã có email thì bỏ qua
+    // (không đụng mật khẩu). Email đã verify sẵn + không cần OTP để đăng nhập được ngay.
+    public async Task<int> EnsureDemoUsersAsync()
+    {
+        var demos = new[]
+        {
+            (Email: "premium@taskhub.com", Username: "premiumdemo", FullName: "Người Dùng Premium", Password: "Demo@1234", IsPremium: true),
+            (Email: "member@taskhub.com",  Username: "memberdemo",  FullName: "Thành Viên Dự Án",   Password: "Demo@1234", IsPremium: false),
+            (Email: "demo@taskhub.com",    Username: "guestdemo",   FullName: "Tài Khoản Demo",      Password: "Demo@1234", IsPremium: false),
+        };
+
+        var created = 0;
+        foreach (var d in demos)
+        {
+            var email = d.Email.Trim().ToLowerInvariant();
+            if (await _userRepository.FindOneAsync(u => u.Email == email) is not null)
+            {
+                continue;
+            }
+
+            var subscription = d.IsPremium
+                ? new SubscriptionInfo
+                {
+                    Plan = "Premium",
+                    Status = "Active",
+                    StartDate = DateTime.UtcNow,
+                    IsPremium = true,
+                    PremiumUntil = DateTime.UtcNow.AddYears(5),
+                }
+                : SubscriptionInfo.FreeActive;
+
+            var user = new User
+            {
+                Username = d.Username,
+                Email = email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(d.Password),
+                Role = "Member",
+                IsActive = true,
+                IsEmailVerified = true,
+                Subscription = subscription,
+                Profile = new User.UserProfile { FullName = d.FullName },
+            };
+
+            await _userRepository.CreateAsync(user);
+            created++;
+        }
+
+        return created;
+    }
 }

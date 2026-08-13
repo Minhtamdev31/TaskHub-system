@@ -27,4 +27,7 @@ public interface IUserService
     /// Chưa có → tạo mới role "Admin"; đã có nhưng chưa phải Admin → nâng quyền. Trả về true nếu có thay đổi.
     /// </summary>
     Task<bool> EnsureAdminAsync(string username, string email, string password);
+
+    // Seed các tài khoản demo (Premium/Free) để chấm bài — idempotent, bỏ qua nếu đã tồn tại.
+    Task<int> EnsureDemoUsersAsync();
 }

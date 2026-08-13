@@ -278,6 +278,27 @@ using (var scope = app.Services.CreateScope())
 }
 
 // ==========================================
+// SEED TÀI KHOẢN DEMO cho giảng viên chấm bài (Premium/Free).
+// Chỉ chạy khi bật cờ Seed__DemoAccounts=true (env Render). Idempotent.
+// ==========================================
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        if (string.Equals(app.Configuration["Seed:DemoAccounts"], "true", StringComparison.OrdinalIgnoreCase))
+        {
+            var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+            var created = await userService.EnsureDemoUsersAsync();
+            Console.WriteLine($"[SEED] Tài khoản demo: đã tạo mới {created} (bỏ qua các tài khoản đã tồn tại).");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[SEED ERROR] Không seed được tài khoản demo: {ex.Message}");
+    }
+}
+
+// ==========================================
 // TẠO INDEX MONGODB (chạy 1 lần, idempotent)
 // ==========================================
 using (var scope = app.Services.CreateScope())
