@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   LayoutDashboard, Users, CreditCard, Package,
   TrendingUp, ShoppingCart, Crown, Trash2, Plus, X, ShieldCheck, Shield, Server, Zap,
-  ChevronLeft, ChevronRight, FileText, User, Hash, Clock,
+  ChevronLeft, ChevronRight, FileText, User, Hash, Clock, Search,
 } from 'lucide-react';
 import { HubConnectionBuilder } from '@microsoft/signalr';
 import { adminService } from '../services/api';
@@ -250,24 +250,30 @@ const OverviewTab = () => {
 };
 
 /* ---------------- Users ---------------- */
+const USERS_PAGE_SIZE = 10;
+
 const UsersTab = () => {
-  const [users, setUsers] = useState([]);
-  const [page, setPage] = useState(1);
-  const [meta, setMeta] = useState({ total: 0, totalPages: 1 });
+  const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');   // all | admin | member
+  const [planFilter, setPlanFilter] = useState('all');   // all | premium | free
+  const [page, setPage] = useState(1);
 
   const load = useCallback(() => {
     setLoading(true);
-    adminService.getUsers(page)
-      .then((res) => {
-        setUsers(res.data.items || []);
-        setMeta({ total: res.data.total || 0, totalPages: res.data.totalPages || 1 });
-      })
+    // Tải tối đa 100 user để tìm kiếm/lọc trên toàn bộ, không chỉ trang hiện tại.
+    adminService.getUsers(1, 100)
+      .then((res) => setAllUsers(res.data.items || []))
       .catch(() => toast.error('Không tải được danh sách người dùng.'))
       .finally(() => setLoading(false));
-  }, [page]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
+  // Đổi bộ lọc → về trang 1.
+  useEffect(() => { setPage(1); }, [search, roleFilter, planFilter]);
+
+  const adminCount = allUsers.filter((u) => (u.role || '').toLowerCase() === 'admin').length;
 
   const handleGrant = async (u) => {
     try { await adminService.grantPremium(u.id, 30); toast.success(`Đã cấp Premium cho ${u.username}.`); load(); }
@@ -278,7 +284,30 @@ const UsersTab = () => {
     catch { toast.error('Thu hồi thất bại.'); }
   };
   const handleToggleRole = async (u) => {
-    const newRole = (u.role || '').toLowerCase() === 'admin' ? 'Member' : 'Admin';
+    const isAdmin = (u.role || '').toLowerCase() === 'admin';
+    const newRole = isAdmin ? 'Member' : 'Admin';
+
+    if (isAdmin) {
+      // Cảnh báo rõ ràng để tránh bấm nhầm bỏ quyền admin.
+      const lastAdmin = adminCount <= 1;
+      const ok = await confirm({
+        title: 'Bỏ quyền admin?',
+        message: lastAdmin
+          ? `"${u.username}" là ADMIN DUY NHẤT. Bỏ quyền sẽ khiến hệ thống không còn ai quản trị (không vào được trang admin, báo cáo doanh thu). Bạn chắc chắn?`
+          : `"${u.username}" sẽ mất toàn bộ quyền quản trị: không vào được trang admin, quản lý người dùng, báo cáo doanh thu. Bạn chắc chắn?`,
+        confirmText: 'Bỏ quyền admin',
+        danger: true,
+      });
+      if (!ok) return;
+    } else {
+      const ok = await confirm({
+        title: 'Cấp quyền admin?',
+        message: `"${u.username}" sẽ có TOÀN QUYỀN quản trị hệ thống.`,
+        confirmText: 'Cấp admin',
+      });
+      if (!ok) return;
+    }
+
     try { await adminService.updateUser(u.id, { role: newRole }); toast.success(`Đã đổi vai trò ${u.username} → ${newRole}.`); load(); }
     catch { toast.error('Đổi vai trò thất bại.'); }
   };
@@ -288,10 +317,53 @@ const UsersTab = () => {
     catch { toast.error('Xóa thất bại.'); }
   };
 
+  // Tìm kiếm (tên/email) + lọc theo vai trò & gói — tất cả client-side.
+  const q = search.trim().toLowerCase();
+  const filtered = allUsers.filter((u) => {
+    const matchSearch = !q
+      || (u.username || '').toLowerCase().includes(q)
+      || (u.email || '').toLowerCase().includes(q);
+    const isAdmin = (u.role || '').toLowerCase() === 'admin';
+    const matchRole = roleFilter === 'all' || (roleFilter === 'admin' ? isAdmin : !isAdmin);
+    const isPremium = !!u.subscription?.isPremium;
+    const matchPlan = planFilter === 'all' || (planFilter === 'premium' ? isPremium : !isPremium);
+    return matchSearch && matchRole && matchPlan;
+  });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / USERS_PAGE_SIZE));
+  const pageClamped = Math.min(page, totalPages);
+  const pageItems = filtered.slice((pageClamped - 1) * USERS_PAGE_SIZE, pageClamped * USERS_PAGE_SIZE);
+
+  const selectCls = 'text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200';
+
   if (loading) return <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>;
 
   return (
-    <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-x-auto">
+    <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+      {/* Thanh tìm kiếm + lọc */}
+      <div className="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-slate-100">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Tìm theo tên hoặc email…"
+            className="w-full text-sm border border-slate-200 rounded-xl pl-9 pr-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          />
+        </div>
+        <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className={selectCls}>
+          <option value="all">Mọi vai trò</option>
+          <option value="admin">Admin</option>
+          <option value="member">Member</option>
+        </select>
+        <select value={planFilter} onChange={(e) => setPlanFilter(e.target.value)} className={selectCls}>
+          <option value="all">Mọi gói</option>
+          <option value="premium">Premium</option>
+          <option value="free">Free</option>
+        </select>
+        <span className="text-xs text-slate-400 ml-auto">{filtered.length} người dùng</span>
+      </div>
+
+      <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-slate-100">
         <thead className="bg-slate-50/70">
           <tr>
@@ -301,7 +373,7 @@ const UsersTab = () => {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {users.map((u) => {
+          {pageItems.map((u) => {
             const isAdmin = (u.role || '').toLowerCase() === 'admin';
             const isPremium = u.subscription?.isPremium;
             return (
@@ -346,9 +418,13 @@ const UsersTab = () => {
               </tr>
             );
           })}
+          {filtered.length === 0 && (
+            <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400">Không tìm thấy người dùng phù hợp.</td></tr>
+          )}
         </tbody>
       </table>
-      <Pager page={page} totalPages={meta.totalPages} total={meta.total} onChange={setPage} />
+      </div>
+      <Pager page={pageClamped} totalPages={totalPages} total={filtered.length} onChange={setPage} />
     </div>
   );
 };
