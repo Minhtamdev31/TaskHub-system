@@ -24,8 +24,9 @@ public class AiService : IAiService
     private const int MaxTasks = 100;
     private const int MaxComments = 40;
 
-    // Model miễn phí của Groq (API tương thích OpenAI).
-    private const string GroqModel = "llama-3.3-70b-versatile";
+    // ĐÃ ĐỔI: Sử dụng model mới thay cho model cũ llama-3.3-70b-versatile bị gỡ bỏ.
+    // Lựa chọn thay thế: "llama-3.1-8b-instant" (nhanh, nhẹ) hoặc "llama-3.3-70b-specdec" / "qwen/qwen3.6-27b"
+    private const string GroqModel = "llama-3.1-8b-instant";
     private const string GroqEndpoint = "https://api.groq.com/openai/v1/chat/completions";
 
     private const string SystemInstruction =
@@ -172,8 +173,11 @@ public class AiService : IAiService
         {
             await _analysisRepository.CreateAsync(new AiAnalysis
             {
-                CacheKey = cacheKey, SourceHash = sourceHash, Content = content,
-                GeneratedByUserId = userId, GeneratedAt = DateTime.UtcNow
+                CacheKey = cacheKey,
+                SourceHash = sourceHash,
+                Content = content,
+                GeneratedByUserId = userId,
+                GeneratedAt = DateTime.UtcNow
             });
         }
         else
@@ -187,8 +191,8 @@ public class AiService : IAiService
         return content;
     }
 
-    // Đổi version khi chỉnh prompt → mọi hash đổi → AI sinh lại bản mới (1 lần) thay cho bản cũ.
-    private const string AnalysisVersion = "v4";
+    // ĐÃ ĐỔI: Tăng version từ "v4" lên "v5" để invalid cache cũ, buộc AI gọi sinh mới bằng model mới.
+    private const string AnalysisVersion = "v5";
 
     private static string StatusVi(string s) => s switch
     { "Todo" => "Cần làm", "InProgress" => "Đang làm", "Review" => "Xem xét", "Done" => "Hoàn thành", _ => s };
