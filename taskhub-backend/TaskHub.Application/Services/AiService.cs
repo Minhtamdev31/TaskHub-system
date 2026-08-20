@@ -24,8 +24,8 @@ public class AiService : IAiService
     private const int MaxTasks = 100;
     private const int MaxComments = 40;
 
-    // ĐÃ SỬA: Chuyển sang model chính thức đang hỗ trợ trên Groq Cloud.
-    private const string GroqModel = "llama-3.3-70b-specdec";
+    // ĐÃ SỬA: Dùng model chính thức chuẩn của Groq (llama-3.3-70b-versatile)
+    private const string GroqModel = "llama-3.3-70b-versatile";
     private const string GroqEndpoint = "https://api.groq.com/openai/v1/chat/completions";
 
     private const string SystemInstruction =
@@ -74,14 +74,11 @@ public class AiService : IAiService
             return null;
         }
 
-        // Lọc theo index projectId (không kéo cả collection).
         var tasks = (await _taskRepository.FindAsync(t => t.ProjectId == projectId))
             .OrderByDescending(t => t.UpdatedAt ?? t.CreatedAt)
             .Take(MaxTasks)
             .ToList();
 
-        // Hash snapshot task (gồm người nhận) → chỉ gọi AI khi có task mới/đổi.
-        // Key kèm userId vì bản tóm tắt được cá nhân hoá ("của bạn").
         var snapshot = string.Join(";", tasks
             .OrderBy(t => t.Id)
             .Select(t => $"{t.Id}:{t.Status}:{t.Priority}:{t.DueDate?.ToString("o")}:{t.UpdatedAt?.ToString("o")}:{t.UserId}"));
@@ -89,7 +86,6 @@ public class AiService : IAiService
 
         return await GetOrGenerateAsync($"project:{projectId}:user:{userId}", sourceHash, userId, async () =>
         {
-            // Tên người nhận cho từng task (để tóm tắt nêu "ai làm task nào").
             var assigneeIds = tasks.Select(t => t.UserId).Where(s => !string.IsNullOrEmpty(s)).Distinct().ToList();
             var nameById = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var aid in assigneeIds)
@@ -109,7 +105,6 @@ public class AiService : IAiService
         });
     }
 
-    // ====== Gọi Groq (tách dùng chung cho mọi tính năng AI) ======
     private async Task<string> CallGroqAsync(string systemPrompt, string userPrompt, int maxTokens)
     {
         var apiKey = _configuration["Groq:ApiKey"];
@@ -150,7 +145,6 @@ public class AiService : IAiService
         return ExtractText(doc.RootElement);
     }
 
-    // ====== Cache DB theo hash: dữ liệu không đổi → trả bản đã lưu (0 token) ======
     private static string Sha256(string input)
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
@@ -162,7 +156,7 @@ public class AiService : IAiService
         var existing = await _analysisRepository.FindOneAsync(a => a.CacheKey == cacheKey);
         if (existing is not null && existing.SourceHash == sourceHash && !string.IsNullOrWhiteSpace(existing.Content))
         {
-            return existing.Content; // cache hit — không gọi Groq
+            return existing.Content;
         }
 
         var content = await generate();
@@ -190,15 +184,14 @@ public class AiService : IAiService
         return content;
     }
 
-    // ĐÃ SỬA: Đổi version sang "v6" để xóa sạch cache của lệnh gọi lỗi vừa rồi.
-    private const string AnalysisVersion = "v6";
+    // ĐÃ SỬA: Đổi sang "v8" để xóa triệt để cache lỗi cũ trên DB
+    private const string AnalysisVersion = "v8";
 
     private static string StatusVi(string s) => s switch
     { "Todo" => "Cần làm", "InProgress" => "Đang làm", "Review" => "Xem xét", "Done" => "Hoàn thành", _ => s };
     private static string PriorityVi(string p) => p switch
     { "Low" => "Thấp", "Medium" => "Trung bình", "High" => "Cao", "Critical" => "Khẩn cấp", _ => p };
 
-    // ====== Phân tích 1 task ======
     private const string TaskSystemInstruction =
         "Bạn là trợ lý công việc của TaskHub. Trả lời bằng tiếng Việt, dùng markdown, đúng 3 mục: " +
         "**Tóm tắt** (1-2 câu), **Việc cần làm** (liệt kê ĐỦ các yêu cầu/bước nêu trong mô tả, mỗi ý 1 gạch đầu dòng ngắn gọn), " +
@@ -212,7 +205,6 @@ public class AiService : IAiService
         var task = await _taskRepository.GetByIdAsync(taskId);
         if (task is null || string.IsNullOrWhiteSpace(task.ProjectId)) return null;
 
-        // Quyền: phải là owner/thành viên của dự án chứa task.
         var project = await _projectRepository.GetByIdAsync(task.ProjectId);
         if (project is null) return null;
         var hasAccess = project.OwnerId.Equals(userId, StringComparison.OrdinalIgnoreCase) ||
@@ -220,8 +212,6 @@ public class AiService : IAiService
         if (!hasAccess) return null;
 
         var due = task.DueDate?.ToString("o") ?? "";
-        // KHÔNG đưa Status vào hash: trạng thái chỉ là tiến độ, không đổi nội dung phân tích
-        // → đổi trạng thái không tốn token gọi lại AI. AnalysisVersion để làm mới khi đổi prompt.
         var sourceHash = Sha256($"{AnalysisVersion}|{task.Title}|{task.Description}|{task.Priority}|{due}");
 
         return await GetOrGenerateAsync($"task:{taskId}", sourceHash, userId, () =>
@@ -240,7 +230,6 @@ public class AiService : IAiService
         });
     }
 
-    // ====== Tóm tắt công việc của tôi (Dashboard) ======
     private const string MyWorkSystemInstruction =
         "Bạn là trợ lý cá nhân của TaskHub. Tóm tắt NGẮN GỌN bằng tiếng Việt, dùng markdown, đúng 3 mục: " +
         "**Tổng quan** (1-2 câu), **Cần ưu tiên** (gạch đầu dòng việc gấp/quá hạn), **Gợi ý hôm nay** (1-2 câu). " +
@@ -256,10 +245,9 @@ public class AiService : IAiService
         var tasks = projectIds.Count == 0
             ? new List<TaskItem>()
             : (await _taskRepository.FindAsync(t => projectIds.Contains(t.ProjectId)))
-                .Where(t => t.UserId == userId) // chỉ việc giao cho user
+                .Where(t => t.UserId == userId)
                 .ToList();
 
-        // Hash snapshot: nếu các việc của user không đổi thì tái dùng tóm tắt.
         var snapshot = string.Join(";", tasks
             .OrderBy(t => t.Id)
             .Select(t => $"{t.Id}:{t.Status}:{t.Priority}:{t.DueDate?.ToString("o")}:{t.UpdatedAt?.ToString("o")}"));
@@ -333,7 +321,6 @@ public class AiService : IAiService
             var late = t.DueDate.HasValue && t.DueDate.Value < now && !t.Status.Equals("Done", StringComparison.OrdinalIgnoreCase)
                 ? " (đã quá hạn)"
                 : string.Empty;
-            // Người nhận: nếu là người đang xem → "của bạn", ngược lại dùng tên (hoặc "chưa giao").
             string assignee;
             if (string.IsNullOrEmpty(t.UserId)) assignee = "chưa giao";
             else if (t.UserId.Equals(requesterUserId, StringComparison.OrdinalIgnoreCase)) assignee = "của bạn";
