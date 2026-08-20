@@ -24,8 +24,8 @@ public class AiService : IAiService
     private const int MaxTasks = 100;
     private const int MaxComments = 40;
 
-    // ĐÃ SỬA: Dùng mixtral-8x7b-32768 siêu ổn định trên Groq, không lo bị 404/400.
-    private const string GroqModel = "mixtral-8x7b-32768";
+    // ĐÃ SỬA: Dùng model chính thức đang hoạt động trên Groq
+    private const string GroqModel = "llama3-8b-8192";
     private const string GroqEndpoint = "https://api.groq.com/openai/v1/chat/completions";
 
     private const string SystemInstruction =
@@ -184,8 +184,8 @@ public class AiService : IAiService
         return content;
     }
 
-    // ĐÃ SỬA: Nâng version lên "v9" để làm sạch cache lỗi 404 cũ trong DB
-    private const string AnalysisVersion = "v9";
+    // ĐÃ SỬA: Nâng version lên "v10" để dọn sạch cache lỗi cũ
+    private const string AnalysisVersion = "v10";
 
     private static string StatusVi(string s) => s switch
     { "Todo" => "Cần làm", "InProgress" => "Đang làm", "Review" => "Xem xét", "Done" => "Hoàn thành", _ => s };
