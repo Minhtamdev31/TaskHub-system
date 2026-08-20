@@ -25,7 +25,7 @@ public class AiService : IAiService
     private const int MaxComments = 40;
 
     // ĐÃ SỬA: Dùng model chính thức đang hoạt động trên Groq
-    private const string GroqModel = "llama-3.1-8b-instant";
+    private const string GroqModel = "openai/gpt-oss-20b";
     private const string GroqEndpoint = "https://api.groq.com/openai/v1/chat/completions";
 
     private const string SystemInstruction =
