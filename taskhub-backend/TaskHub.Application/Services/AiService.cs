@@ -24,9 +24,8 @@ public class AiService : IAiService
     private const int MaxTasks = 100;
     private const int MaxComments = 40;
 
-    // ĐÃ ĐỔI: Sử dụng model mới thay cho model cũ llama-3.3-70b-versatile bị gỡ bỏ.
-    // Lựa chọn thay thế: "llama-3.1-8b-instant" (nhanh, nhẹ) hoặc "llama-3.3-70b-specdec" / "qwen/qwen3.6-27b"
-    private const string GroqModel = "llama-3.1-8b-instant";
+    // ĐÃ SỬA: Chuyển sang model chính thức đang hỗ trợ trên Groq Cloud.
+    private const string GroqModel = "llama-3.3-70b-specdec";
     private const string GroqEndpoint = "https://api.groq.com/openai/v1/chat/completions";
 
     private const string SystemInstruction =
@@ -191,8 +190,8 @@ public class AiService : IAiService
         return content;
     }
 
-    // ĐÃ ĐỔI: Tăng version từ "v4" lên "v5" để invalid cache cũ, buộc AI gọi sinh mới bằng model mới.
-    private const string AnalysisVersion = "v5";
+    // ĐÃ SỬA: Đổi version sang "v6" để xóa sạch cache của lệnh gọi lỗi vừa rồi.
+    private const string AnalysisVersion = "v6";
 
     private static string StatusVi(string s) => s switch
     { "Todo" => "Cần làm", "InProgress" => "Đang làm", "Review" => "Xem xét", "Done" => "Hoàn thành", _ => s };
